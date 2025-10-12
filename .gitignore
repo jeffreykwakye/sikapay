@@ -1,0 +1,13 @@
+# Vendor directory
+/vendor/
+
+# Sensitive files
+.env
+
+# OS/IDE files
+.DS_Store
+.idea/
+.vscode/
+
+# Runtime/Logs
+*.log
