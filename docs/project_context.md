@@ -52,8 +52,19 @@ The core foundation is a multi-tenant SaaS application designed for high securit
 * Database Schema: **Complete and Migrated.**
 * Seeding: **Successful** (Initial Roles, Plans, Permissions, and Super Admin are active).
 
-## II. Next Focus: Authentication & Routing
+# SikaPay Project Context Log
 
-The immediate priority is to build the front-end login mechanism to validate the core `Auth.php` and tenancy model.
+## Initial Setup & Architecture (Current Status)
 
-* **Target:** Implement `LoginController`, `BaseController`, and the login view.
+| Date | Feature/Decision | Details | Status |
+| :--- | :--- | :--- | :--- |
+| YYYY-MM-DD | Core Directory Structure | Adopted standard structure: `app/`, `resources/views/`, `public/`. | Complete |
+| YYYY-MM-DD | Routing Implementation | Uses `FastRoute` via a custom `Router` class (`app/Core/Router.php`). | Complete |
+| **2025-10-13** | **Authentication (Super Admin)** | Implemented `Auth` service, `LoginController`, and session management. | Complete |
+| **2025-10-13** | **Multi-Tenancy Scoping** | Implemented `getTenantScope()` logic in `app/Core/Model.php`. **Super Admin bypass confirmed.** Tenant user isolation confirmed via `/test-scope`. | Complete |
+| **2025-10-13** | **Security Fix (BFcache)** | Implemented server-side and client-side JavaScript fix to prevent cached pages after logout. | Complete |
+
+## Next Focus Area
+
+**Tenant Management Module** (Super Admin View)
+* Objective: Create UI and backend logic for the Super Admin to create and manage tenants dynamically.

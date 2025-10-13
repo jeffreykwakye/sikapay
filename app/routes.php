@@ -13,4 +13,5 @@ return [
 
     // Placeholder Dashboard Route
     ['GET', '/dashboard', ['DashboardController', 'index']],
+     ['GET', '/test-scope', ['TestController', 'index']],
 ];

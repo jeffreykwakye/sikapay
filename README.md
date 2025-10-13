@@ -12,7 +12,7 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 
 1.  **Clone Repository:** (If checking out)
     ```bash
-    git clone https://github.com/jeffreykwakye/sikapay.git
+    git clone [https://github.com/jeffreykwakye/sikapay.git](https://github.com/jeffreykwakye/sikapay.git)
     cd sikapay
     ```
 2.  **Environment:** Create a `.env` file in the root directory.
@@ -23,28 +23,42 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
     ```
 4.  **Virtual Host:** Ensure your web server points the document root to the `/public` directory (e.g., `sikapay.localhost`).
 5.  **Database:** Create the database defined in your `.env` file (e.g., `sikapay`).
-6.  **CLI Setup:** After PHP files are placed, run migrations and seed initial data.
+
+## 🛠️ Installation and Initial Data
+
+1.  **CLI Setup:** After PHP files are placed, run migrations and seed initial data.
     ```bash
     php cli/cli_runner.php db:migrate
     php cli/cli_runner.php db:seed
     ```
-7.  **Access:** Open your configured URL (e.g., `http://sikapay.localhost/`).
+    * **Note:** This process creates the initial **Super Admin** user and **System Tenant** data.
 
+2.  **Access:** Open your configured URL (e.g., `http://sikapay.localhost/`).
 
-# 🛠️ Installation and Setup
+---
 
-## Database Setup
+## 🔑 Access & Credentials
 
-1.  Ensure your environment variables for the database connection are set in `app/Core/Database.php` or your configuration file.
-2.  Run all migrations to create the core security, billing, and profile tables:
+The core authentication system is operational and multi-tenancy is active.
 
-    ```bash
-    php cli/cli_runner.php db:migrate
-    ```
+| Role | Email | Password | Access |
+| :--- | :--- | :--- | :--- |
+| **Super Admin** | `admin@sikapay.local` | `password` | System-wide (Tenant ID 1) |
+| **Tenant Admin** | `tenant.admin@acmecorp.com` | `password` | Tenant-scoped (Tenant ID 2) |
 
-3.  Seed the initial data (Roles, Permissions, Plans, Features, and the Super Admin user):
+**Note on Tenant Credentials:** The `tenant.admin@acmecorp.com` user and its Tenant (ID 2) must be manually created in the database for testing purposes.
 
-    ```bash
-    php cli/cli_runner.php db:seed
-    ```
-    *The Super Admin credentials are: **admin@sikapay.local** / **password***
+---
+
+## ✨ Architectural & Working Features
+
+### Architectural Highlights
+* **Front Controller:** All requests are routed through `public/index.php`.
+* **Routing:** Uses the **FastRoute** package via a custom `Router` class (`app/Core/Router.php`).
+* **Multi-Tenancy Scoping:** Core data isolation is enforced automatically in `app/Core/Model.php` by checking the user's role and injecting a `WHERE tenant_id = X` clause into all non-admin queries.
+
+### Working Features
+* **Full Authentication Flow:** Login and Logout are functional and secure.
+* **Secure Routing:** URL Routing (`/login`, `/dashboard`, `/logout`) is protected.
+* **Security:** Browser back/forward caching is disabled for authenticated routes to prevent session fixation/hijacking after logout.
+* **Data Scoping (Multi-Tenancy Isolation):** Fully validated and implemented.

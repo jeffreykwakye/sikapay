@@ -30,6 +30,20 @@
             <strong>Role Status:</strong> <?php echo htmlspecialchars($data['userRole']); ?><br>
             <strong>Access Context:</strong> <?php echo htmlspecialchars($data['tenantInfo']); ?>
         </div>
+        <?php 
+        // We know only Super Admin sees this dashboard title, but for clarity:
+        if ($data['title'] === 'Super Admin Dashboard'): 
+        ?>
+            <p class="test-link">
+                <a href="/test-scope">Run Multi-Tenancy Scoping Test</a>
+            </p>
+
+            <?php
+$password = 'password'; // The password you want to hash
+$hash = password_hash($password, PASSWORD_DEFAULT);
+echo $hash . "\n";
+?>
+        <?php endif; ?>
         
         <a href="/logout" class="logout-link">Log Out</a>
     </div>
