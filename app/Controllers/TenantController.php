@@ -14,12 +14,12 @@ use Jeffrey\Sikapay\Core\Auth;
 
 class TenantController extends Controller
 {
-    private TenantModel $tenantModel;
-    private PlanModel $planModel;
-    private SubscriptionModel $subscriptionModel;
-    private UserModel $userModel;
-    private RoleModel $roleModel;
-    private AuditModel $auditModel;
+    protected TenantModel $tenantModel;
+    protected PlanModel $planModel;
+    protected SubscriptionModel $subscriptionModel;
+    protected UserModel $userModel;
+    protected RoleModel $roleModel;
+    protected AuditModel $auditModel;
 
     public function __construct()
     {
@@ -138,13 +138,22 @@ class TenantController extends Controller
 
             // 4. Commit Transaction
             $this->tenantModel->getDB()->commit();
+
+            // 5. Trigger Success Notification
+            $this->notificationService->notifyUser(
+                $tenantId, 
+                $this->userId, // The Super Admin who performed the action
+                'TENANT_PROVISIONING_SUCCESS', 
+                "Tenant '{$tenantData['name']}' Provisioned",
+                "Successfully created tenant {$tenantData['name']} and admin user {$userData['email']}."
+            );
             
-            // 5. Success Handling
+            // 6. Success Handling
             $_SESSION['flash_success'] = "Tenant '{$tenantData['name']}' created successfully. Initial admin: {$userData['email']}.";
             $this->redirect('/tenants');
 
         } catch (\Exception $e) {
-            // 6. Failure: Rollback
+            // 7. Failure: Rollback
             if ($this->tenantModel->getDB()->inTransaction()) {
                 $this->tenantModel->getDB()->rollBack();
             }

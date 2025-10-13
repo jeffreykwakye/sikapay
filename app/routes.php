@@ -1,5 +1,5 @@
 <?php
-// app/routes.php (REVISED)
+declare(strict_types=1);
 // Returns an array of routes in the format: [METHOD, URI, HANDLER]
 
 return [
@@ -18,6 +18,10 @@ return [
     ['GET', '/tenants', ['TenantController', 'index']],
     ['GET', '/tenants/create', ['TenantController', 'create']],
     ['POST', '/tenants', ['TenantController', 'store']],
+
+    // Notification Routes
+    ['GET', '/notifications', ['NotificationController', 'index']],
+    ['POST', '/notifications/mark-read', ['NotificationController', 'markRead']],
 
     // Scope Test Route
     ['GET', '/test-scope', ['TestController', 'index']],

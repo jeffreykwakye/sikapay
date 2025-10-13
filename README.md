@@ -2,6 +2,8 @@
 
 SikaPay is a custom-built, multi-tenant web application designed to handle payroll processing in Ghana, strictly adhering to all statutory requirements (PAYE, SSNIT Tiers 1, 2, 3) and accommodating complex pay components and international hires.
 
+---
+
 ## 🛠️ Technology Stack
 
 * **Language:** PHP 8.1+ (Vanilla MVC)
@@ -10,55 +12,58 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 
 ## 🚀 Setup Guide
 
-1.  **Clone Repository:** (If checking out)
-    ```bash
-    git clone [https://github.com/jeffreykwakye/sikapay.git](https://github.com/jeffreykwakye/sikapay.git)
-    cd sikapay
-    ```
-2.  **Environment:** Create a `.env` file in the root directory.
-    * *Note: See the `PROJECT_CONTEXT.md` for specific required environment variables.*
-3.  **Composer:** Install PHP dependencies.
-    ```bash
-    composer install
-    ```
-4.  **Virtual Host:** Ensure your web server points the document root to the `/public` directory (e.g., `sikapay.localhost`).
-5.  **Database:** Create the database defined in your `.env` file (e.g., `sikapay`).
+1.  **Clone Repository:** (If checking out)
+    ```bash
+    git clone [https://github.com/jeffreykwakye/sikapay.git](https://github.com/jeffreykwakye/sikapay.git)
+    cd sikapay
+    ```
+2.  **Environment:** Create a `.env` file in the root directory.
+    * *Note: See the `PROJECT_CONTEXT.md` for specific required environment variables.*
+3.  **Composer:** Install PHP dependencies.
+    ```bash
+    composer install
+    ```
+4.  **Virtual Host:** Ensure your web server points the document root to the `/public` directory (e.g., `sikapay.localhost`).
+5.  **Database:** Create the database defined in your `.env` file (e.g., `sikapay`).
 
 ## 🛠️ Installation and Initial Data
 
-1.  **CLI Setup:** After PHP files are placed, run migrations and seed initial data.
-    ```bash
-    php cli/cli_runner.php db:migrate
-    php cli/cli_runner.php db:seed
-    ```
-    * **Note:** This process creates the initial **Super Admin** user and **System Tenant** data.
+1.  **CLI Setup:** After PHP files are placed, run migrations and seed initial data.
+    ```bash
+    php cli/cli_runner.php db:migrate
+    php cli/cli_runner.php db:seed
+    ```
+    * **Note:** This process creates the initial **Super Admin** user and **System Tenant** data.
 
-2.  **Access:** Open your configured URL (e.g., `http://sikapay.localhost/`).
+2.  **Access:** Open your configured URL (e.g., `http://sikapay.localhost/`).
+
+---
+
+## ✨ Architectural & Working Features (Current Status)
+
+| Module | Features | Status | Notes |
+| :--- | :--- | :--- | :--- |
+| **Authentication** | Full Login/Logout Flow | Complete | Secure session management. |
+| **Multi-Tenancy** | Data Scoping & Isolation | Core Complete | Base Model enforces `WHERE tenant_id = X` on tenant users; Super Admin bypass implemented. |
+| **Tenant Provisioning** | **Full Creation Workflow (CRUD-C)** | **Complete** | **Transactional creation** of Tenant, Admin User, Subscription, and Audit Log records. |
+| **Subscriptions** | Initial Trial Provisioning | Complete | Dedicated `subscriptions` and `subscription_history` tables populated. |
+| **Audit/Compliance** | Audit Logging | Complete | Logs critical actions using the acting Super Admin's ID and new Tenant ID. |
+| **Security** | BFCache Fix & Secure Routing | Complete | Prevents cached session data post-logout. |
 
 ---
 
 ## 🔑 Access & Credentials
 
-The core authentication system is operational and multi-tenancy is active.
-
 | Role | Email | Password | Access |
 | :--- | :--- | :--- | :--- |
 | **Super Admin** | `admin@sikapay.local` | `password` | System-wide (Tenant ID 1) |
-| **Tenant Admin** | `tenant.admin@acmecorp.com` | `password` | Tenant-scoped (Tenant ID 2) |
+| **Tenant Admin (Example)** | `beta.admin@beta.com` | `password` | Tenant-scoped (e.g., Tenant ID 3) |
 
-**Note on Tenant Credentials:** The `tenant.admin@acmecorp.com` user and its Tenant (ID 2) must be manually created in the database for testing purposes.
+**Note on Tenant Credentials:** New tenants (e.g., `beta.admin@beta.com`) are **now created directly** via the Super Admin Dashboard and are fully operational for testing.
 
 ---
 
-## ✨ Architectural & Working Features
+## 🚀 Next Focus Area
 
-### Architectural Highlights
-* **Front Controller:** All requests are routed through `public/index.php`.
-* **Routing:** Uses the **FastRoute** package via a custom `Router` class (`app/Core/Router.php`).
-* **Multi-Tenancy Scoping:** Core data isolation is enforced automatically in `app/Core/Model.php` by checking the user's role and injecting a `WHERE tenant_id = X` clause into all non-admin queries.
-
-### Working Features
-* **Full Authentication Flow:** Login and Logout are functional and secure.
-* **Secure Routing:** URL Routing (`/login`, `/dashboard`, `/logout`) is protected.
-* **Security:** Browser back/forward caching is disabled for authenticated routes to prevent session fixation/hijacking after logout.
-* **Data Scoping (Multi-Tenancy Isolation):** Fully validated and implemented.
+**In-App Notification System**
+* **Objective:** Implement a dedicated service and model to generate and display real-time application alerts.
