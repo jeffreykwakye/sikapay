@@ -49,6 +49,7 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 | **Subscriptions** | Initial Trial Provisioning | Complete | Dedicated `subscriptions` and `subscription_history` tables populated. |
 | **Audit/Compliance** | Audit Logging | Complete | Logs critical actions using the acting Super Admin's ID and new Tenant ID. |
 | **Security** | BFCache Fix & Secure Routing | Complete | Prevents cached session data post-logout. |
+| **In-App Notifications** | **Full System Pipeline** | **Complete** | **Real-time alerts, counter badge, mark-as-read functionality, and robust architectural integration.** |
 
 ---
 
@@ -59,11 +60,11 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 | **Super Admin** | `admin@sikapay.local` | `password` | System-wide (Tenant ID 1) |
 | **Tenant Admin (Example)** | `beta.admin@beta.com` | `password` | Tenant-scoped (e.g., Tenant ID 3) |
 
-**Note on Tenant Credentials:** New tenants (e.g., `beta.admin@beta.com`) are **now created directly** via the Super Admin Dashboard and are fully operational for testing.
+**Note on Tenant Credentials:** New tenants (e.g., `beta.admin@beta.com`) are now created directly via the Super Admin Dashboard and are fully operational for testing.
 
 ---
 
 ## 🚀 Next Focus Area
 
-**In-App Notification System**
-* **Objective:** Implement a dedicated service and model to generate and display real-time application alerts.
+**User Experience Refinements & Core Feature Expansion**
+* **Objective:** Enhance usability (e.g., showing user names, auto-marking notifications as read) and begin building out core tenant features (e.g., Payroll setup).

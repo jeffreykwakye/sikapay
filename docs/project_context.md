@@ -10,28 +10,28 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 
 ## 🚀 Setup Guide
 
-1.  **Clone Repository:** (If checking out)
-    ```bash
-    git clone https://github.com/jeffreykwakye/sikapay.git
-    cd sikapay
-    ```
-2.  **Environment:** Create a `.env` file in the root directory.
-    * *Note: See the `PROJECT_CONTEXT.md` for specific required environment variables.*
-3.  **Composer:** Install PHP dependencies.
-    ```bash
-    composer install
-    ```
-4.  **Virtual Host:** Ensure your web server points the document root to the `/public` directory (e.g., `sikapay.localhost`).
-5.  **Database:** Create the database defined in your `.env` file (e.g., `sikapay`).
-6.  **CLI Setup:** After PHP files are placed, run migrations and seed initial data.
-    ```bash
-    php cli/cli_runner.php db:migrate
-    php cli/cli_runner.php db:seed
-    ```
-7.  **Access:** Open your configured URL (e.g., `http://sikapay.localhost/`).
+1.  **Clone Repository:** (If checking out)
+    ```bash
+    git clone [https://github.com/jeffreykwakye/sikapay.git](https://github.com/jeffreykwakye/sikapay.git)
+    cd sikapay
+    ```
+2.  **Environment:** Create a `.env` file in the root directory.
+    * *Note: See the `PROJECT_CONTEXT.md` for specific required environment variables.*
+3.  **Composer:** Install PHP dependencies.
+    ```bash
+    composer install
+    ```
+4.  **Virtual Host:** Ensure your web server points the document root to the `/public` directory (e.g., `sikapay.localhost`).
+5.  **Database:** Create the database defined in your `.env` file (e.g., `sikapay`).
+6.  **CLI Setup:** After PHP files are placed, run migrations and seed initial data.
+    ```bash
+    php cli/cli_runner.php db:migrate
+    php cli/cli_runner.php db:seed
+    ```
+7.  **Access:** Open your configured URL (e.g., `http://sikapay.localhost/`).
 
 
-## Project Status: Super Admin Module Complete (v1.0)
+## Project Status: Super Admin Module & Core Infrastructure Complete (v1.1)
 ---
 
 ### **Current Features Implemented**
@@ -44,23 +44,25 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 | **System Tables** | Plans, Roles | Complete | Scoping bypass implemented for system-wide read access. |
 | **Subscriptions** | Initial Trial Provisioning | Complete | Dedicated `subscriptions` and `subscription_history` tables populated transactionally. |
 | **Audit/Compliance** | Audit Logging | Complete | Logs critical actions (e.g., Tenant creation) using the acting Super Admin's ID. |
+| **Notifications (NEW)** | **E2E In-App System** | **Complete** | **Includes service, model, controller, display, mark-as-read functionality, and UI badge counter.** |
 
 ---
 
 ### **Upcoming Features**
 
-* In-App Notification System
+* **Auto-Mark Read** on notification view
+* **Tenant Admin Welcome Notification**
 * Role-Based Access Control (RBAC) Enforcement
 * Tenant Admin Dashboard & Payroll Approval Flow
 
 ### **Installation**
 
-1.  **Clone Repository:** `git clone [repository URL]`
-2.  **Environment:** Requires PHP 8.1+ and MySQL/MariaDB.
-3.  **Database Setup:** Create a `sikapay` database.
-4.  **Configuration:** Update the `Database.php` connection details.
-5.  **Migrations/Seeding:** Run all migration SQL scripts, including `create_tenants.sql`, `create_users.sql`, `create_subscriptions.sql`, etc.
-6.  **Start Server:** Use XAMPP/MAMP or `php -S localhost:8080 -t public`.
+1.  **Clone Repository:** `git clone [repository URL]`
+2.  **Environment:** Requires PHP 8.1+ and MySQL/MariaDB.
+3.  **Database Setup:** Create a `sikapay` database.
+4.  **Configuration:** Update the `Database.php` connection details.
+5.  **Migrations/Seeding:** Run all migration SQL scripts, including `create_tenants.sql`, `create_users.sql`, `create_subscriptions.sql`, etc.
+6.  **Start Server:** Use XAMPP/MAMP or `php -S localhost:8080 -t public`.
 
 ### **Testing Credentials**
 
@@ -92,12 +94,16 @@ The core foundation is a multi-tenant SaaS application designed for high securit
 
 ## II. Architectural Patterns & Core Implementation (Phase 2: Complete)
 
-### A. Multi-Tenancy Scoping
+### A. Base Controller Refactoring & Dependency Injection (NEW)
+
+The base `Controller` now serves as the central context and service injector for all extending controllers.
 
 | Component | Implementation Detail | Rationale |
 | :--- | :--- | :--- |
-| **Data Scoping** | All Tenant-scoped Models inherit from `app/Core/Model.php`, which automatically injects `WHERE tenant_id = :currentTenantId`. | Guarantees data isolation. |
-| **System Scoping** | Models for tables like `plans`, `roles`, and `audit_logs` utilize the **`$noTenantScope = true`** flag to bypass the `tenant_id` WHERE clause. | Allows Super Admin and system functionality without modifying core `Model` logic. |
+| **Service Injection** | Base `Controller` initializes and exposes `$notificationService`, `$tenantModel`, and `$userModel`. | Centralizes dependency management and simplifies child controllers. |
+| **Context Injection** | User context (`$userId`, `$tenantId`, `$userFirstName`, `$tenantName`) is calculated in the `Controller` and passed to all views. | Ensures a consistent header/footer experience (UX). |
+| **View Pathing** | Resolved persistent pathing errors by using `dirname(__DIR__, 2)` to calculate a stable, absolute project root path for file inclusions. | Improves robustness and OS compatibility. |
+| **Inheritance Fix** | Properties in child controllers (e.g., `TenantController`) were adjusted to use **`protected`** access level to prevent PHP fatal inheritance errors. | Adheres to strict PHP inheritance rules. |
 
 ### B. Transactional Provisioning Workflow (Super Admin)
 
@@ -110,6 +116,7 @@ The tenant creation process now adheres to the **Single Responsibility Principle
 | **Provisioning** | `TenantModel`, `UserModel` | Creates the new tenant record and the associated primary admin user. |
 | **Subscription** | `SubscriptionModel` | Inserts the initial **trial** record into `subscriptions` (current state) and `subscription_history` (audit trail). |
 | **Compliance** | `AuditModel` | Logs the creation event, citing the new `tenantId` and the acting Super Admin's `user_id`. |
+| **Notification Trigger** | `NotificationService` | Triggered *outside* the main transaction (post-commit) to alert the Super Admin of success. |
 
 ---
 
@@ -122,10 +129,13 @@ The tenant creation process now adheres to the **Single Responsibility Principle
 | **2025-10-13** | **Authentication (Super Admin)** | Implemented `Auth` service, `LoginController`, and session management. | Complete |
 | **2025-10-13** | **Multi-Tenancy Scoping** | Implemented `getTenantScope()` logic in `app/Core/Model.php`. Super Admin bypass confirmed. | Complete |
 | **2025-10-13** | **Tenant Provisioning** | **Full SRP implementation.** Orchestration of Tenant, User, Subscription, and Audit Log creation in a single transaction. | **Complete** |
+| **2025-10-13** | **In-App Notifications** | **Full E2E implementation** (Models, Service, Controller, Views, and Header UI integration). | **Complete** |
+| **2025-10-13** | **Architecture Refinement** | Refactored Base Controller for central service injection, corrected property access levels, and fixed file pathing. | **Complete** |
 
 ## Next Focus Area
 
-**In-App Notification System**
-* **Objective:** Design and implement a service-based system to generate and deliver in-app notifications (e.g., payroll submission, subscription renewal warnings) to specific users based on their role and actions.
-* **Prerequisites:** `notifications` table structure is migrated.
-
+**User Experience Refinement**
+* **Objective:** Implement logic to welcome the new Tenant Admin and improve notification usability.
+* **Tasks:**
+    1. Implement notification trigger for the newly created Tenant Admin.
+    2. Implement auto-mark-as-read functionality upon viewing the notifications page.
