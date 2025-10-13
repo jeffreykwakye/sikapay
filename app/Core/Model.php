@@ -5,6 +5,7 @@ namespace Jeffrey\Sikapay\Core;
 
 use Jeffrey\Sikapay\Core\Database;
 use Jeffrey\Sikapay\Core\Auth; 
+use \PDO;
 
 abstract class Model
 {
@@ -14,6 +15,9 @@ abstract class Model
     // Multi-tenancy context
     protected ?int $currentTenantId;
     protected bool $isSuperAdmin;
+    
+    // Flag to bypass tenant scoping for system-level tables (e.g., plans, roles)
+    protected bool $noTenantScope = false; 
 
     public function __construct(string $table)
     {
@@ -28,19 +32,18 @@ abstract class Model
 
         // Ensure a non-admin user has a tenant ID (security check)
         if (!$this->isSuperAdmin && $this->currentTenantId === 0) {
-             throw new \Exception("Security Violation: Non-admin user accessing model without a Tenant ID.");
+            throw new \Exception("Security Violation: Non-admin user accessing model without a Tenant ID.");
         }
     }
 
     /**
      * Retrieves the basic WHERE clause required for multi-tenancy isolation.
-     * This will be prepended to all standard queries.
-     * * @return string The SQL WHERE clause fragment (e.g., "WHERE tenant_id = 1") or an empty string.
+     * @return string The SQL WHERE clause fragment.
      */
     protected function getTenantScope(array $where = []): string
     {
-        // 1. Super Admins bypass scoping entirely
-        if ($this->isSuperAdmin) {
+        // 1. Bypass scoping for system tables or Super Admins
+        if ($this->noTenantScope || $this->isSuperAdmin) {
             return $where ? "WHERE " . implode(' AND ', $where) : "";
         }
         
@@ -56,16 +59,24 @@ abstract class Model
     }
     
     /**
+     * Provides access to the PDO connection for external transaction management.
+     * @return \PDO
+     */
+    public function getDB(): \PDO
+    {
+        return $this->db;
+    }
+    
+    /**
      * Generic method to find a single record by its ID, enforcing tenant scope.
-     * * @param int $id
-     * @return mixed|null
+     * 
      */
     public function find(int $id): mixed
     {
-        $sql = "SELECT * FROM {$this->table} WHERE id = :id";
+         $sql = "SELECT * FROM {$this->table} WHERE id = :id";
         
         // Add the tenant scope (Super Admin sees all, Tenant sees only their own)
-        if (!$this->isSuperAdmin) {
+        if (!$this->isSuperAdmin && !$this->noTenantScope) {
              // If we're scoped, we need to check both ID and tenant_id
              $sql .= " AND tenant_id = {$this->currentTenantId}";
         }
@@ -77,8 +88,7 @@ abstract class Model
 
     /**
      * Generic method to retrieve all records, enforcing tenant scope.
-     * * @param array $where Additional WHERE conditions.
-     * @return array
+     *
      */
     public function all(array $where = []): array
     {

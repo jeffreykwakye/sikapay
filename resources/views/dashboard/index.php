@@ -37,12 +37,9 @@
             <p class="test-link">
                 <a href="/test-scope">Run Multi-Tenancy Scoping Test</a>
             </p>
-
-            <?php
-$password = 'password'; // The password you want to hash
-$hash = password_hash($password, PASSWORD_DEFAULT);
-echo $hash . "\n";
-?>
+            <p class="test-link">
+                <a href="/tenants">Manage Tenants</a>
+            </p>
         <?php endif; ?>
         
         <a href="/logout" class="logout-link">Log Out</a>

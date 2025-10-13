@@ -13,5 +13,12 @@ return [
 
     // Placeholder Dashboard Route
     ['GET', '/dashboard', ['DashboardController', 'index']],
-     ['GET', '/test-scope', ['TestController', 'index']],
+
+    // Tenant Management Routes (Super Admin)
+    ['GET', '/tenants', ['TenantController', 'index']],
+    ['GET', '/tenants/create', ['TenantController', 'create']],
+    ['POST', '/tenants', ['TenantController', 'store']],
+
+    // Scope Test Route
+    ['GET', '/test-scope', ['TestController', 'index']],
 ];

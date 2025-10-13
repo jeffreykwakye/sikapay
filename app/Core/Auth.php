@@ -93,6 +93,18 @@ class Auth
     {
         return $_SESSION['is_super_admin'] ?? false;
     }
+
+
+    /**
+     * Gets the ID of the currently authenticated user.
+     * @return int The user ID, or 0 if no user is logged in.
+     */
+    public static function userId(): int
+    {
+        // Assuming the authenticated user's ID is stored under 'user_id' in the session.
+        return (int)($_SESSION['user_id'] ?? 0);
+    }
+
     
     /**
      * Retrieves the current user's tenant ID from the session.
