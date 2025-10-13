@@ -12,7 +12,7 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 
 1.  **Clone Repository:** (If checking out)
     ```bash
-    git clone https://github.com/jeffreykwakye/sikapay.git sikapay
+    git clone https://github.com/jeffreykwakye/sikapay.git
     cd sikapay
     ```
 2.  **Environment:** Create a `.env` file in the root directory.
@@ -29,3 +29,22 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
     php cli/cli_runner.php db:seed
     ```
 7.  **Access:** Open your configured URL (e.g., `http://sikapay.localhost/`).
+
+
+# 🛠️ Installation and Setup
+
+## Database Setup
+
+1.  Ensure your environment variables for the database connection are set in `app/Core/Database.php` or your configuration file.
+2.  Run all migrations to create the core security, billing, and profile tables:
+
+    ```bash
+    php cli/cli_runner.php db:migrate
+    ```
+
+3.  Seed the initial data (Roles, Permissions, Plans, Features, and the Super Admin user):
+
+    ```bash
+    php cli/cli_runner.php db:seed
+    ```
+    *The Super Admin credentials are: **admin@sikapay.local** / **password***
