@@ -7,32 +7,52 @@ use Jeffrey\Sikapay\Core\Auth;
 use Jeffrey\Sikapay\Core\View;
 use Jeffrey\Sikapay\Services\NotificationService;
 use Jeffrey\Sikapay\Models\TenantModel;
+use Jeffrey\Sikapay\Models\UserModel; // Added for User Name lookup
 
 abstract class Controller
 {
     protected Auth $auth;
     protected int $userId; // For user context
     protected int $tenantId; // For tenancy context
-    protected NotificationService $notificationService; // For core application service;
-    protected TenantModel $tenantModel; // For fetching tenant name
+
+    // 🛑 Model/Service properties must be declared here 🛑
+    protected NotificationService $notificationService; 
+    protected TenantModel $tenantModel;
+    protected UserModel $userModel; // New property for user lookup
+
+    // Optional properties initialized to null or default
     protected ?string $tenantName = null;
+    protected array $userName = ['first_name' => null, 'last_name' => null];
 
     
     public function __construct()
     {
-        // Initialize Auth service for use in all controllers
+        // 1. Initialize Auth service
         $this->auth = new Auth(); 
-         // 2. Initialize user context (using the instance Auth::userId)
+        
+        // 2. Initialize user context (using the instance Auth::userId)
         $this->userId = $this->auth->userId();
         $this->tenantId = $this->auth->tenantId();
         
-        // 3. Initialize Notification Service
-        $this->notificationService = new NotificationService();
-        // 4. Initialize Tenant Model and fetch name
-        $this->tenantModel = new TenantModel();
-        if ($this->tenantId > 0) {
-            $this->tenantName = $this->tenantModel->getNameById($this->tenantId);
-        }
+        // CONDITIONAL INITIALIZATION BLOCK (Fixes Logout Error) 🛑
+        // Only initialize tenant-scoped services and models if a user is logged in, 
+        // preventing the Base Model's security check from firing on public pages.
+        if ($this->userId > 0) {
+            
+            // Initialize Models/Services
+            $this->userModel = new UserModel();
+            $this->notificationService = new NotificationService();
+            $this->tenantModel = new TenantModel();
+
+            // Fetch contextual data
+            $this->userName = $this->userModel->getNameById($this->userId);
+
+            if ($this->tenantId > 0) {
+                $this->tenantName = $this->tenantModel->getNameById($this->tenantId);
+            }
+        } 
+        // NOTE: If $this->userId is 0 (logged out), the above properties remain uninitialized, 
+        // which is fine for the Login/Logout controllers since they don't use them.
     }
 
 
@@ -46,9 +66,17 @@ abstract class Controller
             'auth' => $this->auth, // Pass the Auth instance for check/isSuperAdmin calls in views
             'userId' => $this->userId,
             'tenantId' => $this->tenantId,
+            
+            // Use defaults if models weren't initialized (e.g., on Login page)
             'tenantName' => $this->tenantName ?? 'System/Public',
-            // Calculate unread count
-            'unreadNotificationCount' => $this->userId > 0 ? $this->notificationService->getUnreadCount($this->userId) : 0,
+            // Pass User Name
+            'userFirstName' => $this->userName['first_name'] ?? 'User',
+            'userLastName' => $this->userName['last_name'] ?? '',
+            
+            // Calculate unread count (safely use $this->notificationService only if it exists)
+            'unreadNotificationCount' => (isset($this->notificationService) && $this->userId > 0)
+                ? $this->notificationService->getUnreadCount($this->userId) 
+                : 0,
         ];
         
         // 2. Merge page-specific data with common data
@@ -59,7 +87,6 @@ abstract class Controller
         
         // Security check: Ensure the content file exists
         if (!file_exists($contentFile)) {
-             // Use the base class's throw for simplicity
              throw new \Exception("View file not found: {$viewPath}");
         }
 
@@ -73,7 +100,7 @@ abstract class Controller
         $projectRoot = dirname(__DIR__, 2); 
         
         // Build the absolute path to the master layout file
-        $masterLayoutPath = $projectRoot . '/resources/layout/master.php'; // 🛑 Corrected target path 🛑
+        $masterLayoutPath = $projectRoot . '/resources/layout/master.php'; 
 
         // Load the master layout file
         require $masterLayoutPath;  
@@ -113,7 +140,6 @@ abstract class Controller
         header('Pragma: no-cache');
         
         // Back/Forward Cache (BFcache) Prevention
-        // This instructs the browser not to use bfcache for this page.
         header('Permissions-Policy: interest-cohort=()');
     }
 

@@ -116,7 +116,8 @@ class TenantController extends Controller
             $tenantId = $this->tenantModel->create($tenantData); 
 
             // C. Execute Creation (Model 2: User)
-            $this->userModel->createUser($tenantId, $userData);
+            // Execute the creation and CAPTURE the newly created Admin User's ID
+            $adminUserId = $this->userModel->createUser($tenantId, $userData);
 
             // D. Execute Creation (Model 3: Subscription)
             $this->subscriptionModel->recordInitialSubscription(
@@ -124,8 +125,8 @@ class TenantController extends Controller
                 $tenantData['plan_id'], 
                 $tenantData['subscription_status'] // Should be 'trial' as per your initial setting
             );
- 
-            // D. Audit Logging (MUST occur before commit)
+
+            // E. Audit Logging (MUST occur before commit)
             $this->auditModel->log(
                 $tenantId, 
                 'TENANT_CREATED_WITH_ADMIN',
@@ -139,13 +140,24 @@ class TenantController extends Controller
             // 4. Commit Transaction
             $this->tenantModel->getDB()->commit();
 
-            // 5. Trigger Success Notification
+            // 5. Trigger Success Notifications (After commit)
+            
+            // 5a. Notify the Super Admin (Existing)
             $this->notificationService->notifyUser(
                 $tenantId, 
                 $this->userId, // The Super Admin who performed the action
                 'TENANT_PROVISIONING_SUCCESS', 
                 "Tenant '{$tenantData['name']}' Provisioned",
                 "Successfully created tenant {$tenantData['name']} and admin user {$userData['email']}."
+            );
+
+            // 5b. Notify the new Tenant Admin (NEW) 
+            $this->notificationService->notifyUser(
+                $tenantId, 
+                $adminUserId, // The new admin user's ID
+                'WELCOME_NEW_TENANT_ADMIN', 
+                "Welcome to SikaPay, {$userData['first_name']}!",
+                "Your account for the tenant '{$tenantData['name']}' has been successfully provisioned. You can now log in and begin setting up payroll."
             );
             
             // 6. Success Handling

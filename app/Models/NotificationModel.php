@@ -78,4 +78,18 @@ class NotificationModel extends Model
             ':user_id' => $userId
         ]);
     }
+
+
+    /**
+     * Marks all unread notifications for a specific user as read in the database.
+     */
+    public function markAllAsRead(int $userId): bool
+    {
+        // NOTE: The base model's tenant scoping will automatically apply
+        // the current tenant_id to the WHERE clause, ensuring security.
+        $sql = "UPDATE notifications SET is_read = TRUE, read_at = NOW() WHERE user_id = :user_id AND is_read = FALSE";
+        
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([':user_id' => $userId]);
+    }
 }

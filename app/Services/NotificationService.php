@@ -50,4 +50,17 @@ class NotificationService
     {
         return $this->notificationModel->markAsRead($notificationId, $userId);
     }
+
+
+    /**
+     * Marks all unread notifications for a specific user as read.
+     */
+    public function markAllAsRead(int $userId): bool
+    {
+        if ($userId <= 0) {
+            return false;
+        }
+    
+        return $this->notificationModel->markAllAsRead($userId);
+    }
 }

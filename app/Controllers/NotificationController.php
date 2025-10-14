@@ -20,12 +20,12 @@ class NotificationController extends Controller
         }
     }
 
-    /**
-     * Shows the list of all notifications for the logged-in user.
-     */
     public function index(): void
     {
-        // Use the inherited $this->notificationService
+        // Mark all unread items as read upon viewing the page
+        $this->notificationService->markAllAsRead($this->userId);
+        
+        // Fetch the updated list of notifications (which are now all 'read')
         $notifications = $this->notificationService->getNotifications($this->userId);
         
         $this->view('notifications/index', [
