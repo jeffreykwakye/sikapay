@@ -60,4 +60,32 @@ class LoginController extends Controller
         $this->auth->logout();
         $this->redirect('/login');
     }
+
+
+    /**
+     * Displays the login form (main entry point for /login).
+     */
+    public function index(): void // Renamed from 'show' to the correct entry point
+    {
+        $this->preventCache(); // Good practice to prevent caching
+
+        if ($this->auth->check()) {
+            $this->redirect('/dashboard');
+            return;
+        }
+        
+        // 1. Get error from session (use the 'login_error' key as per your attempt() method)
+        $error = $_SESSION['login_error'] ?? null;
+        unset($_SESSION['login_error']); // Clear message after reading
+
+        // 2. 🛑 CRITICAL FIX: Use viewLogin() and the correct view path 🛑
+        // Note: The previous call was $this->viewLogin('login/index'). We must ensure consistency.
+        $this->viewLogin('auth/login', [
+            'error' => $error,
+            // You can add the flash_error for consistency if needed, but login_error is primary
+            // 'flash_error' => $_SESSION['flash_error'] ?? null, 
+        ]);
+        // Note: No need to unset $_SESSION['flash_error'] here if it's not the primary error key.
+    }
+
 }

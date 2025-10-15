@@ -31,38 +31,31 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 7.  **Access:** Open your configured URL (e.g., `http://sikapay.localhost/`).
 
 
-## Project Status: Super Admin Module & Core Infrastructure Complete (v1.1)
+## Project Status: Core Infrastructure & RBAC Implemented (v1.2)
 ---
 
 ### **Current Features Implemented**
 
 | Module | Features | Status | Notes |
 | :--- | :--- | :--- | :--- |
-| **Authentication** | Super Admin Login, Tenant User Login, Logout | Complete | Tenant isolation enforced post-login. |
+| **Authentication** | Super Admin Login, Tenant User Login, Logout **(Auth Service is now Singleton)** | Complete | Centralized, secure session management. |
+| **Security/RBAC** | **Role-Based Access Control (RBAC)** | **Core Complete** | **Implemented central `Auth::can()` gate, Permission Middleware, and protected initial routes.** |
 | **Multi-Tenancy** | Request/Tenant Routing, Database Scoping | Core Complete | Base Model enforces `WHERE tenant_id = X` on most tables. |
-| **Super Admin** | **Tenant Management (CRUD-C)** | **Complete** | **Full transactional creation** of Tenant, Admin User, Subscription, and Audit Log. |
+| **Super Admin** | **Tenant Management (CRUD-C)** | **Complete** | Full transactional creation of Tenant, Admin User, Subscription, and Audit Log. |
 | **System Tables** | Plans, Roles | Complete | Scoping bypass implemented for system-wide read access. |
 | **Subscriptions** | Initial Trial Provisioning | Complete | Dedicated `subscriptions` and `subscription_history` tables populated transactionally. |
-| **Audit/Compliance** | Audit Logging | Complete | Logs critical actions (e.g., Tenant creation) using the acting Super Admin's ID. |
-| **Notifications (NEW)** | **E2E In-App System** | **Complete** | **Includes service, model, controller, display, mark-as-read functionality, and UI badge counter.** |
+| **Audit/Compliance** | Audit Logging | Complete | Logs critical actions using the acting Super Admin's ID. |
+| **Notifications (NEW)** | **E2E In-App System** | **Complete** | Includes service, model, controller, display, mark-as-read functionality, and UI badge counter. |
 
 ---
 
 ### **Upcoming Features**
 
+* **Monolog Integration** for structured logging
 * **Auto-Mark Read** on notification view
 * **Tenant Admin Welcome Notification**
-* Role-Based Access Control (RBAC) Enforcement
+* **Employee Management Module**
 * Tenant Admin Dashboard & Payroll Approval Flow
-
-### **Installation**
-
-1.  **Clone Repository:** `git clone [repository URL]`
-2.  **Environment:** Requires PHP 8.1+ and MySQL/MariaDB.
-3.  **Database Setup:** Create a `sikapay` database.
-4.  **Configuration:** Update the `Database.php` connection details.
-5.  **Migrations/Seeding:** Run all migration SQL scripts, including `create_tenants.sql`, `create_users.sql`, `create_subscriptions.sql`, etc.
-6.  **Start Server:** Use XAMPP/MAMP or `php -S localhost:8080 -t public`.
 
 ### **Testing Credentials**
 
@@ -74,7 +67,7 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 
 # 🏢 SikaPay - Core Project Context and Architecture
 
-## I. Multi-Tenancy & Security Layer (Phase 1: Complete)
+## I. Multi-Tenancy & Security Layer (Phase 2: Complete)
 
 The core foundation is a multi-tenant SaaS application designed for high security and isolation.
 
@@ -82,37 +75,35 @@ The core foundation is a multi-tenant SaaS application designed for high securit
 
 | Table Group | Purpose | Key Features |
 | :--- | :--- | :--- |
-| **Tenancy** | Core Isolation | `tenants`, `tenant_profiles`, **`payroll_approval_flow`** setting. |
+| **Tenancy** | Core Isolation | `tenants`, `tenant_profiles`, `payroll_approval_flow` setting. |
 | **User Management** | Identity & Access | `users`, `user_profiles`. |
 | **RBAC** | Granular Permissions | `roles`, `permissions`, `role_permissions`, `user_permissions`. |
 | **Employment** | HR Records & History | `departments`, `positions`, `employees`, `employment_history`. |
-| **Billing** | Feature Gating | `plans`, `features`, `plan_features`, **`subscriptions`**, **`subscription_history`**. |
-| **Compliance** | Audit Trail | **`audit_logs`** (Tracking all critical actions). |
-| **Application** | User Feedback | **`notifications`** (Table structure is migrated). |
+| **Billing** | Feature Gating | `plans`, `features`, `plan_features`, `subscriptions`, `subscription_history`. |
+| **Compliance** | Audit Trail | `audit_logs` (Tracking all critical actions). |
+| **Application** | User Feedback | `notifications` (Table structure is migrated). |
 
 ---
 
 ## II. Architectural Patterns & Core Implementation (Phase 2: Complete)
 
-### A. Base Controller Refactoring & Dependency Injection (NEW)
+### A. Authentication and Authorization (New Core System)
 
-The base `Controller` now serves as the central context and service injector for all extending controllers.
-
-| Component | Implementation Detail | Rationale |
-| :--- | :--- | :--- |
-| **Service Injection** | Base `Controller` initializes and exposes `$notificationService`, `$tenantModel`, and `$userModel`. | Centralizes dependency management and simplifies child controllers. |
-| **Context Injection** | User context (`$userId`, `$tenantId`, `$userFirstName`, `$tenantName`) is calculated in the `Controller` and passed to all views. | Ensures a consistent header/footer experience (UX). |
-| **View Pathing** | Resolved persistent pathing errors by using `dirname(__DIR__, 2)` to calculate a stable, absolute project root path for file inclusions. | Improves robustness and OS compatibility. |
-| **Inheritance Fix** | Properties in child controllers (e.g., `TenantController`) were adjusted to use **`protected`** access level to prevent PHP fatal inheritance errors. | Adheres to strict PHP inheritance rules. |
+| Component | Implementation Detail | Rationale | Status |
+| :--- | :--- | :--- | :--- |
+| **Auth Service** | **Singleton Pattern** applied to `app/Core/Auth.php`. | Guarantees a single, stateful instance for DB checks and session access. | **Complete** |
+| **Base Controller**| `__construct()` updated to use `Auth::getInstance()`. | Fixed the Fatal Error and adheres to the Singleton pattern. | **Complete** |
+| **Authorization Gate**| **Central `Auth::can($key)` method** implements the 3-tiered logic (Super Admin > User Override > Role Default). | Single source of truth for all access control decisions. | **Complete** |
+| **Route Protection** | **`app/Middleware/PermissionMiddleware.php`** created. | Centralizes pre-controller security checks and denial handling. | **Complete** |
+| **Router Support** | `app/Core/Router.php` updated to support and execute the `['middleware' => [...], 'handler' => [...] ]` route structure. | Enables declarative, per-route access control. | **Complete** |
 
 ### B. Transactional Provisioning Workflow (Super Admin)
 
-The tenant creation process now adheres to the **Single Responsibility Principle (SRP)**, with the `TenantController::store()` method acting as a dedicated **Orchestrator** for a single, critical database transaction.
+The tenant creation process adheres to the **Single Responsibility Principle (SRP)**, with the `TenantController::store()` method acting as a dedicated **Orchestrator** for a single, critical database transaction.
 
 | Responsibility | Model/Service | Details |
 | :--- | :--- | :--- |
 | **Orchestration** | `TenantController` | Manages `PDO::beginTransaction()` and `PDO::commit()`/`rollBack()` to ensure atomicity. |
-| **Role Lookup** | `RoleModel` | Dynamically retrieves the `tenant_admin` role ID. |
 | **Provisioning** | `TenantModel`, `UserModel` | Creates the new tenant record and the associated primary admin user. |
 | **Subscription** | `SubscriptionModel` | Inserts the initial **trial** record into `subscriptions` (current state) and `subscription_history` (audit trail). |
 | **Compliance** | `AuditModel` | Logs the creation event, citing the new `tenantId` and the acting Super Admin's `user_id`. |
@@ -124,18 +115,19 @@ The tenant creation process now adheres to the **Single Responsibility Principle
 
 | Date | Feature/Decision | Details | Status |
 | :--- | :--- | :--- | :--- |
-| YYYY-MM-DD | Core Directory Structure | Adopted standard structure: `app/`, `resources/views/`, `public/`. | Complete |
-| YYYY-MM-DD | Routing Implementation | Uses `FastRoute` via a custom `Router` class (`app/Core/Router.php`). | Complete |
 | **2025-10-13** | **Authentication (Super Admin)** | Implemented `Auth` service, `LoginController`, and session management. | Complete |
 | **2025-10-13** | **Multi-Tenancy Scoping** | Implemented `getTenantScope()` logic in `app/Core/Model.php`. Super Admin bypass confirmed. | Complete |
 | **2025-10-13** | **Tenant Provisioning** | **Full SRP implementation.** Orchestration of Tenant, User, Subscription, and Audit Log creation in a single transaction. | **Complete** |
 | **2025-10-13** | **In-App Notifications** | **Full E2E implementation** (Models, Service, Controller, Views, and Header UI integration). | **Complete** |
-| **2025-10-13** | **Architecture Refinement** | Refactored Base Controller for central service injection, corrected property access levels, and fixed file pathing. | **Complete** |
+| **2025-10-15** | **RBAC & Architectural Fix** | **Implemented Singleton pattern for Auth**, fixed Controller instantiation, implemented **Permission Middleware** and updated **Router** to enforce security. | **Complete** |
 
 ## Next Focus Area
 
-**User Experience Refinement**
-* **Objective:** Implement logic to welcome the new Tenant Admin and improve notification usability.
+**User Experience Refinement & Monolog**
+* **Objective:** Enhance application stability and security logging.
 * **Tasks:**
-    1. Implement notification trigger for the newly created Tenant Admin.
-    2. Implement auto-mark-as-read functionality upon viewing the notifications page.
+    1. **Install and integrate Monolog** for structured application and security logging.
+    2. Implement notification trigger for the newly created Tenant Admin.
+    3. Implement auto-mark-as-read functionality upon viewing the notifications page.
+
+---

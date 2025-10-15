@@ -43,13 +43,13 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 
 | Module | Features | Status | Notes |
 | :--- | :--- | :--- | :--- |
-| **Authentication** | Full Login/Logout Flow | Complete | Secure session management. |
-| **Multi-Tenancy** | Data Scoping & Isolation | Core Complete | Base Model enforces `WHERE tenant_id = X` on tenant users; Super Admin bypass implemented. |
+| **Authentication** | Login/Logout Flow **(Auth Service is now Singleton)** | Complete | Centralized session management and guaranteed single instance. |
+| **Security/RBAC** | **Role-Based Access Control (RBAC)** | **Core Complete** | **Central `Auth::can()` gate, Permission Middleware, and protected initial routes.** |
+| **Multi-Tenancy** | Data Scoping & Isolation | Core Complete | Base Model enforces `WHERE tenant_id = X`. |
 | **Tenant Provisioning** | **Full Creation Workflow (CRUD-C)** | **Complete** | **Transactional creation** of Tenant, Admin User, Subscription, and Audit Log records. |
-| **Subscriptions** | Initial Trial Provisioning | Complete | Dedicated `subscriptions` and `subscription_history` tables populated. |
-| **Audit/Compliance** | Audit Logging | Complete | Logs critical actions using the acting Super Admin's ID and new Tenant ID. |
-| **Security** | BFCache Fix & Secure Routing | Complete | Prevents cached session data post-logout. |
-| **In-App Notifications** | **Full System Pipeline** | **Complete** | **Real-time alerts, counter badge, mark-as-read functionality, and robust architectural integration.** |
+| **Subscriptions** | Initial Trial Provisioning | Complete | Dedicated tables populated transactionally. |
+| **Audit/Compliance** | Audit Logging | Complete | Logs critical actions using the acting Super Admin's ID. |
+| **In-App Notifications**| Full System Pipeline | Complete | Real-time alerts, counter badge, mark-as-read functionality. |
 
 ---
 
@@ -66,5 +66,6 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 
 ## 🚀 Next Focus Area
 
-**User Experience Refinements & Core Feature Expansion**
-* **Objective:** Enhance usability (e.g., showing user names, auto-marking notifications as read) and begin building out core tenant features (e.g., Payroll setup).
+**Security & Feature Expansion**
+* **Objective:** Complete full route protection, enhance logging, and begin building Employee Management features.
+* **Immediate Task:** Install and integrate **Monolog** for structured application and security logging.

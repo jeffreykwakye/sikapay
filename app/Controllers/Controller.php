@@ -12,10 +12,11 @@ use Jeffrey\Sikapay\Models\UserModel; // Added for User Name lookup
 abstract class Controller
 {
     protected Auth $auth;
+    protected View $view; 
     protected int $userId; // For user context
     protected int $tenantId; // For tenancy context
 
-    // 🛑 Model/Service properties must be declared here 🛑
+    // Model/Service properties must be declared here
     protected NotificationService $notificationService; 
     protected TenantModel $tenantModel;
     protected UserModel $userModel; // New property for user lookup
@@ -28,13 +29,14 @@ abstract class Controller
     public function __construct()
     {
         // 1. Initialize Auth service
-        $this->auth = new Auth(); 
+        $this->auth = Auth::getInstance();
+        $this->view = new View(); // Initialize View service
         
         // 2. Initialize user context (using the instance Auth::userId)
         $this->userId = $this->auth->userId();
         $this->tenantId = $this->auth->tenantId();
         
-        // CONDITIONAL INITIALIZATION BLOCK (Fixes Logout Error) 🛑
+        // CONDITIONAL INITIALIZATION BLOCK
         // Only initialize tenant-scoped services and models if a user is logged in, 
         // preventing the Base Model's security check from firing on public pages.
         if ($this->userId > 0) {
@@ -104,6 +106,38 @@ abstract class Controller
 
         // Load the master layout file
         require $masterLayoutPath;  
+    }
+
+
+    /**
+     * Loads a view without the full master layout (for public pages like Login).
+     */
+    protected function viewLogin(string $viewPath, array $data = []): void
+    {
+        // 1. Merge page-specific data with common data (only what's needed for errors/input)
+        $finalData = $data;
+        
+        // 2. Define the path to the specific content file
+        $contentFile = $this->getViewPath($viewPath);
+        
+        if (!file_exists($contentFile)) {
+             throw new \Exception("Login View file not found: {$viewPath}");
+        }
+
+        // 3. Extract data
+        extract($finalData);
+        
+        // 4. Load a minimal layout file (or directly load the content file)
+        $projectRoot = dirname(__DIR__, 2);
+        $minimalLayoutPath = $projectRoot . '/resources/layout/minimal.php';
+
+        if (file_exists($minimalLayoutPath)) {
+            $__content_file = $contentFile;
+            require $minimalLayoutPath;
+        } else {
+            // Fallback: If minimal layout doesn't exist, load content directly
+            require $contentFile;
+        }
     }
 
 
