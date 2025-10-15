@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Jeffrey\Sikapay\Middleware;
 
 use Jeffrey\Sikapay\Core\Auth; 
+use Jeffrey\Sikapay\Core\Log;
 
 class PermissionMiddleware
 {
@@ -28,11 +29,12 @@ class PermissionMiddleware
         if (!$auth->can($requiredPermission)) {
             
             // Log the unauthorized attempt (good practice)
-            error_log(
-                sprintf("UNAUTHORIZED ACCESS: User %d attempted action '%s'", 
-                $auth->userId(), // Use the instance method (or static helper)
-                $requiredPermission
-            ));
+            Log::error("Unauthorized access attempt.", [
+                'user_id' => $auth->userId(),
+                'tenant_id' => $auth->tenantId(),
+                'permission' => $requiredPermission,
+                'ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'N/A' 
+            ]);
 
             $_SESSION['flash_error'] = "Access denied. You do not have permission for this action ({$requiredPermission}).";
             
