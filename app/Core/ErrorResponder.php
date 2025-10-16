@@ -14,6 +14,10 @@ class ErrorResponder
                 $title = "404 Not Found";
                 $defaultMessage = "The page you requested could not be found.";
                 break;
+            case 403: // <-- NEW CASE for Authorization Failure
+                $title = "403 Forbidden";
+                $defaultMessage = "You do not have permission to access this resource.";
+                break;
             case 405:
                 $title = "405 Method Not Allowed";
                 $defaultMessage = "The request method is not supported for this resource.";
@@ -29,10 +33,10 @@ class ErrorResponder
 
         $displayMessage = !empty($message) ? $message : $defaultMessage;
 
-        // In a real application, we would load a View here (e.g., Views/errors/404.php)
+        // In a real application, we would load a View here (e.g., Views/errors/403.php)
         echo "<h1>{$title}</h1>";
         echo "<p>{$displayMessage}</p>";
 
-        exit();
+        exit(); // <-- CRITICAL: Always halts execution
     }
 }

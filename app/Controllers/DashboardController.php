@@ -16,10 +16,10 @@ class DashboardController extends Controller
         // Prevent browser caching of this sensitive page
         $this->preventCache(); 
 
-        if (!$this->auth->check()) {
-            // If not logged in, redirect to login page
-            $this->redirect('/login');
-        }
+        // if (!$this->auth->check()) {
+        //     // If not logged in, redirect to login page
+        //     $this->redirect('/login');
+        // }
 
         // --- Authentication Checks ---
         

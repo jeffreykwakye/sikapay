@@ -52,6 +52,10 @@ abstract class Controller
             if ($this->tenantId > 0) {
                 $this->tenantName = $this->tenantModel->getNameById($this->tenantId);
             }
+
+            // Use default values so the view doesn't crash:
+            // $this->userName = ['first_name' => 'Tenant', 'last_name' => 'Admin'];
+            // $this->tenantName = "Tenant ID: {$this->tenantId}";
         } 
         // NOTE: If $this->userId is 0 (logged out), the above properties remain uninitialized, 
         // which is fine for the Login/Logout controllers since they don't use them.

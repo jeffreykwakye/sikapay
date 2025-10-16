@@ -55,27 +55,38 @@ class Router
     private function executeHandler($handler, array $vars): void
     {
         // --- STEP 1: Check for Middleware Structure ---
-        // If the handler is an associative array with a 'handler' key, we run middleware first.
         if (is_array($handler) && isset($handler['handler'])) {
             
-            // Extract middleware and controller handler details
-            $middlewareInfo = $handler['middleware'] ?? null; // Middleware is optional, but required for RBAC
+            $authMiddlewareInfo = $handler['auth'] ?? null;      // NEW: Basic Auth check
+            $permissionMiddlewareInfo = $handler['permission'] ?? null; // Existing Permission check
             $controllerHandler = $handler['handler'];
             
-            // If middleware is defined, execute it
-            if ($middlewareInfo && is_array($middlewareInfo)) {
-                $middlewareName = "Jeffrey\\Sikapay\\Middleware\\" . $middlewareInfo[0]; // e.g., PermissionMiddleware
-                $permissionKey = $middlewareInfo[1]; // e.g., 'tenant:create'
+            // --- A. Run Auth Middleware (Basic Login Check) ---
+            if ($authMiddlewareInfo === 'AuthMiddleware') {
+                $authMiddlewareName = "Jeffrey\\Sikapay\\Middleware\\AuthMiddleware";
+                if (class_exists($authMiddlewareName)) {
+                    $middleware = new $authMiddlewareName();
+                    // The handle method will redirect and exit if not logged in.
+                    $middleware->handle(); 
+                } else {
+                    ErrorResponder::respond(500, "AuthMiddleware class not found.");
+                    return;
+                }
+            }
+
+            // --- B. Run Permission Middleware (RBAC Check) ---
+            if ($permissionMiddlewareInfo && is_array($permissionMiddlewareInfo)) {
+                $middlewareName = "Jeffrey\\Sikapay\\Middleware\\" . $permissionMiddlewareInfo[0]; // e.g., PermissionMiddleware
+                $permissionKey = $permissionMiddlewareInfo[1]; // e.g., 'tenant:create'
                 
                 if (class_exists($middlewareName)) {
                     $middleware = new $middlewareName();
-                    
-                    // CRITICAL: Call the handle method. If the handle method fails (returns false), 
+                    // CRITICAL: Call the handle method. If the handle method fails, 
                     // it is responsible for redirecting and exiting.
                     $middleware->handle($permissionKey); 
                     
                 } else {
-                    ErrorResponder::respond(500, "Middleware class not found: {$middlewareName}");
+                    ErrorResponder::respond(500, "Permission Middleware class not found: {$middlewareName}");
                     return;
                 }
             }

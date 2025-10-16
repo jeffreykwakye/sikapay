@@ -5,6 +5,7 @@ namespace Jeffrey\Sikapay\Middleware;
 
 use Jeffrey\Sikapay\Core\Auth; 
 use Jeffrey\Sikapay\Core\Log;
+use Jeffrey\Sikapay\Core\ErrorResponder;
 
 class PermissionMiddleware
 {
@@ -15,11 +16,12 @@ class PermissionMiddleware
      */
     public function handle(string $requiredPermission): bool
     {
-        // Safely retrieve the Auth instance using the Singleton pattern
         $auth = Auth::getInstance(); 
 
-        // 1. Check Login Status first
+        // 1. Check Login Status first (Fallback check, as AuthMiddleware should run first)
         if (!$auth->check()) {
+            // Note: AuthMiddleware should handle this, but as a fallback, 
+            // a direct redirect to /login is safer than using ErrorResponder here.
             $_SESSION['flash_error'] = "You must be logged in to access this page.";
             header('Location: /login');
             exit;
@@ -28,7 +30,7 @@ class PermissionMiddleware
         // 2. Check Permission using the central Auth::can() gate
         if (!$auth->can($requiredPermission)) {
             
-            // Log the unauthorized attempt (good practice)
+            // Log the unauthorized attempt
             Log::error("Unauthorized access attempt.", [
                 'user_id' => $auth->userId(),
                 'tenant_id' => $auth->tenantId(),
@@ -36,11 +38,15 @@ class PermissionMiddleware
                 'ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'N/A' 
             ]);
 
-            $_SESSION['flash_error'] = "Access denied. You do not have permission for this action ({$requiredPermission}).";
-            
-            // Redirect to a safe page
-            header('Location: /dashboard'); 
-            exit;
+            // !!! CRITICAL CHANGE: Halt the request using the ErrorResponder !!!
+            $message = "Access denied. Required permission: {$requiredPermission}.";
+            ErrorResponder::respond(403, $message); 
+            // Note: The ErrorResponder will call exit()
+
+            // The code below is unreachable due to ErrorResponder::respond(403)
+            // $_SESSION['flash_error'] = "Access denied. ...";
+            // header('Location: /dashboard'); 
+            // exit;
         }
 
         return true; // Authorization successful
