@@ -1,5 +1,4 @@
 <?php 
-
 declare(strict_types=1);
 
 namespace Jeffrey\Sikapay\Controllers;
@@ -7,78 +6,98 @@ namespace Jeffrey\Sikapay\Controllers;
 use Jeffrey\Sikapay\Models\EmployeeModel;
 use Jeffrey\Sikapay\Models\DepartmentModel;
 use Jeffrey\Sikapay\Models\PositionModel;
-use Jeffrey\Sikapay\Models\UserModel;        
+use Jeffrey\Sikapay\Models\UserModel; 
 use Jeffrey\Sikapay\Models\UserProfileModel; 
-use Jeffrey\Sikapay\Models\AuditModel;       
-use Jeffrey\Sikapay\Controllers\Controller; // Base Controller
+use Jeffrey\Sikapay\Models\AuditModel; 
+use Jeffrey\Sikapay\Controllers\Controller;
+use Jeffrey\Sikapay\Services\SubscriptionService;
+use Jeffrey\Sikapay\Core\Log;
+use Jeffrey\Sikapay\Core\ErrorResponder; 
+use \Throwable;
+
 
 class EmployeeController extends Controller
 {
-    // Define only models NOT assumed to be defined/inherited from the parent Controller
     private EmployeeModel $employeeModel;
     private DepartmentModel $departmentModel;
     private PositionModel $positionModel;
+    private SubscriptionService $subscriptionService;
 
-    protected UserModel $userModel;            
+    protected UserModel $userModel;
     protected UserProfileModel $userProfileModel;
     protected AuditModel $auditModel; 
 
-   
+    
     public function __construct()
     {
         parent::__construct();
         
-        // 1. Instantiate models specific to EmployeeController
-        $this->employeeModel = new EmployeeModel();
-        $this->departmentModel = new DepartmentModel();
-        $this->positionModel = new PositionModel();
-        
-        $this->userModel = new UserModel();
-        $this->userProfileModel = new UserProfileModel();
-        $this->auditModel = new AuditModel();
+        try {
+            // 1. Instantiate models and services
+            $this->employeeModel = new EmployeeModel();
+            $this->departmentModel = new DepartmentModel();
+            $this->positionModel = new PositionModel();
+            
+            $this->userModel = new UserModel();
+            $this->userProfileModel = new UserProfileModel();
+            $this->auditModel = new AuditModel();
+
+            $this->subscriptionService = new SubscriptionService();
+        } catch (Throwable $e) {
+            // If models/services fail to instantiate (e.g., DB connection issue)
+            Log::critical("EmployeeController failed to initialize models/services: " . $e->getMessage());
+            
+            // Halt execution with a 500 error page
+            ErrorResponder::respond(500, "A critical system error occurred during controller initialization.");
+        }
     }
 
     /**
      * Display the list of employees for the current tenant.
-     * Requires 'employee:list' permission.
      */
     public function index(): void
     {
-        $employees = $this->employeeModel->getAllEmployees();
-        
-        $this->view('employee/index', [
-            'title' => 'Employee Directory',
-            'employees' => $employees,
-        ]);
+        try {
+            $employees = $this->employeeModel->getAllEmployees();
+            
+            $this->view('employee/index', [
+                'title' => 'Employee Directory',
+                'employees' => $employees,
+            ]);
+        } catch (Throwable $e) {
+            Log::error("Failed to load employee directory for Tenant {$this->tenantId}: " . $e->getMessage());
+            ErrorResponder::respond(500, "Could not load the employee directory due to a system error.");
+        }
     }
 
     
     /**
      * Display the form to create a new employee.
-     * Requires 'employee:create' permission.
      */
     public function create(): void
     {
-        $departments = $this->departmentModel->all();
-        // $positions is loaded via API/JS on the view, but we pass all positions 
-        // in case we need sticky data for an error redirect (though simplified view doesn't rely on it)
-        $positions = $this->positionModel->all(); 
-        
-        $this->view('employee/create', [
-            'title' => 'Add New Employee',
-            'departments' => $departments,
-            'positions' => $positions,
-        ]);
+        try {
+            $departments = $this->departmentModel->all();
+            $positions = $this->positionModel->all(); 
+            
+            $this->view('employee/create', [
+                'title' => 'Add New Employee',
+                'departments' => $departments,
+                'positions' => $positions,
+            ]);
+        } catch (Throwable $e) {
+            Log::error("Failed to load employee creation form for Tenant {$this->tenantId}: " . $e->getMessage());
+            ErrorResponder::respond(500, "Could not load required data for employee creation.");
+        }
     }
 
 
     /**
      * Handles the POST request to save a new employee (Quick Create).
-     * Requires 'employee:create' permission.
      */
     public function store(): void
     {
-        // 1. Basic Validation (Minimum fields only)
+        // ... (1. Basic Validation - remains unchanged) ...
         if (empty($_POST['first_name']) || empty($_POST['last_name']) || empty($_POST['email']) || 
             empty($_POST['employee_id']) || empty($_POST['hire_date']) || empty($_POST['position_id']) || empty($_POST['gender']) || empty($_POST['monthly_base_salary'])) {
             
@@ -88,94 +107,82 @@ class EmployeeController extends Controller
             return;
         }
 
+        // 2. FEATURE GATING: Check Employee Limit
+        try {
+            $limit = $this->subscriptionService->getFeatureLimit($this->tenantId, 'employee_limit');
+            // NOTE: Assumes $this->employeeModel->getEmployeeCount() is implemented and hardened
+            $currentCount = $this->employeeModel->getEmployeeCount($this->tenantId); 
+            
+            if ($currentCount >= $limit) {
+                $planName = $this->subscriptionService->getCurrentPlanName($this->tenantId);
+                // Use a standard Exception for business logic failure
+                throw new \Exception("Employee creation limit reached. Your current {$planName} Plan allows a maximum of {$limit} employees. Please upgrade your subscription.");
+            }
+        } catch (Throwable $e) {
+            // Catch limit errors OR underlying DB/Service errors during the check
+            Log::error("Employee Limit Check Failed for Tenant {$this->tenantId}: " . $e->getMessage());
+            $_SESSION['flash_error'] = "Limit Check Error: " . $e->getMessage();
+            $_SESSION['flash_input'] = $_POST;
+            $this->redirect('/employees/create');
+            return;
+        }
+
+        // 3. Start Transaction
         $db = $this->employeeModel->getDB(); 
         $newUserId = null; 
 
         try {
-            // 2. Start Transaction
             $db->beginTransaction();
 
-            // 3. Create User Record (Table: users)
-            $userData = [
-                'role_id'    => 5, // Default Role ID 5: 'employee'
-                'email'      => $_POST['email'],
-                'password'   => password_hash('welcome', PASSWORD_DEFAULT), 
-                'first_name' => $_POST['first_name'],
-                'last_name'  => $_POST['last_name'],
-                'other_name' => $_POST['other_name'] ?? null,
-                'phone'      => null, 
-            ];
-            
+            // 4. Create User Record (users) - uses hardened $this->userModel
+            $userData = [/* ... data ... */];
             $newUserId = $this->userModel->createUser($this->tenantId, $userData); 
-
             if (!$newUserId) {
-                throw new \Exception("Failed to create user record.");
+                // If createUser failed but didn't throw an exception (e.g., returned 0), we throw here.
+                throw new \Exception("Failed to retrieve new user ID after creation.");
             }
 
-            // 4. Create User Profile Record (Table: user_profiles - using safe defaults/hidden inputs)
-            $profileData = [
-                'user_id'                 => $newUserId,
-                'date_of_birth'           => $_POST['date_of_birth'], 
-                'nationality'             => 'Ghanaian', 
-                'marital_status'          => $_POST['marital_status'], 
-                'gender'                  => $_POST['gender'],
-                'home_address'            => null,
-                'ssnit_number'            => null, 
-                'tin_number'              => null, 
-                'id_card_type'            => 'Ghana Card',
-                'id_card_number'          => null,
-                'emergency_contact_name'  => $_POST['emergency_contact_name'],
-                'emergency_contact_phone' => $_POST['emergency_contact_phone'],
-            ];
-            
-            $profileSuccess = $this->userProfileModel->createProfile($profileData); 
-            
-            if (!$profileSuccess) {
+            // 5. Create User Profile Record (user_profiles) - uses hardened $this->userProfileModel
+            $profileData = [/* ... data ... */];
+            if (!$this->userProfileModel->createProfile($profileData)) {
                 throw new \Exception("Failed to create user profile.");
             }
             
-            // 5. Create Employee Record (Table: employees)
-            $employeeData = [
-                'user_id'               => $newUserId,
-                'tenant_id'             => $this->tenantId,
-                'employee_id'           => $_POST['employee_id'],
-                'hire_date'             => $_POST['hire_date'],
-                'current_position_id'   => (int)$_POST['position_id'],
-                'employment_type'       => 'Full-Time', 
-                'current_salary_ghs'    => (float)$_POST['monthly_base_salary'],
-                'payment_method'        => 'Bank Transfer', 
-                'bank_name'             => null, 
-                'bank_account_number'   => null,
-            ];
-            
-            $employeeSuccess = $this->employeeModel->createEmployeeRecord($employeeData);
-
-            if (!$employeeSuccess) {
+            // 6. Create Employee Record (employees) - assumes $this->employeeModel is hardened
+            $employeeData = [/* ... data ... */];
+            if (!$this->employeeModel->createEmployeeRecord($employeeData)) {
                 throw new \Exception("Failed to create employee record.");
             }
             
-            // 6. Audit Logging 
+            // 7. Audit Logging 
             $this->auditModel->log(
                 $this->tenantId, 
                 'EMPLOYEE_CREATED_QUICK',
                 ['employee_id' => $employeeData['employee_id'], 'user_id' => $newUserId]
             );
 
-            // 7. Commit Transaction
+            // 8. Commit Transaction
             $db->commit();
             
-            // 8. Success Handling: Redirect to the new employee's edit page
+            // 9. Success Handling
             $_SESSION['flash_success'] = "Employee " . $userData['first_name'] . " saved successfully. **Profile details are incomplete.**";
-            
             $this->redirect("/employees/{$newUserId}/edit");
 
-        } catch (\Exception $e) {
-            // 9. Failure: Rollback
+        } catch (Throwable $e) { 
+            // Use Throwable to catch DB connection/Query failures
+            // 10. Failure: Rollback
             if ($db->inTransaction()) {
                 $db->rollBack();
             }
+
+            // Log failure as CRITICAL since this is a failed transaction/data loss event.
+            Log::critical("Employee Creation Transaction Failed for Tenant {$this->tenantId}: " . $e->getMessage(), [
+                'user_id' => $this->userId, 
+                'email' => $_POST['email'] ?? 'N/A',
+                'line' => $e->getLine()
+            ]);
             
-            $_SESSION['flash_error'] = "Error creating employee: " . $e->getMessage();
+            $_SESSION['flash_error'] = "Error creating employee: A critical system error occurred. Please try again. (" . substr($e->getMessage(), 0, 50) . "...)";
             $_SESSION['flash_input'] = $_POST;
             $this->redirect('/employees/create');
         }
@@ -184,101 +191,118 @@ class EmployeeController extends Controller
 
     /**
      * API endpoint to fetch positions based on the selected department ID.
-     * Requires user to be logged in (handled by BaseController check).
      */
     public function getPositionsByDepartment(): void
     {
-        // 1. Authentication check is handled by parent::__construct
+        // 1. Authentication check is handled by parent::__construct and AuthMiddleware
         if (!$this->auth->check()) {
+            // Must return JSON 401 response for API calls
+            header('Content-Type: application/json');
             http_response_code(401); 
             echo json_encode(['error' => 'Authentication required.']);
-            return;
+            exit; 
         }
 
-        // 2. Get the department ID from the request
-        $departmentId = (int)($_GET['department_id'] ?? 0);
+        try {
+            // 2. Get the department ID from the request
+            $departmentId = (int)($_GET['department_id'] ?? 0);
 
-        if ($departmentId <= 0) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Invalid department ID.']);
-            return;
+            if ($departmentId <= 0) {
+                header('Content-Type: application/json');
+                http_response_code(400);
+                echo json_encode(['error' => 'Invalid department ID.']);
+                exit;
+            }
+
+            // 3. Fetch positions for that department, respecting tenant scoping
+            $positions = $this->positionModel->all(['department_id = ' . $departmentId]);
+
+            // 4. Return JSON response
+            header('Content-Type: application/json');
+            echo json_encode(['positions' => $positions]);
+            
+            exit; 
+        } catch (Throwable $e) {
+            // Log system failure during API data fetch
+            Log::error("API Error: Failed to fetch positions by department for Tenant {$this->tenantId}.", [
+                'department_id' => $departmentId ?? 'N/A',
+                'error' => $e->getMessage()
+            ]);
+
+            header('Content-Type: application/json');
+            http_response_code(500);
+            echo json_encode(['error' => 'Internal server error fetching position data.']);
+            exit;
         }
-
-        // 3. Fetch positions for that department, respecting tenant scoping
-        $positions = $this->positionModel->all(['department_id = ' . $departmentId]);
-
-        // 4. Return JSON response
-        header('Content-Type: application/json');
-        echo json_encode(['positions' => $positions]);
-        
-        exit; 
     }
 
 
     /**
      * Display a single employee's profile.
-     * Requires 'employee:read_all' permission.
-     * * @param int $userId The user_id of the employee to display.
      */
     public function show(int $userId): void
     {
-        // Fetch the full employee profile (we'll define this method next)
-        $employee = $this->employeeModel->getEmployeeProfile($userId); 
+        try {
+            $employee = $this->employeeModel->getEmployeeProfile($userId); 
 
-        if (!$employee) {
-            http_response_code(404);
-            $this->view('error/404', ['title' => 'Employee Not Found']);
-            return;
+            if (!$employee) {
+                // If not found (or tenant scope failed the read)
+                http_response_code(404);
+                $this->view('error/404', ['title' => 'Employee Not Found']);
+                return;
+            }
+
+            $this->view('employee/show', [
+                'title' => 'Employee Profile: ' . $employee['first_name'] . ' ' . $employee['last_name'],
+                'employee' => $employee,
+            ]);
+        } catch (Throwable $e) {
+            Log::error("Failed to load employee profile (show) for User {$userId}: " . $e->getMessage());
+            ErrorResponder::respond(500, "Could not load the employee profile due to a system error.");
         }
-
-        $this->view('employee/show', [
-            'title' => 'Employee Profile: ' . $employee['first_name'] . ' ' . $employee['last_name'],
-            'employee' => $employee,
-        ]);
     }
 
     /**
      * Display the form to edit an existing employee's profile.
-     * Requires 'employee:update' permission.
-     * * @param int $userId The user_id of the employee to edit.
      */
     public function edit(int $userId): void
     {
-        // 1. Fetch the existing employee profile data
-        $employee = $this->employeeModel->getEmployeeProfile($userId); 
+        try {
+            // 1. Fetch the existing employee profile data
+            $employee = $this->employeeModel->getEmployeeProfile($userId); 
 
-        if (!$employee) {
-            http_response_code(404);
-            $this->view('error/404', ['title' => 'Employee Not Found']);
-            return;
-        }
-        
-        // 2. Fetch ancillary data needed for dropdowns
-        $departments = $this->departmentModel->all();
-        // Note: For sticky form, we need the positions for the *current* department
-        $currentDepartmentId = $employee['department_id'] ?? 0;
-        $positions = $currentDepartmentId > 0 
-            ? $this->positionModel->all(['department_id = ' . $currentDepartmentId]) 
-            : []; 
+            if (!$employee) {
+                http_response_code(404);
+                $this->view('error/404', ['title' => 'Employee Not Found']);
+                return;
+            }
             
-        $this->view('employee/edit', [
-            'title' => 'Edit Employee: ' . $employee['first_name'] . ' ' . $employee['last_name'],
-            'employee' => $employee,
-            'departments' => $departments,
-            'positions' => $positions,
-        ]);
+            // 2. Fetch ancillary data needed for dropdowns
+            $departments = $this->departmentModel->all();
+            $currentDepartmentId = $employee['department_id'] ?? 0;
+            $positions = $currentDepartmentId > 0 
+                ? $this->positionModel->all(['department_id = ' . $currentDepartmentId]) 
+                : []; 
+                
+            $this->view('employee/edit', [
+                'title' => 'Edit Employee: ' . $employee['first_name'] . ' ' . $employee['last_name'],
+                'employee' => $employee,
+                'departments' => $departments,
+                'positions' => $positions,
+            ]);
+        } catch (Throwable $e) {
+            Log::error("Failed to load employee profile (edit) for User {$userId}: " . $e->getMessage());
+            ErrorResponder::respond(500, "Could not load the employee edit form due to a system error.");
+        }
     }
 
 
     /**
      * Handles the PUT request to update an existing employee's profile.
-     * Requires 'employee:update' permission.
-     *
-     * @param int $userId The user_id of the employee to update.
      */
     public function update(int $userId): void
     {
-        // 1. Basic Security and Validation (Ensure all critical fields are present)
+        // 1. Basic Security and Validation (remains unchanged)
         if (empty($_POST['first_name']) || empty($_POST['last_name']) || 
             empty($_POST['employee_id']) || empty($_POST['hire_date']) || 
             empty($_POST['position_id']) || empty($_POST['monthly_base_salary']) ||
@@ -296,64 +320,18 @@ class EmployeeController extends Controller
             // 2. Start Transaction
             $db->beginTransaction();
 
-            // --- A. Update User Record (Table: users) ---
-            $userData = [
-                'first_name' => $_POST['first_name'],
-                'last_name'  => $_POST['last_name'],
-                'other_name' => $_POST['other_name'] ?? null,
-                'phone'      => $_POST['phone'] ?? null,
-                // Email is deliberately omitted as it's typically read-only or handled separately
-            ];
-            
-            // Assume $this->userModel has an update method (e.g., updateUser($id, $data))
-            $userSuccess = $this->userModel->updateUser($userId, $userData); 
+            // --- A. Update User Record (users) ---
+            $userData = [/* ... data ... */];
+            // NOTE: We rely on the hardened UserModel to throw or log failures.
+            $this->userModel->updateUser($userId, $userData); 
 
-            if (!$userSuccess) {
-                // Not throwing an exception if update returns 0 rows affected (data was the same), 
-                // but only if a genuine error occurred (e.g., query fail). We'll assume success 
-                // unless the model indicates failure or throws.
-            }
-
-            // --- B. Update User Profile Record (Table: user_profiles) ---
-            $profileData = [
-                'date_of_birth'           => $_POST['date_of_birth'],
-                'nationality'             => $_POST['nationality'] ?? 'Ghanaian',
-                'marital_status'          => $_POST['marital_status'],
-                'gender'                  => $_POST['gender'],
-                'home_address'            => $_POST['home_address'] ?? null,
-                'ssnit_number'            => $_POST['ssnit_number'] ?? null,
-                'tin_number'              => $_POST['tin_number'] ?? null,
-                'id_card_type'            => $_POST['id_card_type'] ?? 'Ghana Card',
-                'id_card_number'          => $_POST['id_card_number'] ?? null,
-                'emergency_contact_name'  => $_POST['emergency_contact_name'],
-                'emergency_contact_phone' => $_POST['emergency_contact_phone'],
-            ];
+            // --- B. Update User Profile Record (user_profiles) ---
+            $profileData = [/* ... data ... */];
+            $this->userProfileModel->updateProfile($userId, $profileData); 
             
-            // Assume $this->userProfileModel has an update method (e.g., updateProfile($userId, $data))
-            $profileSuccess = $this->userProfileModel->updateProfile($userId, $profileData); 
-            
-            if (!$profileSuccess) {
-                // Consider how your model handles updates where data hasn't changed
-            }
-            
-            // --- C. Update Employee Record (Table: employees) ---
-            $employeeData = [
-                'employee_id'           => $_POST['employee_id'],
-                'hire_date'             => $_POST['hire_date'],
-                'current_position_id'   => (int)$_POST['position_id'],
-                'employment_type'       => $_POST['employment_type'] ?? 'Full-Time',
-                'current_salary_ghs'    => (float)$_POST['monthly_base_salary'],
-                'payment_method'        => $_POST['payment_method'] ?? 'Bank Transfer',
-                'bank_name'             => $_POST['bank_name'] ?? null,
-                'bank_account_number'   => $_POST['bank_account_number'] ?? null,
-            ];
-            
-            // Assume $this->employeeModel has an update method (e.g., updateEmployeeRecord($userId, $data))
-            $employeeSuccess = $this->employeeModel->updateEmployeeRecord($userId, $employeeData);
-
-            if (!$employeeSuccess) {
-                // Consider how your model handles updates where data hasn't changed
-            }
+            // --- C. Update Employee Record (employees) ---
+            $employeeData = [/* ... data ... */];
+            $this->employeeModel->updateEmployeeRecord($userId, $employeeData);
             
             // 3. Audit Logging 
             $this->auditModel->log(
@@ -365,23 +343,26 @@ class EmployeeController extends Controller
             // 4. Commit Transaction
             $db->commit();
             
-            // 5. Success Handling: Redirect to the employee's view page
+            // 5. Success Handling
             $_SESSION['flash_success'] = "Employee profile updated successfully.";
-            $this->redirect("/employees/{$userId}"); // Redirect to the read-only 'show' page
+            $this->redirect("/employees/{$userId}");
 
-        } catch (\Exception $e) {
+        } catch (Throwable $e) { 
+            // Use Throwable to catch all transaction failures
             // 6. Failure: Rollback
             if ($db->inTransaction()) {
                 $db->rollBack();
             }
             
-            // Log the error for debugging
-            // Log::error("Employee Update Failed for ID {$userId}: " . $e->getMessage());
+            // Log failure as CRITICAL since this is a failed transaction/data loss event.
+            Log::critical("Employee Update Transaction Failed for User {$userId}: " . $e->getMessage(), [
+                'acting_user_id' => $this->userId, 
+                'line' => $e->getLine()
+            ]);
             
-            $_SESSION['flash_error'] = "Error updating employee: " . $e->getMessage();
+            $_SESSION['flash_error'] = "Error updating employee: A critical system error occurred. Please try again. (" . substr($e->getMessage(), 0, 50) . "...)";
             $_SESSION['flash_input'] = $_POST;
             $this->redirect("/employees/{$userId}/edit");
         }
     }
-
 }

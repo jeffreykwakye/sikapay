@@ -11,7 +11,9 @@ return [
     // Login Routes (Public)
     ['GET', '/login', ['LoginController', 'index']],
     ['POST', '/attempt-login', ['LoginController', 'attempt']],
-    ['GET', '/logout', ['LoginController', 'logout']],
+    
+    // Logout should be a POST request to prevent CSRF logout attacks.
+    ['POST', '/logout', ['LoginController', 'logout']], 
 
     // =========================================================
     // Protected Routes (All require 'auth' => 'AuthMiddleware')
@@ -25,7 +27,6 @@ return [
     ]],
 
     // Tenant Management Routes (Super Admin Only)
-    // NOTE: 'auth' is added to all. The PermissionMiddleware will enforce Super Admin check.
     ['GET', '/tenants', [
         'auth' => 'AuthMiddleware', 
         'permission' => ['PermissionMiddleware', 'tenant:read_all'],
@@ -33,33 +34,33 @@ return [
     ]],
 
     ['GET', '/tenants/create', [
-        'auth' => 'AuthMiddleware', // <-- FIX: Added 'auth' key
-        'permission' => ['PermissionMiddleware', 'tenant:create'], // <-- FIX: Renamed 'middleware' to 'permission'
+        'auth' => 'AuthMiddleware', 
+        'permission' => ['PermissionMiddleware', 'tenant:create'],
         'handler' => ['TenantController', 'create']
     ]],
 
     ['POST', '/tenants', [
-        'auth' => 'AuthMiddleware', // <-- FIX: Added 'auth' key
-        'permission' => ['PermissionMiddleware', 'tenant:create'], // <-- FIX: Renamed 'middleware' to 'permission'
+        'auth' => 'AuthMiddleware', 
+        'permission' => ['PermissionMiddleware', 'tenant:create'],
         'handler' => ['TenantController', 'store']
     ]],
 
     // Notification Routes 
     ['GET', '/notifications', [
-        'auth' => 'AuthMiddleware', // <-- FIX: Added 'auth' key
-        'permission' => ['PermissionMiddleware', 'self:view_notifications'], // <-- FIX: Renamed 'middleware' to 'permission'
+        'auth' => 'AuthMiddleware', 
+        'permission' => ['PermissionMiddleware', 'self:view_notifications'], 
         'handler' => ['NotificationController', 'index']
     ]],
     ['POST', '/notifications/mark-read', [
-        'auth' => 'AuthMiddleware', // <-- FIX: Added 'auth' key
-        'permission' => ['PermissionMiddleware', 'self:manage_notifications'], // <-- FIX: Renamed 'middleware' to 'permission'
+        'auth' => 'AuthMiddleware', 
+        'permission' => ['PermissionMiddleware', 'self:manage_notifications'], 
         'handler' => ['NotificationController', 'markRead']
     ]],
 
     // Scope Test Route (Protected for debugging/testing)
     ['GET', '/test-scope', [
-        'auth' => 'AuthMiddleware', // <-- FIX: Added 'auth' key
-        'permission' => ['PermissionMiddleware', 'system:test_route'], // <-- FIX: Renamed 'middleware' to 'permission'
+        'auth' => 'AuthMiddleware', 
+        'permission' => ['PermissionMiddleware', 'system:test_route'], 
         'handler' => ['TestController', 'index']
     ]],
 
@@ -113,9 +114,9 @@ return [
     // API Route for Cascading Dropdown (Requires login for security, no specific RBAC needed)
     [
         'GET', '/api/positions', [
-            'auth' => 'AuthMiddleware', // <-- FIX: Added 'auth' key
-            'permission' => ['PermissionMiddleware', 'employee:list'], // <-- FIX: Renamed 'middleware' to 'permission'
-            'handler' => ['Jeffrey\Sikapay\Controllers\EmployeeController', 'getPositionsByDepartment']
+            'auth' => 'AuthMiddleware', 
+            'permission' => ['PermissionMiddleware', 'employee:list'], 
+            'handler' => ['EmployeeController', 'getPositionsByDepartment']
         ]
     ],
 

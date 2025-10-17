@@ -5,40 +5,37 @@ namespace Jeffrey\Sikapay\Controllers;
 
 use Jeffrey\Sikapay\Core\Auth; 
 use Jeffrey\Sikapay\Core\View;
+use Jeffrey\Sikapay\Core\Log; 
+use Jeffrey\Sikapay\Core\ErrorResponder; // Standardized Error Handling
 use Jeffrey\Sikapay\Services\NotificationService;
 use Jeffrey\Sikapay\Models\TenantModel;
-use Jeffrey\Sikapay\Models\UserModel; // Added for User Name lookup
+use Jeffrey\Sikapay\Models\UserModel;
 
 abstract class Controller
 {
     protected Auth $auth;
     protected View $view; 
-    protected int $userId; // For user context
-    protected int $tenantId; // For tenancy context
+    protected int $userId; 
+    protected int $tenantId; 
 
-    // Model/Service properties must be declared here
     protected NotificationService $notificationService; 
     protected TenantModel $tenantModel;
-    protected UserModel $userModel; // New property for user lookup
+    protected UserModel $userModel; 
 
-    // Optional properties initialized to null or default
     protected ?string $tenantName = null;
     protected array $userName = ['first_name' => null, 'last_name' => null];
 
     
     public function __construct()
     {
-        // 1. Initialize Auth service
+        // 1. Initialize Auth service and Context
         $this->auth = Auth::getInstance();
-        $this->view = new View(); // Initialize View service
+        $this->view = new View();
         
-        // 2. Initialize user context (using the instance Auth::userId)
         $this->userId = $this->auth->userId();
         $this->tenantId = $this->auth->tenantId();
         
         // CONDITIONAL INITIALIZATION BLOCK
-        // Only initialize tenant-scoped services and models if a user is logged in, 
-        // preventing the Base Model's security check from firing on public pages.
         if ($this->userId > 0) {
             
             // Initialize Models/Services
@@ -47,18 +44,48 @@ abstract class Controller
             $this->tenantModel = new TenantModel();
 
             // Fetch contextual data
-            $this->userName = $this->userModel->getNameById($this->userId);
+            try {
+                $this->userName = $this->userModel->getNameById($this->userId);
 
-            if ($this->tenantId > 0) {
-                $this->tenantName = $this->tenantModel->getNameById($this->tenantId);
+                if ($this->tenantId > 0) {
+                    $this->tenantName = $this->tenantModel->getNameById($this->tenantId);
+                }
+            } catch (\Exception $e) {
+                // LOGGING: Catch model initialization failure (e.g., DB down)
+                Log::critical("Base Controller Context Initialization Failed for User ID {$this->userId}: " . $e->getMessage());
+
+                // Halt flow with a generic server error response to the user
+                ErrorResponder::respond(500, "A critical system error occurred during initialization. Please try again.");
             }
-
-            // Use default values so the view doesn't crash:
-            // $this->userName = ['first_name' => 'Tenant', 'last_name' => 'Admin'];
-            // $this->tenantName = "Tenant ID: {$this->tenantId}";
         } 
-        // NOTE: If $this->userId is 0 (logged out), the above properties remain uninitialized, 
-        // which is fine for the Login/Logout controllers since they don't use them.
+    }
+
+    // ------------------------------------------------------------------
+    // SECURITY-FOCUSED AUTHORIZATION METHOD
+    // ------------------------------------------------------------------
+
+    /**
+     * Checks if the currently authenticated user has the required permission.
+     * If permission is denied, execution is halted with a generic 403 response, 
+     * but the failure is logged with specific context for debugging.
+     *
+     * @param string $permissionKey The key of the required permission (e.g., 'employee:create').
+     */
+    protected function checkPermission(string $permissionKey): void
+    {
+        if (!$this->auth->hasPermission($permissionKey)) {
+            
+            // 1. Log the specific permission failure for audit/debugging purposes
+            Log::error("Authorization Failed (403): User {$this->userId} in Tenant {$this->tenantId} attempted access without permission '{$permissionKey}'.", [
+                'user_id' => $this->userId,
+                'tenant_id' => $this->tenantId,
+                'permission_key' => $permissionKey
+            ]);
+
+            // 2. Show a generic, non-specific 403 error to the user/hacker
+            ErrorResponder::respond(403, "Access to this feature is restricted by your role permissions.");
+        }
+        // If permission check passes, the method returns normally, and execution continues.
     }
 
 
@@ -67,49 +94,43 @@ abstract class Controller
      */
     protected function view(string $viewPath, array $data = []): void
     {
-        // 1. Get common data for the layout and views
         $commonData = [
-            'auth' => $this->auth, // Pass the Auth instance for check/isSuperAdmin calls in views
+            'auth' => $this->auth, 
             'userId' => $this->userId,
             'tenantId' => $this->tenantId,
             
-            // Use defaults if models weren't initialized (e.g., on Login page)
             'tenantName' => $this->tenantName ?? 'System/Public',
-            // Pass User Name
             'userFirstName' => $this->userName['first_name'] ?? 'User',
             'userLastName' => $this->userName['last_name'] ?? '',
             
-            // Calculate unread count (safely use $this->notificationService only if it exists)
             'unreadNotificationCount' => (isset($this->notificationService) && $this->userId > 0)
                 ? $this->notificationService->getUnreadCount($this->userId) 
                 : 0,
         ];
         
-        // 2. Merge page-specific data with common data
         $finalData = array_merge($commonData, $data);
-        
-        // 3. Define the path to the specific content file
         $contentFile = $this->getViewPath($viewPath);
         
-        // Security check: Ensure the content file exists
+        // 4. Check for View File Existence and Handle Failure
         if (!file_exists($contentFile)) {
-             throw new \Exception("View file not found: {$viewPath}");
+            Log::critical("View file not found: {$contentFile}. Requested path: {$viewPath}");
+            ErrorResponder::respond(500, "View file {$viewPath} not found. System Configuration Error.");
         }
 
-        // 4. Extract data for use in the master layout and content view
+        // 5. Extract data and load master layout
         extract($finalData);
-        
-        // 5. Define a special variable to hold the path to the content view.
         $__content_file = $contentFile;
         
-        // 6. Load the master layout file (this will require the content file inside it)
         $projectRoot = dirname(__DIR__, 2); 
-        
-        // Build the absolute path to the master layout file
         $masterLayoutPath = $projectRoot . '/resources/layout/master.php'; 
 
-        // Load the master layout file
-        require $masterLayoutPath;  
+        // 6. Check for Master Layout Existence and Handle Failure
+        if (!file_exists($masterLayoutPath)) {
+            Log::critical("Master layout file not found at: {$masterLayoutPath}");
+            ErrorResponder::respond(500, "Master layout file is missing. System Configuration Error.");
+        }
+
+        require $masterLayoutPath;
     }
 
 
@@ -118,20 +139,17 @@ abstract class Controller
      */
     protected function viewLogin(string $viewPath, array $data = []): void
     {
-        // 1. Merge page-specific data with common data (only what's needed for errors/input)
         $finalData = $data;
-        
-        // 2. Define the path to the specific content file
         $contentFile = $this->getViewPath($viewPath);
         
+        // Check for View File Existence and Handle Failure
         if (!file_exists($contentFile)) {
-             throw new \Exception("Login View file not found: {$viewPath}");
+            Log::critical("Login View file not found: {$contentFile}. Requested path: {$viewPath}");
+            ErrorResponder::respond(500, "Login View file {$viewPath} not found. System Configuration Error.");
         }
 
-        // 3. Extract data
         extract($finalData);
         
-        // 4. Load a minimal layout file (or directly load the content file)
         $projectRoot = dirname(__DIR__, 2);
         $minimalLayoutPath = $projectRoot . '/resources/layout/minimal.php';
 
@@ -139,7 +157,7 @@ abstract class Controller
             $__content_file = $contentFile;
             require $minimalLayoutPath;
         } else {
-            // Fallback: If minimal layout doesn't exist, load content directly
+            Log::critical("Minimal layout file not found at: {$minimalLayoutPath}. Loading content directly.");
             require $contentFile;
         }
     }
@@ -155,15 +173,14 @@ abstract class Controller
 
     /**
      * Redirects the user to a specified URI.
-     * * @param string $uri The URI to redirect to.
+     * @param string $uri The URI to redirect to.
      */
     protected function redirect(string $uri): void
     {
         header("Location: {$uri}");
         exit();
     }
-
-
+    
     /**
      * Sends HTTP headers to prevent the browser from caching the page.
      * This is essential for preventing logged-out users from seeing cached pages

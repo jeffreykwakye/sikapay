@@ -4,50 +4,99 @@ declare(strict_types=1);
 namespace Jeffrey\Sikapay\Controllers;
 
 use Jeffrey\Sikapay\Controllers\Controller;
+use Jeffrey\Sikapay\Core\Log;
+use Jeffrey\Sikapay\Core\ErrorResponder;
+use \Throwable;
 
 class LoginController extends Controller
 {
     /**
-     * Displays the login form.
+     * Displays the login form (main entry point for /login).
+     * Consolidates original 'show' and 'index' logic.
      */
-    public function show(): void
+    public function index(): void
     {
-        if ($this->auth->check()) {
-            // If already logged in, redirect to the dashboard (we'll implement this later)
-            $this->redirect('/dashboard');
-        }
-        
-        // Pass any session error message to the view
-        $error = $_SESSION['login_error'] ?? null;
-        unset($_SESSION['login_error']); // Clear message after reading
+        try {
+            $this->preventCache();
+            
+            // Check if already authenticated
+            if ($this->auth->check()) {
+                $this->redirect('/dashboard');
+                return;
+            }
+            
+            // Handle error messages from failed login attempts
+            $error = $_SESSION['login_error'] ?? null;
+            $flashError = $_SESSION['flash_error'] ?? null; // For AuthMiddleware redirects
+            
+            unset($_SESSION['login_error']); 
+            unset($_SESSION['flash_error']); // Clear both primary and fallback errors
 
-        $this->view('auth/login', ['error' => $error]);
+            // Use the dedicated viewLogin() method from the Base Controller
+            $this->viewLogin('auth/login', [
+                'error' => $error,
+                'flash_error' => $flashError, // Pass the fallback message too
+            ]);
+
+        } catch (Throwable $e) {
+            // Catch critical error during the auth check or view load
+            Log::critical("Login Form Load Failed: " . $e->getMessage(), [
+                'ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'N/A'
+            ]);
+
+            // Fail-safe: Display a controlled 500 error page.
+            ErrorResponder::respond(500, "A critical system error occurred while preparing the login page.");
+        }
     }
+    
+    // The 'show' method is removed as 'index' now serves as the canonical entry point.
+    // public function show(): void {} 
+
 
     /**
      * Handles the login form submission.
      */
     public function attempt(): void
     {
-        if ($this->auth->check()) {
-            $this->redirect('/dashboard');
-        }
+        try {
+            if ($this->auth->check()) {
+                $this->redirect('/dashboard');
+            }
 
-        // Basic input validation (more robust validation should be added here)
-        $email = $_POST['email'] ?? '';
-        $password = $_POST['password'] ?? '';
+            // Basic input validation
+            $email = $_POST['email'] ?? '';
+            $password = $_POST['password'] ?? '';
 
-        if (empty($email) || empty($password)) {
-            $_SESSION['login_error'] = 'Email and password are required.';
-            $this->redirect('/login');
-        }
-
-        if ($this->auth->login($email, $password)) {
-            // Success: Redirect to a safe zone
-            $this->redirect('/dashboard');
-        } else {
-            // Failure: Set error and redirect back to form
-            $_SESSION['login_error'] = 'Invalid credentials or account is inactive.';
+            if (empty($email) || empty($password)) {
+                $_SESSION['login_error'] = 'Email and password are required.';
+                $this->redirect('/login');
+            }
+            
+            // Core authentication attempt, relies on Auth service
+            if ($this->auth->login($email, $password)) {
+                // Success: Redirect to the intended page or dashboard
+                $redirectTo = $_SESSION['redirect_back_to'] ?? '/dashboard';
+                unset($_SESSION['redirect_back_to']); // Clear the redirect target
+                $this->redirect($redirectTo);
+            } else {
+                // Failure: Set error and redirect back to form
+                $_SESSION['login_error'] = 'Invalid credentials or account is inactive.';
+                Log::warning("Login attempt failed.", [
+                    'email' => $email,
+                    'ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'N/A'
+                ]);
+                $this->redirect('/login');
+            }
+            
+        } catch (Throwable $e) {
+            // Catch critical error during login process (e.g., DB failure in Auth)
+            Log::critical("Login Attempt CRITICAL FAILURE: " . $e->getMessage(), [
+                'email' => $email ?? 'N/A',
+                'ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'N/A'
+            ]);
+            
+            // Fail-safe: Inform user of system error and redirect them back to login.
+            $_SESSION['login_error'] = 'A system error prevented your login. Please try again.';
             $this->redirect('/login');
         }
     }
@@ -57,35 +106,16 @@ class LoginController extends Controller
      */
     public function logout(): void
     {
-        $this->auth->logout();
-        $this->redirect('/login');
-    }
-
-
-    /**
-     * Displays the login form (main entry point for /login).
-     */
-    public function index(): void // Renamed from 'show' to the correct entry point
-    {
-        $this->preventCache(); // Good practice to prevent caching
-
-        if ($this->auth->check()) {
-            $this->redirect('/dashboard');
-            return;
+        try {
+            $this->auth->logout();
+            $this->redirect('/login');
+        } catch (Throwable $e) {
+            // Log the error, but still redirect the user away from sensitive area
+            Log::error("Logout process failed: " . $e->getMessage(), [
+                'user_id' => $this->auth->userId() ?? 'N/A'
+            ]);
+            // Still redirect to login, as the primary goal is clearing session/cookies (which may have partially succeeded)
+            $this->redirect('/login');
         }
-        
-        // 1. Get error from session (use the 'login_error' key as per your attempt() method)
-        $error = $_SESSION['login_error'] ?? null;
-        unset($_SESSION['login_error']); // Clear message after reading
-
-        // 2. 🛑 CRITICAL FIX: Use viewLogin() and the correct view path 🛑
-        // Note: The previous call was $this->viewLogin('login/index'). We must ensure consistency.
-        $this->viewLogin('auth/login', [
-            'error' => $error,
-            // You can add the flash_error for consistency if needed, but login_error is primary
-            // 'flash_error' => $_SESSION['flash_error'] ?? null, 
-        ]);
-        // Note: No need to unset $_SESSION['flash_error'] here if it's not the primary error key.
     }
-
 }

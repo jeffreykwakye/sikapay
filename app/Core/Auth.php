@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace Jeffrey\Sikapay\Core;
 
 use Jeffrey\Sikapay\Core\Database;
+use Jeffrey\Sikapay\Core\Log;
+
 
 class Auth 
 {
@@ -14,8 +16,15 @@ class Auth
     // Make constructor private for Singleton pattern
     private function __construct() 
     {
-        $this->db = Database::getInstance() 
-            ?? throw new \Exception("Database connection required for Auth service.");
+        try {
+            $this->db = Database::getInstance() 
+                ?? throw new \Exception("Database connection required for Auth service.");
+        } catch (\Exception $e) {
+            // Critical DB setup failure
+            Log::critical("Auth Service DB Initialization Failure: " . $e->getMessage());
+            // Re-throw or die since this is a critical system error
+            throw new \Exception("Auth Service cannot initialize: Database unavailable.");
+        }
             
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
@@ -40,42 +49,49 @@ class Auth
      */
     public function login(string $email, string $password): bool
     {
-        $stmt = $this->db->prepare("SELECT u.id, u.tenant_id, u.role_id, u.password 
-                                    FROM users u 
-                                    WHERE u.email = :email AND u.is_active = TRUE");
-        $stmt->execute([':email' => $email]);
-        $user = $stmt->fetch(\PDO::FETCH_ASSOC);
+        try {
+            $stmt = $this->db->prepare("SELECT u.id, u.tenant_id, u.role_id, u.password 
+                                         FROM users u 
+                                         WHERE u.email = :email AND u.is_active = TRUE");
+            $stmt->execute([':email' => $email]);
+            $user = $stmt->fetch(\PDO::FETCH_ASSOC);
 
-        if (!$user || !password_verify($password, $user['password'])) {
-            return false;
+            if (!$user || !password_verify($password, $user['password'])) {
+                return false;
+            }
+
+            // --- Authentication successful: Set session data ---
+            
+            $roleId = (int)$user['role_id'];
+            $roleName = $this->getRoleNameById($roleId); // Fetch role name once
+
+            $_SESSION['user_id'] = (int)$user['id'];
+            $_SESSION['tenant_id'] = (int)$user['tenant_id'];
+            
+            // Store the Role ID and Role Name in session
+            $_SESSION['role_id'] = $roleId; 
+            $_SESSION['role_name'] = $roleName; 
+            
+            $_SESSION['is_super_admin'] = ($roleName === self::SUPER_ADMIN_ROLE_NAME); 
+
+            $this->updateLastLogin((int)$user['id']);
+
+            return true;
+        } catch (\PDOException $e) {
+            // Log a database error during login attempt
+            Log::error("Login failed for email '{$email}': Database Error: " . $e->getMessage());
+            return false; // Treat database failure as authentication failure
         }
-
-        // --- Authentication successful: Set session data ---
-        
-        $roleId = (int)$user['role_id'];
-        $roleName = $this->getRoleNameById($roleId); // Fetch role name once
-
-        $_SESSION['user_id'] = (int)$user['id'];
-        $_SESSION['tenant_id'] = (int)$user['tenant_id'];
-        
-        // Store the Role ID and Role Name in session
-        $_SESSION['role_id'] = $roleId; 
-        $_SESSION['role_name'] = $roleName; 
-        
-        $_SESSION['is_super_admin'] = ($roleName === self::SUPER_ADMIN_ROLE_NAME); 
-
-        $this->updateLastLogin((int)$user['id']);
-
-        return true;
     }
-    
-    
+
+
+
     /**
      * The central authorization gate. Checks User Override -> Role Default -> Super Admin.
-     * * @param string $permissionKey The key_name of the permission (e.g., 'employee:update').
+     * @param string $permissionKey The key_name of the permission (e.g., 'employee:update').
      * @return bool True if the user is authorized, false otherwise.
      */
-    public function can(string $permissionKey): bool
+    public function hasPermission(string $permissionKey): bool
     {
         $userId = self::userId();
         $roleId = self::getRoleId();
@@ -89,21 +105,39 @@ class Auth
             return true;
         }
 
-        // Find the permission ID for the given key
-        $permissionId = $this->getPermissionIdByKey($permissionKey);
-        if ($permissionId === 0) {
-            // Permission key is unknown, deny by default.
-            return false;
-        }
+        try {
+            // Find the permission ID for the given key
+            $permissionId = $this->getPermissionIdByKey($permissionKey);
+            if ($permissionId === 0) {
+                // Permission key is unknown, deny by default. Log this as a warning/error
+                Log::error("Undefined Permission Key '{$permissionKey}' requested for authorization check.");
+                return false;
+            }
 
-        // 2. Check for Explicit User Override
-        $userOverride = $this->hasUserOverride($userId, $permissionId);
-        if ($userOverride !== null) {
-            return $userOverride; // Use TRUE or FALSE from override
+            // 2. Check for Explicit User Override
+            $userOverride = $this->hasUserOverride($userId, $permissionId);
+            if ($userOverride !== null) {
+                return $userOverride; // Use TRUE or FALSE from override
+            }
+            
+            // 3. Check for Default Role Permission
+            return $this->hasRolePermission($roleId, $permissionId);
+            
+        } catch (\PDOException $e) {
+            //  Log a database error during permission check
+            Log::critical("Authorization Database Error for User {$userId}, Key '{$permissionKey}': " . $e->getMessage());
+            return false; // Fail safe on database error
         }
-        
-        // 3. Check for Default Role Permission
-        return $this->hasRolePermission($roleId, $permissionId);
+    }
+    
+    
+    /**
+     * Backward compatibility alias for hasPermission().
+     * @deprecated Use hasPermission() instead.
+     */
+    public function can(string $permissionKey): bool
+    {
+        return $this->hasPermission($permissionKey);
     }
 
     

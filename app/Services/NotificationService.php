@@ -3,8 +3,11 @@ declare(strict_types=1);
 
 namespace Jeffrey\Sikapay\Services;
 
+use Jeffrey\Sikapay\Core\Log;
+use Jeffrey\Sikapay\Core\Auth;
 use Jeffrey\Sikapay\Models\NotificationModel;
 use Jeffrey\Sikapay\Models\UserModel; // Placeholder for future features
+use \Throwable; // Catch all runtime exceptions
 
 class NotificationService
 {
@@ -13,8 +16,18 @@ class NotificationService
 
     public function __construct()
     {
-        $this->notificationModel = new NotificationModel();
-        // $this->userModel = new UserModel();
+        try {
+            $this->notificationModel = new NotificationModel();
+            // $this->userModel = new UserModel();
+        } catch (Throwable $e) {
+            // CRITICAL: Failed to instantiate a required Model (DB connection or class loading error)
+            Log::critical("NotificationService failed to instantiate NotificationModel.", [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile()
+            ]);
+            // Re-throw: If the model can't be created, the service is non-functional.
+            throw $e;
+        }
     }
     
     /**
@@ -22,17 +35,42 @@ class NotificationService
      */
     public function notifyUser(int $tenantId, int $userId, string $type, string $title, ?string $body = null): void
     {
-        if ($userId > 0) { 
+        if ($userId <= 0) { 
+            return;
+        }
+        
+        try {
+            // The Model handles internal PDOExceptions (logging them and returning 0 if set up).
             $this->notificationModel->createNotification($tenantId, $userId, $type, $title, $body);
+        } catch (Throwable $e) {
+            // Catch unexpected errors (memory, unhandled exceptions)
+            // Failure here must NOT crash the user's primary operation.
+            Log::error("Failed to create notification for User {$userId}.", [
+                'tenant_id' => $tenantId,
+                'type' => $type,
+                'error' => $e->getMessage()
+            ]);
+            // Return void, effectively swallowing the error but logging it.
         }
     }
 
     /**
      * Retrieves all notifications for the current user.
+     * @return array|null Null on critical error, allowing caller to detect failure.
      */
-    public function getNotifications(int $userId): array
+    public function getNotifications(int $userId): ?array
     {
-        return $this->notificationModel->getAllForUser($userId);
+        try {
+            return $this->notificationModel->getAllForUser($userId);
+        } catch (Throwable $e) {
+            // Catch unexpected errors.
+            Log::error("Failed to fetch notifications for User {$userId}.", [
+                'error' => $e->getMessage(),
+                'acting_user' => Auth::userId()
+            ]);
+            // Return null, indicating failure to the controller.
+            return null;
+        }
     }
 
     /**
@@ -40,7 +78,18 @@ class NotificationService
      */
     public function getUnreadCount(int $userId): int
     {
-        return count($this->notificationModel->getUnreadForUser($userId));
+        try {
+            // The Model returns an array of IDs; count is safer to wrap here.
+            return count($this->notificationModel->getUnreadForUser($userId));
+        } catch (Throwable $e) {
+            // Catch unexpected errors.
+            Log::error("Failed to count unread notifications for User {$userId}.", [
+                'error' => $e->getMessage(),
+                'acting_user' => Auth::userId()
+            ]);
+            // Return 0 as a safe fallback for the UI count badge.
+            return 0;
+        }
     }
     
     /**
@@ -48,7 +97,17 @@ class NotificationService
      */
     public function markNotificationAsRead(int $notificationId, int $userId): bool
     {
-        return $this->notificationModel->markAsRead($notificationId, $userId);
+        try {
+            return $this->notificationModel->markAsRead($notificationId, $userId);
+        } catch (Throwable $e) {
+            // Catch unexpected errors.
+            Log::error("Failed to mark notification ID {$notificationId} as read.", [
+                'error' => $e->getMessage(),
+                'target_user' => $userId
+            ]);
+            // Return false on failure.
+            return false;
+        }
     }
 
 
@@ -61,6 +120,15 @@ class NotificationService
             return false;
         }
     
-        return $this->notificationModel->markAllAsRead($userId);
+        try {
+            return $this->notificationModel->markAllAsRead($userId);
+        } catch (Throwable $e) {
+            // Catch unexpected errors.
+            Log::error("Failed to mark all notifications as read for User {$userId}.", [
+                'error' => $e->getMessage()
+            ]);
+            // Return false on failure.
+            return false;
+        }
     }
 }

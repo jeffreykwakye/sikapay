@@ -37,6 +37,6 @@ class ErrorResponder
         echo "<h1>{$title}</h1>";
         echo "<p>{$displayMessage}</p>";
 
-        exit(); // <-- CRITICAL: Always halts execution
+        exit();
     }
 }

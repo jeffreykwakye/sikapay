@@ -19,6 +19,11 @@
                 Welcome, **<?= htmlspecialchars($userFirstName) ?>**! 
             </span>
         <?php endif; ?>
-        <a href="/logout" class="btn-logout">Log Out</a>
+        
+        <form action="/logout" method="POST" class="logout-form" style="display: inline;">
+            <button type="submit" class="btn-logout">
+                Log Out
+            </button>
+        </form>
     </div>
 </header>

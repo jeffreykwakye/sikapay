@@ -6,6 +6,7 @@ namespace Jeffrey\Sikapay\Middleware;
 use Jeffrey\Sikapay\Core\Auth; 
 use Jeffrey\Sikapay\Core\Log;
 use Jeffrey\Sikapay\Core\ErrorResponder;
+use \Throwable; 
 
 class PermissionMiddleware
 {
@@ -16,39 +17,53 @@ class PermissionMiddleware
      */
     public function handle(string $requiredPermission): bool
     {
-        $auth = Auth::getInstance(); 
+        try {
+            $auth = Auth::getInstance(); 
+            $userId = $auth->userId() ?? 0;
+            $tenantId = $auth->tenantId() ?? 0;
+            $ipAddress = $_SERVER['REMOTE_ADDR'] ?? 'N/A';
 
-        // 1. Check Login Status first (Fallback check, as AuthMiddleware should run first)
-        if (!$auth->check()) {
-            // Note: AuthMiddleware should handle this, but as a fallback, 
-            // a direct redirect to /login is safer than using ErrorResponder here.
-            $_SESSION['flash_error'] = "You must be logged in to access this page.";
-            header('Location: /login');
-            exit;
-        }
+            // 1. Check Login Status (Fallback for AuthMiddleware failure)
+            if (!$auth->check()) {
+                $_SESSION['flash_error'] = "You must be logged in to access this page.";
+                header('Location: /login');
+                exit; 
+                
+                return false; 
+            }
 
-        // 2. Check Permission using the central Auth::can() gate
-        if (!$auth->can($requiredPermission)) {
+            // 2. Check Permission using the central Auth::hasPermission() gate
+            if (!$auth->hasPermission($requiredPermission)) {
+                
+                Log::warning("Unauthorized access denied to User {$userId}.", [
+                    'tenant_id' => $tenantId,
+                    'permission' => $requiredPermission,
+                    'ip_address' => $ipAddress
+                ]);
+
+                // Halt the request using the definitive ErrorResponder 403
+                $message = "Access denied. You do not have the required permission: {$requiredPermission}.";
+                ErrorResponder::respond(403, $message); 
+                
+                return false; 
+            }
+
+            return true; // Authorization successful
+
+        } catch (Throwable $e) {
             
-            // Log the unauthorized attempt
-            Log::error("Unauthorized access attempt.", [
-                'user_id' => $auth->userId(),
-                'tenant_id' => $auth->tenantId(),
+            Log::critical("Middleware Execution Failed (PermissionMiddleware).", [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
                 'permission' => $requiredPermission,
-                'ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'N/A' 
+                'user_id' => $userId ?? 'unknown' 
             ]);
 
-            // !!! CRITICAL CHANGE: Halt the request using the ErrorResponder !!!
-            $message = "Access denied. Required permission: {$requiredPermission}.";
-            ErrorResponder::respond(403, $message); 
-            // Note: The ErrorResponder will call exit()
-
-            // The code below is unreachable due to ErrorResponder::respond(403)
-            // $_SESSION['flash_error'] = "Access denied. ...";
-            // header('Location: /dashboard'); 
-            // exit;
+            // If the middleware fails due to a system error, deny access with a 500
+            ErrorResponder::respond(500, "A critical system error occurred during authorization.");
+            
+            return false; 
         }
-
-        return true; // Authorization successful
     }
 }
