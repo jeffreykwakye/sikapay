@@ -9,10 +9,14 @@ use Jeffrey\Sikapay\Models\PositionModel;
 use Jeffrey\Sikapay\Models\UserModel; 
 use Jeffrey\Sikapay\Models\UserProfileModel; 
 use Jeffrey\Sikapay\Models\AuditModel; 
+// 🚨 NEW: Import RoleModel
+use Jeffrey\Sikapay\Models\RoleModel; 
 use Jeffrey\Sikapay\Controllers\Controller;
 use Jeffrey\Sikapay\Services\SubscriptionService;
 use Jeffrey\Sikapay\Core\Log;
 use Jeffrey\Sikapay\Core\ErrorResponder; 
+// 🚨 NEW: Import Validator
+use Jeffrey\Sikapay\Core\Validator;
 use \Throwable;
 
 
@@ -22,6 +26,9 @@ class EmployeeController extends Controller
     private DepartmentModel $departmentModel;
     private PositionModel $positionModel;
     private SubscriptionService $subscriptionService;
+    
+    // 🚨 NEW: RoleModel property
+    private RoleModel $roleModel;
 
     protected UserModel $userModel;
     protected UserProfileModel $userProfileModel;
@@ -38,6 +45,9 @@ class EmployeeController extends Controller
             $this->departmentModel = new DepartmentModel();
             $this->positionModel = new PositionModel();
             
+            // 🚨 NEW: Instantiate RoleModel
+            $this->roleModel = new RoleModel();
+            
             $this->userModel = new UserModel();
             $this->userProfileModel = new UserProfileModel();
             $this->auditModel = new AuditModel();
@@ -52,12 +62,18 @@ class EmployeeController extends Controller
         }
     }
 
+// ------------------------------------------------------------------
+// VIEW METHODS (index, create, show, edit) - Unchanged/Clean
+// ------------------------------------------------------------------
+
     /**
      * Display the list of employees for the current tenant.
      */
     public function index(): void
     {
         try {
+            // NOTE: Add security check here if not in middleware
+            // $this->checkPermission('employee:view');
             $employees = $this->employeeModel->getAllEmployees();
             
             $this->view('employee/index', [
@@ -77,6 +93,8 @@ class EmployeeController extends Controller
     public function create(): void
     {
         try {
+            // NOTE: Add security check here if not in middleware
+            // $this->checkPermission('employee:create');
             $departments = $this->departmentModel->all();
             $positions = $this->positionModel->all(); 
             
@@ -93,160 +111,15 @@ class EmployeeController extends Controller
 
 
     /**
-     * Handles the POST request to save a new employee (Quick Create).
-     */
-    public function store(): void
-    {
-        // ... (1. Basic Validation - remains unchanged) ...
-        if (empty($_POST['first_name']) || empty($_POST['last_name']) || empty($_POST['email']) || 
-            empty($_POST['employee_id']) || empty($_POST['hire_date']) || empty($_POST['position_id']) || empty($_POST['gender']) || empty($_POST['monthly_base_salary'])) {
-            
-            $_SESSION['flash_error'] = 'Required fields (Name, Email, ID, Hire Date, Position, Gender, Salary) are missing.';
-            $_SESSION['flash_input'] = $_POST;
-            $this->redirect('/employees/create');
-            return;
-        }
-
-        // 2. FEATURE GATING: Check Employee Limit
-        try {
-            $limit = $this->subscriptionService->getFeatureLimit($this->tenantId, 'employee_limit');
-            // NOTE: Assumes $this->employeeModel->getEmployeeCount() is implemented and hardened
-            $currentCount = $this->employeeModel->getEmployeeCount($this->tenantId); 
-            
-            if ($currentCount >= $limit) {
-                $planName = $this->subscriptionService->getCurrentPlanName($this->tenantId);
-                // Use a standard Exception for business logic failure
-                throw new \Exception("Employee creation limit reached. Your current {$planName} Plan allows a maximum of {$limit} employees. Please upgrade your subscription.");
-            }
-        } catch (Throwable $e) {
-            // Catch limit errors OR underlying DB/Service errors during the check
-            Log::error("Employee Limit Check Failed for Tenant {$this->tenantId}: " . $e->getMessage());
-            $_SESSION['flash_error'] = "Limit Check Error: " . $e->getMessage();
-            $_SESSION['flash_input'] = $_POST;
-            $this->redirect('/employees/create');
-            return;
-        }
-
-        // 3. Start Transaction
-        $db = $this->employeeModel->getDB(); 
-        $newUserId = null; 
-
-        try {
-            $db->beginTransaction();
-
-            // 4. Create User Record (users) - uses hardened $this->userModel
-            $userData = [/* ... data ... */];
-            $newUserId = $this->userModel->createUser($this->tenantId, $userData); 
-            if (!$newUserId) {
-                // If createUser failed but didn't throw an exception (e.g., returned 0), we throw here.
-                throw new \Exception("Failed to retrieve new user ID after creation.");
-            }
-
-            // 5. Create User Profile Record (user_profiles) - uses hardened $this->userProfileModel
-            $profileData = [/* ... data ... */];
-            if (!$this->userProfileModel->createProfile($profileData)) {
-                throw new \Exception("Failed to create user profile.");
-            }
-            
-            // 6. Create Employee Record (employees) - assumes $this->employeeModel is hardened
-            $employeeData = [/* ... data ... */];
-            if (!$this->employeeModel->createEmployeeRecord($employeeData)) {
-                throw new \Exception("Failed to create employee record.");
-            }
-            
-            // 7. Audit Logging 
-            $this->auditModel->log(
-                $this->tenantId, 
-                'EMPLOYEE_CREATED_QUICK',
-                ['employee_id' => $employeeData['employee_id'], 'user_id' => $newUserId]
-            );
-
-            // 8. Commit Transaction
-            $db->commit();
-            
-            // 9. Success Handling
-            $_SESSION['flash_success'] = "Employee " . $userData['first_name'] . " saved successfully. **Profile details are incomplete.**";
-            $this->redirect("/employees/{$newUserId}/edit");
-
-        } catch (Throwable $e) { 
-            // Use Throwable to catch DB connection/Query failures
-            // 10. Failure: Rollback
-            if ($db->inTransaction()) {
-                $db->rollBack();
-            }
-
-            // Log failure as CRITICAL since this is a failed transaction/data loss event.
-            Log::critical("Employee Creation Transaction Failed for Tenant {$this->tenantId}: " . $e->getMessage(), [
-                'user_id' => $this->userId, 
-                'email' => $_POST['email'] ?? 'N/A',
-                'line' => $e->getLine()
-            ]);
-            
-            $_SESSION['flash_error'] = "Error creating employee: A critical system error occurred. Please try again. (" . substr($e->getMessage(), 0, 50) . "...)";
-            $_SESSION['flash_input'] = $_POST;
-            $this->redirect('/employees/create');
-        }
-    }
-
-
-    /**
-     * API endpoint to fetch positions based on the selected department ID.
-     */
-    public function getPositionsByDepartment(): void
-    {
-        // 1. Authentication check is handled by parent::__construct and AuthMiddleware
-        if (!$this->auth->check()) {
-            // Must return JSON 401 response for API calls
-            header('Content-Type: application/json');
-            http_response_code(401); 
-            echo json_encode(['error' => 'Authentication required.']);
-            exit; 
-        }
-
-        try {
-            // 2. Get the department ID from the request
-            $departmentId = (int)($_GET['department_id'] ?? 0);
-
-            if ($departmentId <= 0) {
-                header('Content-Type: application/json');
-                http_response_code(400);
-                echo json_encode(['error' => 'Invalid department ID.']);
-                exit;
-            }
-
-            // 3. Fetch positions for that department, respecting tenant scoping
-            $positions = $this->positionModel->all(['department_id = ' . $departmentId]);
-
-            // 4. Return JSON response
-            header('Content-Type: application/json');
-            echo json_encode(['positions' => $positions]);
-            
-            exit; 
-        } catch (Throwable $e) {
-            // Log system failure during API data fetch
-            Log::error("API Error: Failed to fetch positions by department for Tenant {$this->tenantId}.", [
-                'department_id' => $departmentId ?? 'N/A',
-                'error' => $e->getMessage()
-            ]);
-
-            header('Content-Type: application/json');
-            http_response_code(500);
-            echo json_encode(['error' => 'Internal server error fetching position data.']);
-            exit;
-        }
-    }
-
-
-    /**
      * Display a single employee's profile.
      */
     public function show(int $userId): void
     {
         try {
+            // $this->checkPermission('employee:view_self'); // If applicable
             $employee = $this->employeeModel->getEmployeeProfile($userId); 
 
             if (!$employee) {
-                // If not found (or tenant scope failed the read)
                 http_response_code(404);
                 $this->view('error/404', ['title' => 'Employee Not Found']);
                 return;
@@ -268,6 +141,7 @@ class EmployeeController extends Controller
     public function edit(int $userId): void
     {
         try {
+            // $this->checkPermission('employee:edit');
             // 1. Fetch the existing employee profile data
             $employee = $this->employeeModel->getEmployeeProfile($userId); 
 
@@ -296,20 +170,166 @@ class EmployeeController extends Controller
         }
     }
 
+// ------------------------------------------------------------------
+// DML/ACTION METHODS - HARDENED
+// ------------------------------------------------------------------
+
+    /**
+     * Handles the POST request to save a new employee (Quick Create).
+     */
+    public function store(): void
+    {
+        // 🚨 1. HARDENED: Validation and Sanitization
+        $validator = new Validator($_POST);
+        
+        $validator->validate([
+            'first_name' => 'required|min:2',
+            'last_name' => 'required|min:2',
+            'email' => 'required|email',
+            'employee_id' => 'required|min:3', 
+            'hire_date' => 'required|date', 
+            'position_id' => 'required|int', 
+            'gender' => 'required|min:1', 
+            'monthly_base_salary' => 'required|numeric', 
+            'phone' => 'optional|min:8',
+        ]);
+
+        if ($validator->fails()) {
+            $errors = implode('<br>', $validator->errors());
+            $_SESSION['flash_error'] = "Employee creation failed due to invalid input: <br>{$errors}";
+            $_SESSION['flash_input'] = $validator->all(); 
+            $this->redirect('/employees/create');
+            return;
+        }
+
+        // 2. FEATURE GATING: Check Employee Limit (Logic remains robustly wrapped in try/catch)
+        try {
+            $limit = $this->subscriptionService->getFeatureLimit($this->tenantId, 'employee_limit');
+            $currentCount = $this->employeeModel->getEmployeeCount($this->tenantId); 
+            
+            if ($currentCount >= $limit) {
+                $planName = $this->subscriptionService->getCurrentPlanName($this->tenantId);
+                throw new \Exception("Employee creation limit reached. Your current {$planName} Plan allows a maximum of {$limit} employees. Please upgrade your subscription.");
+            }
+        } catch (Throwable $e) {
+            // Catch limit errors OR underlying DB/Service errors during the check
+            Log::error("Employee Limit Check Failed for Tenant {$this->tenantId}: " . $e->getMessage());
+            $_SESSION['flash_error'] = "Limit Check Error: " . $e->getMessage();
+            $_SESSION['flash_input'] = $validator->all(); // Use sanitized input
+            $this->redirect('/employees/create');
+            return;
+        }
+
+        // 3. Start Transaction
+        $db = $this->employeeModel->getDB(); 
+        $newUserId = null; 
+
+        try {
+            $db->beginTransaction();
+
+            // 🚨 FIX: Use RoleModel to get the ID and validate its existence
+            $employeeRoleId = $this->roleModel->findIdByName('employee');
+            
+            if ($employeeRoleId === null) {
+                 // Throwing an exception ensures rollback happens in the catch block
+                 throw new \Exception("Configuration Error: 'employee' role not found in database. Cannot create user.");
+            }
+            
+            // 4. Create User Record (users) - USE VALIDATOR::GET()
+            $userData = [
+                'email' => $validator->get('email'),
+                'password' => password_hash('temporary_pass_' . time(), PASSWORD_DEFAULT), 
+                'first_name' => $validator->get('first_name'),
+                'last_name' => $validator->get('last_name'),
+                'phone' => $validator->get('phone'),
+                'role_id' => $employeeRoleId, 
+            ];
+            $newUserId = $this->userModel->createUser($this->tenantId, $userData); 
+            if (!$newUserId) {
+                 throw new \Exception("Failed to retrieve new user ID after creation.");
+            }
+
+            // 5. Create User Profile Record (user_profiles) - USE VALIDATOR::GET()
+            $profileData = [
+                'user_id' => $newUserId,
+                'gender' => $validator->get('gender'),
+                // date_of_birth is optional in quick create, but if present, grab it.
+                'date_of_birth' => $validator->get('date_of_birth', 'string') // Use string type hint for date
+            ];
+            if (!$this->userProfileModel->createProfile($profileData)) {
+                 throw new \Exception("Failed to create user profile.");
+            }
+            
+            // 6. Create Employee Record (employees) - USE VALIDATOR::GET()
+            $employeeData = [
+                'user_id' => $newUserId,
+                'employee_id' => $validator->get('employee_id'),
+                'position_id' => $validator->get('position_id', 'int'),
+                'hire_date' => $validator->get('hire_date'),
+                'monthly_base_salary' => $validator->get('monthly_base_salary', 'float'),
+            ];
+            if (!$this->employeeModel->createEmployeeRecord($employeeData)) {
+                 throw new \Exception("Failed to create employee record.");
+            }
+            
+            // 7. Audit Logging 
+            $this->auditModel->log(
+                $this->tenantId, 
+                'EMPLOYEE_CREATED_QUICK',
+                ['employee_id' => $employeeData['employee_id'], 'user_id' => $newUserId]
+            );
+
+            // 8. Commit Transaction
+            $db->commit();
+            
+            // 9. Success Handling
+            $_SESSION['flash_success'] = "Employee " . $userData['first_name'] . " saved successfully. **Profile details are incomplete.**";
+            $this->redirect("/employees/{$newUserId}/edit");
+
+        } catch (Throwable $e) { 
+            // 10. Failure: Rollback
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+
+            // Log failure as CRITICAL since this is a failed transaction/data loss event.
+            Log::critical("Employee Creation Transaction Failed for Tenant {$this->tenantId}: " . $e->getMessage(), [
+                'user_id' => $this->userId, 
+                'email' => $validator->get('email') ?? 'N/A', // Use validator for safety
+                'line' => $e->getLine()
+            ]);
+            
+            $_SESSION['flash_error'] = "Error creating employee: A critical system error occurred. Please try again. (" . substr($e->getMessage(), 0, 50) . "...)";
+            $_SESSION['flash_input'] = $validator->all();
+            $this->redirect('/employees/create');
+        }
+    }
+
 
     /**
      * Handles the PUT request to update an existing employee's profile.
      */
     public function update(int $userId): void
     {
-        // 1. Basic Security and Validation (remains unchanged)
-        if (empty($_POST['first_name']) || empty($_POST['last_name']) || 
-            empty($_POST['employee_id']) || empty($_POST['hire_date']) || 
-            empty($_POST['position_id']) || empty($_POST['monthly_base_salary']) ||
-            empty($_POST['gender']) || empty($_POST['date_of_birth'])) {
-            
-            $_SESSION['flash_error'] = 'Required fields (Name, ID, Hire Date, Position, Salary, Gender, DOB) are missing.';
-            $_SESSION['flash_input'] = $_POST;
+        // 🚨 1. HARDENED: Validation and Sanitization (Logic is robust)
+        $validator = new Validator($_POST);
+        
+        $validator->validate([
+            'first_name' => 'required|min:2',
+            'last_name' => 'required|min:2',
+            'employee_id' => 'required|min:3', 
+            'hire_date' => 'required|date', 
+            'position_id' => 'required|int', 
+            'monthly_base_salary' => 'required|numeric',
+            'gender' => 'required|min:1',
+            'date_of_birth' => 'required|date',
+            'phone' => 'optional|min:8', 
+        ]);
+        
+        if ($validator->fails()) {
+            $errors = implode('<br>', $validator->errors());
+            $_SESSION['flash_error'] = "Update failed due to invalid input: <br>{$errors}";
+            $_SESSION['flash_input'] = $validator->all();
             $this->redirect("/employees/{$userId}/edit");
             return;
         }
@@ -321,16 +341,29 @@ class EmployeeController extends Controller
             $db->beginTransaction();
 
             // --- A. Update User Record (users) ---
-            $userData = [/* ... data ... */];
-            // NOTE: We rely on the hardened UserModel to throw or log failures.
+            $userData = [
+                'first_name' => $validator->get('first_name'),
+                'last_name' => $validator->get('last_name'),
+                'phone' => $validator->get('phone'),
+                'other_name' => $validator->get('other_name'),
+                // Email field is typically handled in a separate, more secure process
+            ];
             $this->userModel->updateUser($userId, $userData); 
 
             // --- B. Update User Profile Record (user_profiles) ---
-            $profileData = [/* ... data ... */];
+            $profileData = [
+                'gender' => $validator->get('gender'),
+                'date_of_birth' => $validator->get('date_of_birth'),
+            ];
             $this->userProfileModel->updateProfile($userId, $profileData); 
             
             // --- C. Update Employee Record (employees) ---
-            $employeeData = [/* ... data ... */];
+            $employeeData = [
+                'employee_id' => $validator->get('employee_id'),
+                'position_id' => $validator->get('position_id', 'int'),
+                'hire_date' => $validator->get('hire_date'),
+                'monthly_base_salary' => $validator->get('monthly_base_salary', 'float'),
+            ];
             $this->employeeModel->updateEmployeeRecord($userId, $employeeData);
             
             // 3. Audit Logging 
@@ -348,7 +381,6 @@ class EmployeeController extends Controller
             $this->redirect("/employees/{$userId}");
 
         } catch (Throwable $e) { 
-            // Use Throwable to catch all transaction failures
             // 6. Failure: Rollback
             if ($db->inTransaction()) {
                 $db->rollBack();
@@ -361,8 +393,66 @@ class EmployeeController extends Controller
             ]);
             
             $_SESSION['flash_error'] = "Error updating employee: A critical system error occurred. Please try again. (" . substr($e->getMessage(), 0, 50) . "...)";
-            $_SESSION['flash_input'] = $_POST;
+            $_SESSION['flash_input'] = $validator->all();
             $this->redirect("/employees/{$userId}/edit");
+        }
+    }
+    
+// ------------------------------------------------------------------
+// API ENDPOINTS - HARDENED
+// ------------------------------------------------------------------
+
+    /**
+     * API endpoint to fetch positions based on the selected department ID.
+     */
+    public function getPositionsByDepartment(): void
+    {
+        // 1. Authentication check is handled by parent::__construct and AuthMiddleware
+        if (!$this->auth->check()) {
+            header('Content-Type: application/json');
+            http_response_code(401); 
+            echo json_encode(['error' => 'Authentication required.']);
+            exit; 
+        }
+
+        try {
+            // 🚨 2. HARDENED: Use Validator for query parameters ($_GET)
+            $validator = new Validator($_GET); 
+            
+            $validator->validate([
+                'department_id' => 'required|int',
+            ]);
+
+            if ($validator->fails()) {
+                Log::error("API Error: Invalid department ID received.", ['input' => $_GET]);
+                header('Content-Type: application/json');
+                http_response_code(400); // Bad Request
+                echo json_encode(['error' => 'Invalid or missing department ID parameter.']);
+                exit;
+            }
+            
+            // Safely retrieve and cast the ID
+            $departmentId = $validator->get('department_id', 'int'); 
+
+            // 3. Fetch positions for that department, respecting tenant scoping
+            $positions = $this->positionModel->all(['department_id = ' . $departmentId]);
+
+            // 4. Return JSON response
+            header('Content-Type: application/json');
+            echo json_encode(['positions' => $positions]);
+            
+            exit; 
+        } catch (Throwable $e) {
+            // Log system failure during API data fetch
+            Log::error("API Error: Failed to fetch positions by department for Tenant {$this->tenantId}.", [
+                'department_id' => $departmentId ?? 'N/A',
+                'error' => $e->getMessage()
+            ]);
+
+            header('Content-Type: application/json');
+            http_response_code(500);
+            echo json_encode(['error' => 'Internal server error fetching position data.']);
+            exit;
         }
     }
 }

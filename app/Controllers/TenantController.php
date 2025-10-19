@@ -13,6 +13,8 @@ use Jeffrey\Sikapay\Models\AuditModel;
 use Jeffrey\Sikapay\Core\Auth;
 use Jeffrey\Sikapay\Core\Log;
 use Jeffrey\Sikapay\Core\ErrorResponder; 
+//  NEW: Import Validator
+use Jeffrey\Sikapay\Core\Validator; 
 use \Throwable;
 
 class TenantController extends Controller
@@ -42,6 +44,10 @@ class TenantController extends Controller
             ErrorResponder::respond(500, "A critical system error occurred during tenant management initialization.");
         }
     }
+
+// ------------------------------------------------------------------
+// VIEW METHODS (index, create) - Logic remains correct
+// ------------------------------------------------------------------
 
     /**
      * Shows a list of all tenants (Super Admin only).
@@ -76,9 +82,9 @@ class TenantController extends Controller
     {
         try {
              if (!Auth::isSuperAdmin()) {
-                ErrorResponder::respond(403, "Access Denied. Super Admin privileges required.");
-                return;
-            }
+                 ErrorResponder::respond(403, "Access Denied. Super Admin privileges required.");
+                 return;
+             }
             
             $availablePlans = $this->planModel->all(); 
             
@@ -95,23 +101,42 @@ class TenantController extends Controller
         }
     }
 
+// ------------------------------------------------------------------
+// DML/ACTION METHOD - store() - HARDENED
+// ------------------------------------------------------------------
+
     /**
      * Handles the POST request to save the new tenant and admin user.
      */
     public function store(): void
     {
-        // 1. Basic validation (remains unchanged)
-        if (empty($_POST['tenant_name']) || empty($_POST['subdomain']) || empty($_POST['admin_email']) || empty($_POST['admin_password']) || empty($_POST['plan_id'])) {
-            $_SESSION['flash_error'] = 'All required fields (Company Name, Subdomain, Admin Email/Password, and Plan) must be filled.';
-            $_SESSION['flash_input'] = $_POST;
-            $this->redirect('/tenants/create');
-            return;
-        }
-
         // Check Super Admin privilege before proceeding with a major system action
         if (!Auth::isSuperAdmin()) {
             $_SESSION['flash_error'] = 'Permission denied. System Admin required.';
             $this->redirect('/tenants');
+            return;
+        }
+
+        //  1. HARDENED: Validation and Sanitization
+        $validator = new Validator($_POST);
+        
+        $validator->validate([
+            'tenant_name' => 'required|min:3|max:100',
+            'subdomain' => 'required|alpha_dash|min:3|max:50', // alpha_dash enforces safe URLs
+            'admin_email' => 'required|email',
+            'admin_password' => 'required|min:8',
+            'admin_fname' => 'required|min:2',
+            'admin_lname' => 'required|min:2',
+            'plan_id' => 'required|int|min:1',
+            'subscription_status' => 'optional', // Sanitized later
+            'payroll_flow' => 'optional', // Sanitized later
+        ]);
+
+        if ($validator->fails()) {
+            $errors = implode('<br>', $validator->errors());
+            $_SESSION['flash_error'] = "Tenant creation failed due to invalid input: <br>{$errors}";
+            $_SESSION['flash_input'] = $validator->all();
+            $this->redirect('/tenants/create');
             return;
         }
 
@@ -121,42 +146,43 @@ class TenantController extends Controller
         $adminUserId = null;
         $tenantId = null;
         $db = $this->tenantModel->getDB(); // Get PDO object for transaction control
+        $actingUserId = Auth::userId();
 
         try {
+            // SECURITY CHECK: Ensure the Super Admin's ID is valid for logging
+            if ($actingUserId === 0) {
+                 throw new \Exception("Security/Audit Failure: Super Admin user ID could not be retrieved from session.");
+            }
+            
             // 2. Pre-Transaction Setup: Look up the Tenant Admin Role ID dynamically
             $tenantAdminRoleId = $this->roleModel->findIdByName('tenant_admin');
             
-            if (!$tenantAdminRoleId) {
+            if ($tenantAdminRoleId === null) {
                 // If the system role is missing, this is a critical configuration error.
                 throw new \Exception("System error: 'tenant_admin' role not found in the database. Aborting.");
-            }
-            
-            // SECURITY CHECK: Ensure the Super Admin's ID is valid for logging
-            $actingUserId = Auth::userId();
-            if ($actingUserId === 0) {
-                 throw new \Exception("Security/Audit Failure: Super Admin user ID could not be retrieved from session.");
             }
             
             // 3. Start Transaction
             $db->beginTransaction();
 
-            // A. Prepare Data (Assign to pre-declared variables for safe logging in catch)
+            // A. Prepare Data (Assign to pre-declared variables for safe logging in catch) -  USE VALIDATOR::GET()
             $tenantData = [
-                'name' => $_POST['tenant_name'],
-                'subdomain' => strtolower($_POST['subdomain']),
-                'subscription_status' => $_POST['subscription_status'] ?? 'trial',
-                'payroll_approval_flow' => $_POST['payroll_flow'] ?? 'ACCOUNTANT_FINAL',
-                'plan_id' => (int)$_POST['plan_id'],
+                'name' => $validator->get('tenant_name'),
+                'subdomain' => strtolower($validator->get('subdomain')), // Ensure subdomain is lowercase
+                // Apply defaults/sanitization for optional fields
+                'subscription_status' => $validator->get('subscription_status') === 'active' ? 'active' : 'trial',
+                'payroll_approval_flow' => $validator->get('payroll_flow') ?? 'ACCOUNTANT_FINAL',
+                'plan_id' => $validator->get('plan_id', 'int'),
             ];
 
             $userData = [
                 'role_id' => $tenantAdminRoleId, 
-                'email' => $_POST['admin_email'],
-                'password' => password_hash($_POST['admin_password'], PASSWORD_DEFAULT),
-                'first_name' => $_POST['admin_fname'],
-                'last_name' => $_POST['admin_lname'],
-                'other_name' => null, 
-                'phone' => null, 
+                'email' => $validator->get('admin_email'),
+                'password' => password_hash($validator->get('admin_password'), PASSWORD_DEFAULT),
+                'first_name' => $validator->get('admin_fname'),
+                'last_name' => $validator->get('admin_lname'),
+                'other_name' => $validator->get('admin_other_name'), 
+                'phone' => $validator->get('admin_phone'), 
             ];
             
             // B. Execute Creation (Model 1: Tenant) - Must throw on failure
@@ -166,6 +192,7 @@ class TenantController extends Controller
             }
 
             // C. Execute Creation (Model 2: User) - Must throw on failure
+            // Note: createUser is assumed to sanitize $userData again internally, but it's already validated/sanitized here.
             $adminUserId = $this->userModel->createUser($tenantId, $userData);
             if (!$adminUserId) {
                 throw new \Exception("Admin user creation failed unexpectedly.");
@@ -177,7 +204,7 @@ class TenantController extends Controller
                 $tenantData['plan_id'], 
                 $tenantData['subscription_status']
             )) {
-                 throw new \Exception("Initial subscription record failed unexpectedly.");
+                throw new \Exception("Initial subscription record failed unexpectedly.");
             }
 
             // E. Audit Logging (MUST occur before commit)
@@ -216,7 +243,7 @@ class TenantController extends Controller
                 "Welcome to SikaPay, {$userData['first_name']}!",
                 "Your account for the tenant '{$tenantData['name']}' has been successfully provisioned. You can now log in and begin setting up payroll."
             )) {
-                 Log::error("Failed to notify new Tenant Admin {$adminUserId} of tenant creation success.");
+                Log::error("Failed to notify new Tenant Admin {$adminUserId} of tenant creation success.");
             }
             
             // 6. Success Handling
@@ -224,7 +251,6 @@ class TenantController extends Controller
             $this->redirect('/tenants');
 
         } catch (Throwable $e) { 
-            // Use Throwable to catch all critical system/DB errors
             // 7. Failure: Rollback
             if ($db->inTransaction()) {
                 $db->rollBack();
@@ -239,8 +265,8 @@ class TenantController extends Controller
             ]);
             
             // Provide a generic, safe error message to the user
-            $_SESSION['flash_error'] = "Error creating tenant: A critical system error occurred. Please check logs for details.";
-            $_SESSION['flash_input'] = $_POST;
+            $_SESSION['flash_error'] = "Error creating tenant: A critical system error occurred. Please check logs for details. (" . substr($e->getMessage(), 0, 50) . "...)";
+            $_SESSION['flash_input'] = $validator->all(); // Use sanitized input for flashback
             $this->redirect('/tenants/create');
         }
     }

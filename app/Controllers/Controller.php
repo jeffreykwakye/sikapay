@@ -34,9 +34,15 @@ abstract class Controller
         
         $this->userId = $this->auth->userId();
         $this->tenantId = $this->auth->tenantId();
+
+        // Call global security header methods early
+        $this->setSecurityHeaders();
         
         // CONDITIONAL INITIALIZATION BLOCK
         if ($this->userId > 0) {
+            
+            // Prevent caching for ALL authenticated pages
+            $this->preventCache(); 
             
             // Initialize Models/Services
             $this->userModel = new UserModel();
@@ -51,7 +57,7 @@ abstract class Controller
                     $this->tenantName = $this->tenantModel->getNameById($this->tenantId);
                 }
             } catch (\Exception $e) {
-                // LOGGING: Catch model initialization failure (e.g., DB down)
+                // Catch model initialization failure (e.g., DB down)
                 Log::critical("Base Controller Context Initialization Failed for User ID {$this->userId}: " . $e->getMessage());
 
                 // Halt flow with a generic server error response to the user
@@ -177,14 +183,20 @@ abstract class Controller
      */
     protected function redirect(string $uri): void
     {
+        // Explicitly call session_write_close() before redirect
+        // This releases the session file lock, preventing deadlocks (especially common 
+        // when one request causes a redirect followed by an immediate second request).
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
         header("Location: {$uri}");
         exit();
     }
+
     
     /**
      * Sends HTTP headers to prevent the browser from caching the page.
-     * This is essential for preventing logged-out users from seeing cached pages
-     * when using the browser's back button.
      */
     protected function preventCache(): void
     {
@@ -196,6 +208,28 @@ abstract class Controller
         
         // Back/Forward Cache (BFcache) Prevention
         header('Permissions-Policy: interest-cohort=()');
+    }
+
+
+
+    /**
+     * Enforces critical HTTP security headers globally.
+     */
+    protected function setSecurityHeaders(): void
+    {
+        // XSS Protection: Tells the browser to enable its built-in XSS filter.
+        header('X-XSS-Protection: 1; mode=block');
+
+        // Clickjacking Protection: Prevents the page from being rendered in an iframe.
+        header('X-Frame-Options: SAMEORIGIN');
+
+        // MIME Type Sniffing Prevention: Forces the browser to strictly follow the MIME types declared in the Content-Type header.
+        header('X-Content-Type-Options: nosniff');
+        
+        // Content Security Policy (CSP): Most advanced, but requires tuning. 
+        // Start with a strict default (e.g., only allow content from the same origin).
+        // If the application uses external resources, this policy will need to be expanded.
+        header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;");
     }
 
 }
