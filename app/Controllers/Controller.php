@@ -6,10 +6,13 @@ namespace Jeffrey\Sikapay\Controllers;
 use Jeffrey\Sikapay\Core\Auth; 
 use Jeffrey\Sikapay\Core\View;
 use Jeffrey\Sikapay\Core\Log; 
-use Jeffrey\Sikapay\Core\ErrorResponder; // Standardized Error Handling
+use Jeffrey\Sikapay\Core\ErrorResponder;
 use Jeffrey\Sikapay\Services\NotificationService;
 use Jeffrey\Sikapay\Models\TenantModel;
 use Jeffrey\Sikapay\Models\UserModel;
+use Jeffrey\Sikapay\Helpers\ViewHelper;
+use Jeffrey\Sikapay\Security\CsrfToken;
+
 
 abstract class Controller
 {
@@ -21,6 +24,7 @@ abstract class Controller
     protected NotificationService $notificationService; 
     protected TenantModel $tenantModel;
     protected UserModel $userModel; 
+    
 
     protected ?string $tenantName = null;
     protected array $userName = ['first_name' => null, 'last_name' => null];
@@ -100,7 +104,9 @@ abstract class Controller
      */
     protected function view(string $viewPath, array $data = []): void
     {
+        // 1. Common system data
         $commonData = [
+            // CRITICAL: We pass the AUTH object here. The sidebar must use $auth->hasPermission()
             'auth' => $this->auth, 
             'userId' => $this->userId,
             'tenantId' => $this->tenantId,
@@ -108,13 +114,28 @@ abstract class Controller
             'tenantName' => $this->tenantName ?? 'System/Public',
             'userFirstName' => $this->userName['first_name'] ?? 'User',
             'userLastName' => $this->userName['last_name'] ?? '',
+
+            'isSuperAdmin' => $this->auth->isSuperAdmin(),
             
             'unreadNotificationCount' => (isset($this->notificationService) && $this->userId > 0)
                 ? $this->notificationService->getUnreadCount($this->userId) 
                 : 0,
         ];
+
+        // 2. Security-focused helpers to be available in all views
+        $securityHelpers = [
+            // Aliases for XSS and ID hardening
+            'h'         => [ViewHelper::class, 'h'],
+            'id'        => [ViewHelper::class, 'id'],
+            'nl2br_h'   => [ViewHelper::class, 'nl2br_h'],
+            
+            // CSRF Token Class/Reference
+            'CsrfToken' => CsrfToken::class, 
+        ];
+
+        // Merge common data, security helpers, and controller-specific data
+        $finalData = array_merge($commonData, $securityHelpers, $data);
         
-        $finalData = array_merge($commonData, $data);
         $contentFile = $this->getViewPath($viewPath);
         
         // 4. Check for View File Existence and Handle Failure
@@ -145,7 +166,13 @@ abstract class Controller
      */
     protected function viewLogin(string $viewPath, array $data = []): void
     {
-        $finalData = $data;
+        $securityHelpers = [
+            'h'         => [ViewHelper::class, 'h'],
+            'id'        => [ViewHelper::class, 'id'],
+            'CsrfToken' => CsrfToken::class, 
+        ];
+
+        $finalData = array_merge($securityHelpers, $data);
         $contentFile = $this->getViewPath($viewPath);
         
         // Check for View File Existence and Handle Failure
@@ -209,7 +236,6 @@ abstract class Controller
         // Back/Forward Cache (BFcache) Prevention
         header('Permissions-Policy: interest-cohort=()');
     }
-
 
 
     /**

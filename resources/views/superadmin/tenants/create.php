@@ -1,60 +1,173 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title><?php echo htmlspecialchars($data['title']); ?></title>
-    <style> /* Basic styling here */ </style>
-</head>
-<body>
-    <h1><?php echo htmlspecialchars($data['title']); ?></h1>
-    
-    <?php if ($data['error']): ?>
-        <p style="color: red;"><?php echo htmlspecialchars($data['error']); ?></p>
-    <?php endif; ?>
+<?php
+// Note: This file no longer contains <html>, <head>, or <body> tags.
 
-    <form method="POST" action="/tenants">
-        <h2>Tenant Details</h2>
-        <label for="tenant_name">Company Name:</label>
-        <input type="text" id="tenant_name" name="tenant_name" value="<?php echo htmlspecialchars($data['input']['tenant_name'] ?? ''); ?>" required><br><br>
+// The $title variable (used in the master template) should be set here
+$title = $h('Create New Tenant'); 
+?>
 
-        <label for="subdomain">Subdomain:</label>
-        <input type="text" id="subdomain" name="subdomain" value="<?php echo htmlspecialchars($data['input']['subdomain'] ?? ''); ?>" required><br><br>
+<div class="page-header">
+    <h3 class="fw-bold mb-3"><?php echo $h($data['title']); ?></h3>
+    <ul class="breadcrumbs mb-3">
+        <li class="nav-home">
+            <a href="/">
+                <i class="icon-home"></i>
+            </a>
+        </li>
+        <li class="separator">
+            <i class="icon-arrow-right"></i>
+        </li>
+        <li class="nav-item">
+            <a href="/">Dashboard</a>
+        </li>
+        <li class="separator">
+            <i class="icon-arrow-right"></i>
+        </li>
+        <li class="nav-item">
+            <a href="/tenants">Tenant Management</a>
+        </li>
+        <li class="separator">
+            <i class="icon-arrow-right"></i>
+        </li>
+        <li class="nav-item">
+            <a href="#"><?php echo $h($data['title']); ?></a>
+        </li>
+    </ul>
+</div>
 
-        <label for="payroll_flow">Payroll Flow:</label>
-        <select id="payroll_flow" name="payroll_flow">
-            <option value="ACCOUNTANT_FINAL">Accountant Final</option>
-            <option value="ADMIN_FINAL">Admin Final</option>
-        </select><br><br>
 
-        <h2>Subscription Details</h2>
-        <label for="plan_id">Select Plan:</label>
-        <select id="plan_id" name="plan_id" required>
-            <option value="">-- Select a Plan --</option>
-            <?php foreach ($data['plans'] as $plan): ?>
-                <option 
-                    value="<?php echo htmlspecialchars((string)$plan['id']); ?>"
-                    <?php echo (isset($data['input']['plan_id']) && (int)$data['input']['plan_id'] === $plan['id']) ? 'selected' : ''; ?>
-                >
-                    <?php echo htmlspecialchars($plan['name']); ?>
-                </option>
-            <?php endforeach; ?>
-        </select><br><br>
 
-        <h2>Initial Admin User Details</h2>
-        <label for="admin_fname">First Name:</label>
-        <input type="text" id="admin_fname" name="admin_fname" value="<?php echo htmlspecialchars($data['input']['admin_fname'] ?? ''); ?>" required><br><br>
+<?php if (!empty($data['error'])): ?>
+    <p style="color: red;"><?= $h($data['error']) ?></p>
+<?php endif; ?>
 
-        <label for="admin_lname">Last Name:</label>
-        <input type="text" id="admin_lname" name="admin_lname" value="<?php echo htmlspecialchars($data['input']['admin_lname'] ?? ''); ?>" required><br><br>
 
-        <label for="admin_email">Email:</label>
-        <input type="email" id="admin_email" name="admin_email" value="<?php echo htmlspecialchars($data['input']['admin_email'] ?? ''); ?>" required><br><br>
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title"><?php echo $h($data['title']); ?></h4>
+            </div>
+            <div class="card-body">
 
-        <label for="admin_password">Password:</label>
-        <input type="password" id="admin_password" name="admin_password" required><br><br>
+                
+                <form method="POST" action="/tenants">
+                    <div class="row">
 
-        <button type="submit">Create Tenant</button>
-    </form>
-    <p><a href="/tenants">Back to Tenant List</a></p>
-</body>
-</html>
+                        <div class="col-lg-6">
+                            <div class="card">
+                                <div class="card-body">
+
+                                    <?= $CsrfToken::field() ?> 
+            
+                                    <h5>Tenant Details</h5>
+
+                                    <div class="form-group">
+                                        <label for="tenant_name">Company Name:</label>
+                                        <input type="text" class="form-control" id="tenant_name" placeholder="Enter Company's Name" 
+                                            value="<?= $h($data['input']['tenant_name'] ?? '') ?>" required/>
+                                        <small id="tenant_name_help" class="form-text text-muted">
+                                            Please provide your company/business's legal name.
+                                        </small>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="subdomain">Subdomain:</label>
+                                        <input type="text" class="form-control" id="subdomain" placeholder="Enter Subdomain" 
+                                            value="<?= $h($data['input']['subdomain'] ?? '') ?>" required/>
+                                        <small id="subdomain_help" class="form-text text-muted">
+                                            Please set the subdomain.
+                                        </small>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="payroll_flow">Payroll Flow:</label>
+                                        <select class="form-select" id="payroll_flow">
+                                            <option value="ACCOUNTANT_FINAL">Accountant Final</option>
+                                            <option value="ADMIN_FINAL">Admin Final</option>
+                                        </select>
+                                        <small id="payroll_flow_help" class="form-text text-muted">
+                                            Please set who approves final payroll.
+                                        </small>
+                                    </div>
+
+                                    <h5>Subscription Details</h5>
+
+                                    <div class="form-group">
+                                        <label for="plan_id">Select Plan:</label>
+                                        <select class="form-select" id="plan_id">
+                                            <option value="">-- Select a Plan --</option>
+                                            <?php foreach ($data['plans'] as $plan): ?>
+                                                <option value="<?= $h((string)$plan['id']) ?>"
+                                                    <?php echo (isset($data['input']['plan_id']) && (int)$data['input']['plan_id'] === $plan['id']) ? 'selected' : ''; ?>
+                                                    >
+                                                    <?= $h($plan['name']) ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                        <small id="plan_id_help" class="form-text text-muted">
+                                            Please select a subscription plan for the tenant.
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-6">
+
+                            <div class="card">
+                                <div class="card-body">
+
+                                    <h5>Initial Admin User Details</h5>
+
+                                    <div class="form-group">
+                                        <label for="admin_fname">First Name:</label>
+                                        <input type="text" class="form-control" id="admin_fname" placeholder="Enter first name" 
+                                            value="<?= $h($data['input']['admin_fname'] ?? '') ?>" required/>
+                                        <small id="admin_fname_help" class="form-text text-muted">
+                                            Please enter the first name of the administrator.
+                                        </small>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="admin_lname">Last Name:</label>
+                                        <input type="text" class="form-control" id="admin_lname" placeholder="Enter last name" 
+                                            value="<?= $h($data['input']['admin_lname'] ?? '') ?>" required/>
+                                        <small id="admin_lname_help" class="form-text text-muted">
+                                            Please enter the last name of the administrator.
+                                        </small>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="admin_email">Email:</label>
+                                        <input type="text" class="form-control" id="admin_email" placeholder="Enter email" 
+                                            value="<?= $h($data['input']['admin_email'] ?? '') ?>" required/>
+                                        <small id="admin_email_help" class="form-text text-muted">
+                                            Please enter the email of the administrator.
+                                        </small>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="admin_password">Password:</label>
+                                        <input type="text" class="form-control" id="admin_password" placeholder="Enter password" 
+                                            value="<?= $h($data['input']['admin_password'] ?? '') ?>" required/>
+                                        <small id="admin_password_help" class="form-text text-muted">
+                                            Please enter the password of the administrator.
+                                        </small>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                    
+
+                    <button type="submit" class="btn btn-primary btn-block">Create Tenant</button>
+                </form>
+                <!-- <p><a href="/tenants">Back to Tenant List</a></p> -->
+            
+            </div>
+        </div>
+    </div>
+</div>
+

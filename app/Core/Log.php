@@ -70,6 +70,18 @@ class Log
         self::initialize();
         self::$logger->error($message, $context);
     }
+
+
+    /**
+     * Action must be taken immediately. Alerts are typically for critical conditions
+     * that require immediate attention (e.g., security violation like failed CSRF).
+     */
+    public static function alert(string $message, array $context = []): void
+    {
+        self::initialize();
+        self::$logger->alert($message, $context);
+    }
+
     
     /**
      * Critical conditions.

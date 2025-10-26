@@ -16,19 +16,54 @@ class EmployeeModel extends Model
     }
 
     /**
+     * Verifies that a user ID belongs to a specific tenant ID.
+     * Checks the USERS table for the definitive tenant_id for the given user.
+     *
+     * @param int $userId The ID of the employee (user) to check.
+     * @param int $tenantId The ID of the tenant the employee MUST belong to.
+     * @return bool True if the employee/user exists and belongs to the tenant, false otherwise.
+     */
+    public function isEmployeeInTenant(int $userId, int $tenantId): bool
+    {
+        // Check both users (u) and employees (e) to ensure the user exists AND is employed by the correct tenant
+        $sql = "SELECT COUNT(e.user_id) 
+                FROM {$this->table} e
+                JOIN users u ON e.user_id = u.id
+                WHERE e.user_id = :user_id AND e.tenant_id = :tenant_id";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindParam(':user_id', $userId, \PDO::PARAM_INT);
+            $stmt->bindParam(':tenant_id', $tenantId, \PDO::PARAM_INT);
+            $stmt->execute();
+            
+            return (int)$stmt->fetchColumn() === 1;
+        } catch (PDOException $e) {
+            Log::error("Security check failed (isEmployeeInTenant). Tenant {$tenantId}, User {$userId}. Error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    
+    
+    /**
      * Retrieves all employees for the current tenant.
      */
     public function getAllEmployees(): array
     {
-        // Check if tenant scoping is applicable (it should be for this model)
-        $whereClause = $this->getTenantScope(); // Get the "WHERE tenant_id = X" clause
+        // Get the "WHERE tenant_id = X" clause from the base Model.
+        $rawWhereClause = $this->getTenantScope(); 
+        
+        // FIX: Qualify the tenant_id in the WHERE clause using the 'e' alias 
+        // (for the employees table) to resolve the 'ambiguous column' error.
+        $whereClause = str_replace('tenant_id', 'e.tenant_id', $rawWhereClause);
         
         $sql = "SELECT 
-                  e.user_id, e.employee_id, e.hire_date, e.employment_type,
-                  e.current_salary_ghs,
-                  u.first_name, u.last_name, u.email, u.is_active,
-                  p.title AS position_title,
-                  d.name AS department_name
+                    e.user_id, e.employee_id, e.hire_date, e.employment_type,
+                    e.current_salary_ghs, e.bank_name, e.bank_account_number, e.bank_branch, e.bank_account_name, -- Added new bank fields
+                    u.first_name, u.last_name, u.email, u.is_active,
+                    p.title AS position_title,
+                    d.name AS department_name
                 FROM employees e
                 JOIN users u ON e.user_id = u.id
                 LEFT JOIN positions p ON e.current_position_id = p.id
@@ -58,19 +93,24 @@ class EmployeeModel extends Model
      */
     public function createEmployeeRecord(array $data): bool
     {
+        // FIX: Updated SQL to include new columns: bank_branch and bank_account_name
         $sql = "INSERT INTO {$this->table} 
-                  (user_id, tenant_id, employee_id, hire_date, current_position_id, employment_type, current_salary_ghs, payment_method, bank_name, bank_account_number) 
-                  VALUES 
-                  (:user_id, :tenant_id, :employee_id, :hire_date, :current_position_id, :employment_type, :current_salary_ghs, :payment_method, :bank_name, :bank_account_number)";
+                (user_id, tenant_id, employee_id, hire_date, current_position_id, 
+                employment_type, current_salary_ghs, payment_method, bank_name, bank_account_number, bank_branch, 
+                bank_account_name, is_payroll_eligible) 
+                VALUES 
+                (:user_id, :tenant_id, :employee_id, :hire_date, :current_position_id, 
+                :employment_type, :current_salary_ghs, :payment_method, :bank_name, :bank_account_number, :bank_branch, 
+                :bank_account_name, :is_payroll_eligible)";
         
-        $defaults = [
-            'bank_name' => null, 
-            'bank_account_number' => null, 
+       $defaults = [
+            'is_payroll_eligible' => 1
         ];
         $finalData = array_merge($defaults, $data);
         
         try {
             $stmt = $this->db->prepare($sql);
+            // Note: Assuming all required keys including the new bank fields are in $data or defaults
             return $stmt->execute($finalData);
         } catch (PDOException $e) {
             // Log failure in create operation
@@ -102,8 +142,6 @@ class EmployeeModel extends Model
             return true;
         }
         
-        // Note: The primary key for this update is the user_id column
-        // We rely on the Model's tenant scope being enforced higher up, or in the base model's logic.
         $sql = "UPDATE {$this->table} SET " . implode(', ', $setClauses) . " WHERE user_id = :user_id AND tenant_id = " . $this->currentTenantId;
         
         try {
@@ -129,17 +167,19 @@ class EmployeeModel extends Model
         
         $scopeCondition = '';
         if (is_string($tenantScope)) {
-            // Replace the initial 'WHERE' with 'AND' if scope is needed
-            $scopeCondition = str_ireplace('WHERE', 'AND', trim($tenantScope));
+            // Qualify the tenant_id check with 'u.' since 'users' is the primary table here
+            $qualifiedTenantScope = str_replace('tenant_id', 'u.tenant_id', trim($tenantScope));
+            // Replace the initial 'WHERE' with 'AND'
+            $scopeCondition = str_ireplace('WHERE', 'AND', $qualifiedTenantScope);
         }
         
         $sql = "SELECT 
-                  u.*, 
-                  up.*,
-                  e.employee_id, e.hire_date, e.employment_type, e.current_salary_ghs,
-                  e.payment_method, e.bank_name, e.bank_account_number,
-                  p.id AS position_id, p.title AS position_title,
-                  d.id AS department_id, d.name AS department_name
+                    u.*, 
+                    up.*,
+                    e.employee_id, e.hire_date, e.employment_type, e.current_salary_ghs,
+                    e.payment_method, e.bank_name, e.bank_account_number, e.bank_branch, e.bank_account_name, -- Added new bank fields
+                    p.id AS position_id, p.title AS position_title,
+                    d.id AS department_id, d.name AS department_name
                 FROM users u
                 JOIN user_profiles up ON u.id = up.user_id
                 JOIN employees e ON u.id = e.user_id
@@ -187,4 +227,69 @@ class EmployeeModel extends Model
             return 0; 
         }
     }
+
+
+    /**
+     * Checks if a given SSNIT or TIN number is already in use across all tenants.
+     * This is used for pre-validation before creating a new user_profile record.
+     * * @param string $number The SSNIT or TIN number.
+     * @param string $type The column name ('ssnit_number' or 'tin_number').
+     * @return bool True if the number is already in use.
+     */
+    public function isComplianceNumberInUse(string $number, string $type): bool
+    {
+        if (!in_array($type, ['ssnit_number', 'tin_number'])) {
+            // Log security or parameter error
+            return true; // Fail safe
+        }
+
+        // Search the user_profiles table
+        $sql = "SELECT COUNT(user_id) 
+                FROM user_profiles 
+                WHERE {$type} = :number";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindParam(':number', $number, \PDO::PARAM_STR);
+            $stmt->execute();
+            
+            return (int)$stmt->fetchColumn() > 0;
+        } catch (PDOException $e) {
+            Log::error("Compliance number check failed ({$type}). Error: " . $e->getMessage());
+            // Throwing the exception would crash, so return true to fail-safe and prevent duplicate
+            return true; 
+        }
+    }
+
+
+
+    /**
+     * Checks if a given employee ID is already in use within the current tenant.
+     * This uses the tenant scoping already set up on the model.
+     * * @param string $employeeId The employee ID to check.
+     * @return bool True if the employee ID is already in use by this tenant.
+     */
+    public function isEmployeeIdInUse(string $employeeId): bool
+    {
+        // $this->table is 'employees'
+        // $this->currentTenantId is set by the base Model's constructor or logic
+        $sql = "SELECT COUNT(user_id) 
+                FROM {$this->table} 
+                WHERE employee_id = :employee_id 
+                AND tenant_id = :tenant_id";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindParam(':employee_id', $employeeId, \PDO::PARAM_STR);
+            $stmt->bindParam(':tenant_id', $this->currentTenantId, \PDO::PARAM_INT);
+            $stmt->execute();
+            
+            return (int)$stmt->fetchColumn() > 0;
+        } catch (PDOException $e) {
+            Log::error("Employee ID check failed. Error: " . $e->getMessage());
+            // Return true to fail-safe and prevent a database crash attempt
+            return true; 
+        }
+    }
+
 }

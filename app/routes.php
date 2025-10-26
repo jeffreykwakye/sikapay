@@ -89,10 +89,11 @@ return [
         'handler' => ['EmployeeController', 'store']
     ]],
 
-    // View Employee Profile (show)
+    // View Employee Profile (show) - Allows viewing own profile (self:view_profile) OR any employee (employee:read)
+    // This route handles the final redirect after a successful employee creation.
     ['GET', '/employees/{userId:\d+}', [
         'auth' => 'AuthMiddleware',
-        'permission' => ['PermissionMiddleware', 'employee:read_all'],
+        'permission' => ['PermissionMiddleware', 'employee:read_all'], 
         'handler' => ['EmployeeController', 'show']
     ]],
 
@@ -106,18 +107,95 @@ return [
     // Process Update (PUT spoofed via POST)
     ['POST', '/employees/{userId:\d+}', [
         'auth' => 'AuthMiddleware',
-        'permission' => ['PermissionMiddleware', 'employee:update'],
+        'permission' => ['PermissionMiddleware', ['employee:update', 'self:update_profile']],
         'handler' => ['EmployeeController', 'update'] // The method handles the PUT logic
     ]],
+ 
+    // NOTE: The API Route for Cascading Dropdown is REMOVED as it's now handled by client-side JS.
+ 
+    // =========================================================
+    // Configuration Routes: Company Profile (Protected)
+    // =========================================================
+    // Display the Company Profile form
+    ['GET', '/company-profile', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'tenant:manage_settings'],
+        'handler' => ['CompanyProfileController', 'index']
+    ]],
 
+    // Process the update for general details (Name, TIN, Address, etc.)
+    ['POST', '/company-profile/save', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'tenant:manage_settings'],
+        'handler' => ['CompanyProfileController', 'save']
+    ]],
 
-    // API Route for Cascading Dropdown (Requires login for security, no specific RBAC needed)
-    [
-        'GET', '/api/positions', [
-            'auth' => 'AuthMiddleware', 
-            'permission' => ['PermissionMiddleware', 'employee:list'], 
-            'handler' => ['EmployeeController', 'getPositionsByDepartment']
-        ]
-    ],
+    // Process the update for the logo file only
+    ['POST', '/company-profile/upload-logo', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'tenant:manage_settings'],
+        'handler' => ['CompanyProfileController', 'uploadLogo']
+    ]],
 
+    // =========================================================
+    // Configuration Routes: Department Management (Protected)
+    // =========================================================
+    // List/Index Departments
+    ['GET', '/departments', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'config:manage_departments'],
+        'handler' => ['DepartmentController', 'index']
+    ]],
+
+    // Create/Store a new Department
+    ['POST', '/departments/store', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'config:manage_departments'],
+        'handler' => ['DepartmentController', 'store']
+    ]],
+
+    // Update an existing Department by ID
+    ['POST', '/departments/update/{id:\d+}', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'config:manage_departments'],
+        'handler' => ['DepartmentController', 'update']
+    ]],
+
+    // Delete a Department by ID
+    ['POST', '/departments/delete/{id:\d+}', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'config:manage_departments'],
+        'handler' => ['DepartmentController', 'delete']
+    ]],
+// -----------------------------------------------------------------
+// =========================================================
+// Configuration Routes: Position Management (Protected)
+// =========================================================
+    // List/Index Positions
+    ['GET', '/positions', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'config:manage_positions'], // Using the constant defined in the Controller
+        'handler' => ['PositionController', 'index']
+    ]],
+
+    // Create/Store a new Position
+    ['POST', '/positions/store', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'config:manage_positions'],
+        'handler' => ['PositionController', 'store']
+    ]],
+
+    // Update an existing Position by ID
+    ['POST', '/positions/update/{id:\d+}', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'config:manage_positions'],
+        'handler' => ['PositionController', 'update']
+    ]],
+
+    // Delete a Position by ID
+    ['POST', '/positions/delete/{id:\d+}', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'config:manage_positions'],
+        'handler' => ['PositionController', 'delete']
+    ]],
 ];

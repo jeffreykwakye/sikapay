@@ -15,15 +15,38 @@ $this->title = $title; // 'Employee Directory'
     <?php endif; ?>
 </div>
 
-<?php if (empty($employees)): ?>
-    <div class="alert alert-info" role="alert">
-        There are no employees added yet for this tenant. 
-        <?php if ($this->auth->can('employee:create')): ?>
-            Start by adding the first one!
-        <?php endif; ?>
-    </div>
-<?php else: ?>
-    <div class="card shadow-sm">
+<div class="page-header">
+    <h3 class="fw-bold mb-3">Dashboard</h3>
+    <ul class="breadcrumbs mb-3">
+        <li class="nav-home">
+            <a href="/">
+                <i class="icon-home"></i>
+            </a>
+        </li>
+        <li class="separator">
+            <i class="icon-arrow-right"></i>
+        </li>
+        <li class="nav-item">
+            <a href="/">Dashboard</a>
+        </li>
+        <li class="separator">
+            <i class="icon-arrow-right"></i>
+        </li>
+        <li class="nav-item">
+            <a href="#">Employees</a>
+        </li>
+    </ul>
+</div>
+
+<?php //if (empty($employees)): ?>
+    <!-- <div class="alert alert-info" role="alert">
+        There are no employees added yet for this tenant.  -->
+        <?php //if ($this->auth->can('employee:create')): ?>
+            <!-- Start by adding the first one! -->
+        <?php //endif; ?>
+    <!-- </div> -->
+<?php //else: ?>
+    <!-- <div class="card shadow-sm">
         <div class="card-body">
             <div class="table-responsive">
                 <table class="table table-hover table-striped">
@@ -66,5 +89,24 @@ $this->title = $title; // 'Employee Directory'
                 </table>
             </div>
         </div>
+    </div> -->
+<?php //endif; ?>
+
+
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <!-- <div class="card-header">
+                <div class="card-title">Dashboard</div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+ 
+                </div>
+            </div> -->
+        </div>
     </div>
-<?php endif; ?>
+</div>
+
+

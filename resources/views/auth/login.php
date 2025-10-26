@@ -20,10 +20,12 @@
         <h2>SikaPay Login</h2>
         
         <?php if (!empty($data['error'])): ?>
-            <div class="error"><?php echo htmlspecialchars($data['error']); ?></div>
+            <div class="error"><?= $h($data['error']) ?></div>
         <?php endif; ?>
 
         <form method="POST" action="/attempt-login">
+            <?= $CsrfToken::field() ?> 
+            
             <div class="form-group">
                 <label for="email">Email</label>
                 <input type="email" id="email" name="email" value="admin@sikapay.local" required>

@@ -49,7 +49,7 @@ class AppConfig
             $isMissing = !isset($_ENV[$var]);
             $isEmpty = trim((string)($_ENV[$var] ?? '')) === ''; // Check if the trimmed value is empty
             
-            // 🚨 Allow DB_PASS to be empty.
+            // Allow DB_PASS to be empty.
             // If the variable is missing, OR if it's empty AND NOT the DB_PASS, throw an exception.
             if ($isMissing || ($isEmpty && $var !== 'DB_PASS')) {
                 throw new Exception("CRITICAL CONFIGURATION ERROR: The required environment variable '{$var}' is missing or empty. ({$description})");
@@ -82,7 +82,7 @@ class AppConfig
                     \PDO::ATTR_TIMEOUT => 5, // Connection timeout in seconds
                 ]
             ],
-            // 🚨 NEW: Define other security-relevant settings here
+            // NEW: Define other security-relevant settings here
             'security' => [
                 'session_lifetime' => 7200, // 2 hours in seconds
                 'csrf_protection' => true,
