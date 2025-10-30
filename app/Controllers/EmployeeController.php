@@ -20,6 +20,7 @@ use Jeffrey\Sikapay\Models\AuditModel;
 use Jeffrey\Sikapay\Models\RoleModel; 
 use Jeffrey\Sikapay\Models\EmploymentHistoryModel; // Added for updateSalary()
 use Jeffrey\Sikapay\Services\SubscriptionService;
+use Jeffrey\Sikapay\Models\StaffFileModel;
 
 
 class EmployeeController extends Controller
@@ -117,9 +118,13 @@ class EmployeeController extends Controller
                 return;
             }
 
+            $staffFileModel = new StaffFileModel();
+            $staffFiles = $staffFileModel->getFilesByUserId($userId);
+
             $this->view('employee/show', [
                 'title' => 'Employee Profile: ' . $employee['first_name'] . ' ' . $employee['last_name'],
                 'employee' => $employee,
+                'staffFiles' => $staffFiles,
             ]);
         } catch (Throwable $e) {
             Log::error("Failed to load employee profile (show) for User {$userId}: " . $e->getMessage());
@@ -888,5 +893,60 @@ class EmployeeController extends Controller
             echo json_encode(['error' => 'Internal server error fetching position data.']);
             exit;
         }
+    }
+
+
+
+    public function updateProfileImage(int $userId): void
+    {
+        $this->checkPermission('employee:update');
+
+        if (!$this->employeeModel->isEmployeeInTenant($userId, $this->tenantId)) {
+            ErrorResponder::respond(404, "The specified employee was not found.");
+            return;
+        }
+
+        try {
+            $userProfileModel = new UserProfileModel();
+            $newImageUrl = (new \Jeffrey\Sikapay\Helpers\FileUploader())->upload($_FILES['profile_image'], 'assets/images/profiles', ['jpg', 'jpeg', 'png'], 2 * 1024 * 1024);
+            $userProfileModel->updateProfileImage($userId, $newImageUrl);
+
+            $_SESSION['flash_success'] = "Profile image updated successfully.";
+        } catch (\Exception $e) {
+            $_SESSION['flash_error'] = "Profile image update failed: " . $e->getMessage();
+        }
+
+        $this->redirect("/employees/{$userId}");
+    }
+
+    
+
+    public function uploadStaffFile(int $userId): void
+    {
+        $this->checkPermission('employee:update');
+
+        if (!$this->employeeModel->isEmployeeInTenant($userId, $this->tenantId)) {
+            ErrorResponder::respond(404, "The specified employee was not found.");
+            return;
+        }
+
+        try {
+            $staffFileModel = new \Jeffrey\Sikapay\Models\StaffFileModel();
+            $filePath = (new \Jeffrey\Sikapay\Helpers\FileUploader())->upload($_FILES['staff_file'], 'assets/files/staff', ['pdf', 'doc', 'docx', 'jpg', 'png'], 5 * 1024 * 1024);
+
+            $staffFileModel->createFileRecord([
+                'user_id' => $userId,
+                'file_name' => $_FILES['staff_file']['name'],
+                'file_path' => $filePath,
+                'file_type' => $_POST['file_type'],
+                'file_description' => $_POST['file_description'],
+            ]);
+
+            $_SESSION['flash_success'] = "Staff file uploaded successfully.";
+        } catch (\Exception $e) {
+            $_SESSION['flash_error'] = "Staff file upload failed: " . $e->getMessage();
+        }
+
+        $this->redirect("/employees/{$userId}");
     }
 }

@@ -46,6 +46,7 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 | **Subscriptions** | Initial Trial Provisioning | Complete | Dedicated `subscriptions` and `subscription_history` tables populated transactionally. |
 | **Audit/Compliance** | Audit Logging | Complete | Logs critical actions using the acting Super Admin's ID. |
 | **Notifications (NEW)** | **E2E In-App System** | **Complete** | Includes service, model, controller, display, mark-as-read functionality, and UI badge counter. |
+| **Employee Profile** | View, Profile Picture Upload, Staff File Upload | **Complete** | Modern, two-column layout with tabbed navigation. |
 
 ---
 
@@ -121,6 +122,7 @@ The tenant creation process adheres to the **Single Responsibility Principle (SR
 | **2025-10-13** | **In-App Notifications** | **Full E2E implementation** (Models, Service, Controller, Views, and Header UI integration). | **Complete** |
 | **2025-10-15** | **RBAC & Architectural Fix** | **Implemented Singleton pattern for Auth**, fixed Controller instantiation, implemented **Permission Middleware** and updated **Router** to enforce security. | **Complete** |
 | **2025-10-15** | **Logging & UX Complete** | **Integrate Monolog** (daily rotation/expiration). Confirmed and implemented the **Tenant Admin Welcom Notification** on provisioning success.| **Complete** |
+| **2025-10-30** | **Employee Profile** | Rebuilt the employee profile page with a modern, two-column layout, profile picture upload, and staff file management. | **Complete** |
 
 
 ## Next Focus Area

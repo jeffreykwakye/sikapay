@@ -8,7 +8,7 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 
 * **Language:** PHP 8.1+ (Vanilla MVC)
 * **Database:** MySQL / MariaDB
-* **Dependencies:** Composer, FastRoute, FPDF, PhpSpreadsheet, vlucas/phpdotenv.
+* **Dependencies:** Composer, FastRoute, FPDF, PhpSpreadsheet, vlucas/phpdotenv, Monolog.
 
 ## 🚀 Setup Guide
 
@@ -47,9 +47,12 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 | **Security/RBAC** | **Role-Based Access Control (RBAC)** | **Core Complete** | **Central `Auth::can()` gate, Permission Middleware, and protected initial routes.** |
 | **Multi-Tenancy** | Data Scoping & Isolation | Core Complete | Base Model enforces `WHERE tenant_id = X`. |
 | **Tenant Provisioning** | **Full Creation Workflow (CRUD-C)** | **Complete** | **Transactional creation** of Tenant, Admin User, Subscription, and Audit Log records. |
+| **Employee Management** | CRUD for Employees, Departments, and Positions | **Complete** | Full employee lifecycle management, including personal, statutory, and bank information. |
+| **Company Profile** | Tenant Profile Management | **Complete** | Allows tenants to manage their own company profile, including logo upload. |
 | **Subscriptions** | Initial Trial Provisioning | Complete | Dedicated tables populated transactionally. |
 | **Audit/Compliance** | Audit Logging | Complete | Logs critical actions using the acting Super Admin's ID. |
 | **In-App Notifications**| Full System Pipeline | Complete | Real-time alerts, counter badge, mark-as-read functionality. |
+| **Employee Profile** | View, Profile Picture Upload, Staff File Upload | **Complete** | Modern, two-column layout with tabbed navigation. |
 
 ---
 
@@ -66,6 +69,10 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 
 ## 🚀 Next Focus Area
 
-**Security & Feature Expansion**
-* **Objective:** Complete full route protection, enhance logging, and begin building Employee Management features.
-* **Immediate Task:** Install and integrate **Monolog** for structured application and security logging.
+**Payroll & Core Feature Expansion**
+* **Objective:** Build the core payroll processing engine and enhance the user experience.
+* **Immediate Tasks:**
+    *   Implement the payroll generation process.
+    *   Develop payslip generation (PDF).
+    *   Enhance the dashboard with key metrics and summaries.
+    *   Build out a comprehensive reporting module.

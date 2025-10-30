@@ -11,3 +11,7 @@
 
 # Runtime/Logs
 *.log
+gemini_notes.md
+/logs/
+/public/assets/files/
+/public/assets/images/

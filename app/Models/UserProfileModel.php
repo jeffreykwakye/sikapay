@@ -105,4 +105,28 @@ class UserProfileModel extends Model
             throw $e;
         }
     }
+
+
+    /**
+     * Updates only the profile_picture_url for a given user.
+     *
+     * @param int $userId The ID of the user.
+     * @param string|null $imageUrl The new image URL or null to clear it.
+     * @return bool
+     */
+    public function updateProfileImage(int $userId, ?string $imageUrl): bool
+    {
+        $sql = "UPDATE {$this->table} SET profile_picture_url = :url WHERE user_id = :user_id";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindParam(':url', $imageUrl);
+            $stmt->bindParam(':user_id', $userId, \PDO::PARAM_INT);
+            return $stmt->execute();
+        } catch (PDOException $e) {
+            Log::error("Failed to update profile image for User {$userId}. Error: " . $e->getMessage());
+            return false;
+        }
+    }
+
 }

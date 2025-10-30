@@ -110,6 +110,27 @@ return [
         'permission' => ['PermissionMiddleware', ['employee:update', 'self:update_profile']],
         'handler' => ['EmployeeController', 'update'] // The method handles the PUT logic
     ]],
+
+    // Route for Viewing Employment History
+    ['GET', '/employees/{userId:\d+}/history', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'employee:read_all'], 
+        'handler' => ['EmployeeController', 'showHistory']
+    ]],
+
+    // Route for Uploading/Updating Profile Image
+    ['POST', '/employees/{userId:\d+}/image', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'employee:update'], 
+        'handler' => ['EmployeeController', 'updateProfileImage']
+    ]],
+
+    // Route for Uploading Staff Documents
+    ['POST', '/employees/{userId:\d+}/files', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'employee:update'], 
+        'handler' => ['EmployeeController', 'uploadStaffFile']
+    ]],
  
     // NOTE: The API Route for Cascading Dropdown is REMOVED as it's now handled by client-side JS.
  
