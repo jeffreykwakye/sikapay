@@ -52,7 +52,7 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 | **Subscriptions** | Initial Trial Provisioning | Complete | Dedicated tables populated transactionally. |
 | **Audit/Compliance** | Audit Logging | Complete | Logs critical actions using the acting Super Admin's ID. |
 | **In-App Notifications**| Full System Pipeline | Complete | Real-time alerts, counter badge, mark-as-read functionality. |
-| **Employee Profile** | View, Profile Picture Upload, Staff File Upload | **Complete** | Modern, two-column layout with tabbed navigation. |
+| **Employee Profile** | View, Profile Picture Upload, Staff File Upload, Staff File Deletion | **Complete** | Modern, two-column layout with tabbed navigation. |
 
 ---
 

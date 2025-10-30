@@ -122,7 +122,7 @@ $profileImageUrl = !empty($e['profile_picture_url']) ? $h($e['profile_picture_ur
                             <?php endif; ?>
                         </div>
                         <div class="table-responsive">
-                            <table class="table table-striped">
+                            <table class="table table-striped" data-csrf-token="<?= $CsrfToken::getToken() ?>">
                                 <thead>
                                     <tr>
                                         <th>File Name</th>
@@ -140,7 +140,7 @@ $profileImageUrl = !empty($e['profile_picture_url']) ? $h($e['profile_picture_ur
                                             <td><a href="<?= $h($file['file_path']) ?>" target="_blank"><i class="icon-doc"></i> <?= $h($file['file_name']) ?></a></td>
                                             <td><?= $h($file['file_type']) ?></td>
                                             <td><?= date('M j, Y, g:i a', strtotime($file['uploaded_at'])) ?></td>
-                                            <td><button class="btn btn-danger btn-sm"><i class="icon-trash"></i></button></td>
+                                            <td><button class="btn btn-danger btn-sm delete-file-btn" data-file-id="<?= $file['id'] ?>"><i class="icon-trash"></i></button></td>
                                         </tr>
                                         <?php endforeach; ?>
                                     <?php endif; ?>
@@ -159,12 +159,13 @@ $profileImageUrl = !empty($e['profile_picture_url']) ? $h($e['profile_picture_ur
 <div class="modal fade" id="updateImageModal" tabindex="-1" aria-labelledby="updateImageModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form action="/employees/<?= $e['user_id'] ?>/image" method="POST" enctype="multipart/form-data">
+            <form id="updateImageForm" enctype="multipart/form-data" data-user-id="<?= $e['user_id'] ?>">
                 <div class="modal-header">
                     <h5 class="modal-title" id="updateImageModalLabel">Update Profile Image</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
+                    <div id="updateImageMessage"></div>
                     <input type="hidden" name="csrf_token" value="<?= $CsrfToken::getToken() ?>">
                     <div class="mb-3">
                         <label for="profile_image" class="form-label">Select new image (JPG, PNG)</label>
@@ -184,13 +185,14 @@ $profileImageUrl = !empty($e['profile_picture_url']) ? $h($e['profile_picture_ur
 <div class="modal fade" id="uploadFileModal" tabindex="-1" aria-labelledby="uploadFileModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form action="/employees/<?= $e['user_id'] ?>/files" method="POST" enctype="multipart/form-data">
+            <form id="uploadFileForm" enctype="multipart/form-data" data-user-id="<?= $e['user_id'] ?>">
                 <div class="modal-header">
                     <h5 class="modal-title" id="uploadFileModalLabel">Upload Staff Document</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <input type="hidden" name="csrf_token" value="<?= $CsrfToken::getToken() ?>">
+                    <div id="uploadFileMessage"></div>
+                    <?= $CsrfToken::field() ?>
                     <div class="mb-3">
                         <label for="staff_file" class="form-label">Select file (PDF, DOC, DOCX, JPG, PNG)</label>
                         <input class="form-control" type="file" id="staff_file" name="staff_file" required>
@@ -215,6 +217,65 @@ $profileImageUrl = !empty($e['profile_picture_url']) ? $h($e['profile_picture_ur
                     <button type="submit" class="btn btn-primary">Upload File</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<script src="/assets/js/employees/employee-profile.js"></script>
+
+</div>
+
+<!-- Generic Error Modal -->
+<div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="errorModalLabel">Error</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="errorModalMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Generic Success Modal -->
+<div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="successModalLabel">Success</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="successModalMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Generic Confirmation Modal -->
+<div class="modal fade" id="confirmationModal" tabindex="-1" aria-labelledby="confirmationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="confirmationModalLabel">Confirm Action</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmationModalMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" id="confirmActionButton">Confirm</button>
+            </div>
         </div>
     </div>
 </div>

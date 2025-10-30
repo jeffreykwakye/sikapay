@@ -126,12 +126,17 @@ return [
     ]],
 
     // Route for Uploading Staff Documents
-    ['POST', '/employees/{userId:\d+}/files', [
-        'auth' => 'AuthMiddleware',
-        'permission' => ['PermissionMiddleware', 'employee:update'], 
-        'handler' => ['EmployeeController', 'uploadStaffFile']
-    ]],
- 
+        ['POST', '/employees/{userId:\d+}/files', [
+            'auth' => 'AuthMiddleware', 
+            'permission' => ['PermissionMiddleware', 'employee:update'], 
+            'handler' => ['EmployeeController', 'uploadStaffFile']
+        ]],
+    
+        ['POST', '/employees/{userId:\d+}/files/{fileId:\d+}/delete', [
+            'auth' => 'AuthMiddleware',
+            'permission' => ['PermissionMiddleware', 'employee:update'],
+            'handler' => ['EmployeeController', 'deleteStaffFile']
+        ]], 
     // NOTE: The API Route for Cascading Dropdown is REMOVED as it's now handled by client-side JS.
  
     // =========================================================

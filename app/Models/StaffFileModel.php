@@ -73,4 +73,31 @@ class StaffFileModel extends Model
             return false;
         }
     }
+
+    public function deleteFile(int $fileId, int $tenantId): bool
+    {
+        $sql = "SELECT file_path FROM {$this->table} WHERE id = :id AND tenant_id = :tenant_id";
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([':id' => $fileId, ':tenant_id' => $tenantId]);
+            $filePath = $stmt->fetchColumn();
+
+            if ($filePath) {
+                // Delete the file from the file system
+                if (file_exists($filePath)) {
+                    unlink($filePath);
+                }
+
+                // Delete the record from the database
+                $deleteSql = "DELETE FROM {$this->table} WHERE id = :id AND tenant_id = :tenant_id";
+                $deleteStmt = $this->db->prepare($deleteSql);
+                return $deleteStmt->execute([':id' => $fileId, ':tenant_id' => $tenantId]);
+            }
+
+            return false;
+        } catch (PDOException $e) {
+            Log::error("Staff file deletion failed for File ID {$fileId}. Error: " . $e->getMessage());
+            return false;
+        }
+    }
 }
