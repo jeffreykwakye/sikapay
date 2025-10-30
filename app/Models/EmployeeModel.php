@@ -292,4 +292,30 @@ class EmployeeModel extends Model
         }
     }
 
+    /**
+     * Retrieves all active employees for a given tenant who are eligible for payroll.
+     *
+     * @param int $tenantId
+     * @return array An array of employee records.
+     */
+    public function getAllPayrollEligibleEmployees(int $tenantId): array
+    {
+        $sql = "SELECT 
+                    e.user_id, e.employee_id, e.hire_date, e.employment_type,
+                    e.current_salary_ghs, u.first_name, u.last_name, u.email
+                FROM employees e
+                JOIN users u ON e.user_id = u.id
+                WHERE e.tenant_id = :tenant_id AND u.is_active = TRUE AND e.is_payroll_eligible = TRUE
+                ORDER BY u.last_name, u.first_name";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([':tenant_id' => $tenantId]);
+            
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            Log::error("Failed to retrieve payroll eligible employees for Tenant {$tenantId}. Error: " . $e->getMessage());
+            return [];
+        }
+    }
 }

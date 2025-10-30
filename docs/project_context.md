@@ -81,7 +81,8 @@ The core foundation is a multi-tenant SaaS application designed for high securit
 | **RBAC** | Granular Permissions | `roles`, `permissions`, `role_permissions`, `user_permissions`. |
 | **Employment** | HR Records & History | `departments`, `positions`, `employees`, `employment_history`. |
 | **Billing** | Feature Gating | `plans`, `features`, `plan_features`, `subscriptions`, `subscription_history`. |
-| **Compliance** | Audit Trail | `audit_logs` (Tracking all critical actions). |
+| **Payroll** | Core Payroll Data & Logic | `tax_bands`, `ssnit_rates`, `payroll_settings`, `payroll_periods`, `payslips`, `employee_payroll_details`, `PayrollService`, `PayrollController`. |
+| **Payroll Core** | Foundational Payroll Data | `tax_bands`, `ssnit_rates`, `payroll_settings`, `payroll_periods`, `employee_payroll_details`. |
 | **Application** | User Feedback | `notifications` (Table structure is migrated). |
 
 ---
@@ -123,6 +124,7 @@ The tenant creation process adheres to the **Single Responsibility Principle (SR
 | **2025-10-15** | **RBAC & Architectural Fix** | **Implemented Singleton pattern for Auth**, fixed Controller instantiation, implemented **Permission Middleware** and updated **Router** to enforce security. | **Complete** |
 | **2025-10-15** | **Logging & UX Complete** | **Integrate Monolog** (daily rotation/expiration). Confirmed and implemented the **Tenant Admin Welcom Notification** on provisioning success.| **Complete** |
 | **2025-10-30** | **Employee Profile** | Rebuilt the employee profile page with a modern, two-column layout, profile picture upload, staff file management, and staff file deletion. | **Complete** |
+| **2025-10-30** | **Payroll Engine Foundation** | Designed database schema for `tax_bands`, `ssnit_rates`, `payroll_settings`, `payroll_periods`, `employee_payroll_details`. Implemented `PayrollService` with core calculation logic, `PayrollController`, and `payroll/index` view. | **In Progress** |
 
 
 ## Next Focus Area

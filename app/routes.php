@@ -126,18 +126,34 @@ return [
     ]],
 
     // Route for Uploading Staff Documents
-        ['POST', '/employees/{userId:\d+}/files', [
-            'auth' => 'AuthMiddleware', 
-            'permission' => ['PermissionMiddleware', 'employee:update'], 
-            'handler' => ['EmployeeController', 'uploadStaffFile']
-        ]],
-    
-        ['POST', '/employees/{userId:\d+}/files/{fileId:\d+}/delete', [
-            'auth' => 'AuthMiddleware',
-            'permission' => ['PermissionMiddleware', 'employee:update'],
-            'handler' => ['EmployeeController', 'deleteStaffFile']
-        ]], 
-    // NOTE: The API Route for Cascading Dropdown is REMOVED as it's now handled by client-side JS.
+    ['POST', '/employees/{userId:\d+}/files', [
+        'auth' => 'AuthMiddleware', 
+        'permission' => ['PermissionMiddleware', 'employee:update'], 
+        'handler' => ['EmployeeController', 'uploadStaffFile']
+    ]],
+
+    ['POST', '/employees/{userId:\d+}/files/{fileId:\d+}/delete', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'employee:update'],
+        'handler' => ['EmployeeController', 'deleteStaffFile']
+    ]],
+
+    // Payroll Routes
+    ['GET', '/payroll', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'payroll:manage_rules'],
+        'handler' => ['PayrollController', 'index']
+    ]],
+    ['POST', '/payroll/period', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'payroll:manage_rules'],
+        'handler' => ['PayrollController', 'createPeriod']
+    ]],
+    ['POST', '/payroll/run', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'payroll:prepare'],
+        'handler' => ['PayrollController', 'runPayroll']
+    ]],    // NOTE: The API Route for Cascading Dropdown is REMOVED as it's now handled by client-side JS.
  
     // =========================================================
     // Configuration Routes: Company Profile (Protected)
