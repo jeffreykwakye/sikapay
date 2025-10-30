@@ -1,0 +1,18 @@
+[33m5834772[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m feat: Implement asynchronous file uploads and deletion on employee profile
+[33m9ded8d0[m[33m ([m[1;31morigin/main[m[33m)[m feat: Implement employee profile and directory
+[33m9ff027c[m feat(employee): Integration of Kaiadmin template. Complete security hardening and bug fixes, Company profile setup complete. Department and Positions setup for tenants complete. Complete employee onboarding.
+[33m6d6332f[m feat: Validator class added
+[33md84d1fc[m FEAT: Core System Hardening and Infrastructure Resilience
+[33m9d2ace2[m feat(seeder): Finalize production-safe, idempotent RBAC and Plan seeding
+[33m2a24571[m feat(logging): Integrate Monolog with daily rotation and middleware security auditing
+[33m158e956[m feat(security): Implement centralized RBAC via Permission Middleware
+[33mb9895a0[m feat: Complete E2E Notification System & Core UX Fixes
+[33m9ca4c73[m docs: Update README and PROJECT_CONTEXT after Notification Feature Completion
+[33ma590dc3[m FEAT: Implement End-to-End In-App Notification System
+[33mfd1b376[m FEAT: Finalize Super Admin Tenant Creation System
+[33mc7ad1ea[m FEAT: Implement core multi-tenancy architecture and secure full authentication flow.
+[33m5e0a8b1[m FEAT: Implement secure authentication, routing, and view loading. Includes robust security fixes for database connection, view path resolution, and browser bfcache.
+[33m89d959b[m DOCS: Update documentation reflecting complete schema implementation and successful seeding.
+[33m52f54f1[m FEAT: Implement full multi-tenant schema (profiles, RBAC, employment, billing) and correct robust seeder logic.
+[33m9d2e74f[m feat(core): Implement stable MVC core, dependency injection (PDO), dedicated Router and ErrorResponder
+[33ma444a83[m feat: Initial project structure, tooling configuration, documentation and license agreement
