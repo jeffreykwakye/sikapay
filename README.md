@@ -48,7 +48,8 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 | **Multi-Tenancy** | Data Scoping & Isolation | Core Complete | Base Model enforces `WHERE tenant_id = X`. |
 | **Tenant Provisioning** | **Full Creation Workflow (CRUD-C)** | **Complete** | **Transactional creation** of Tenant, Admin User, Subscription, and Audit Log records. |
 | **Employee Management** | CRUD for Employees, Departments, and Positions | **Complete** | Full employee lifecycle management, including personal, statutory, and bank information. |
-| **Payroll Core** | Database schema for tax bands, SSNIT rates, payroll settings, periods, payslips, and employee payroll details; Core calculation logic, service, controller, and view implemented. Payslip generation and viewing functionality included. | **In Progress** | Foundation laid for the core payroll engine. |
+| **Payroll Core** | Database schema for tax bands, SSNIT rates, payroll settings, periods, payslips, and employee payroll details; Core calculation logic, service, controller, and view implemented. Payslip generation and viewing functionality included. | **Complete** | Foundation laid for the core payroll engine. |
+| **Statutory Reports** | Generation of PAYE and SSNIT reports in PDF and Excel formats. | **Complete** | Allows tenants to generate statutory reports for compliance. |
 | **Company Profile** | Tenant Profile Management | **Complete** | Allows tenants to manage their own company profile, including logo upload. |
 | **Subscriptions** | Initial Trial Provisioning | Complete | Dedicated tables populated transactionally. |
 | **Audit/Compliance** | Audit Logging | Complete | Logs critical actions using the acting Super Admin's ID. |
@@ -70,10 +71,9 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 
 ## 🚀 Next Focus Area
 
-**Payroll & Core Feature Expansion**
-* **Objective:** Build the core payroll processing engine and enhance the user experience.
+**User Experience and Feature Enhancement**
+* **Objective:** Enhance the user experience and add more value to the platform.
 * **Immediate Tasks:**
-    *   Implement the payroll generation process.
-    *   Develop payslip generation (PDF).
-    *   Enhance the dashboard with key metrics and summaries.
-    *   Build out a comprehensive reporting module.
+    *   Enhance the dashboard with key payroll metrics.
+    *   Create a self-service portal for employees.
+    *   Integrate an email service for notifications.

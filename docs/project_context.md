@@ -124,16 +124,16 @@ The tenant creation process adheres to the **Single Responsibility Principle (SR
 | **2025-10-15** | **RBAC & Architectural Fix** | **Implemented Singleton pattern for Auth**, fixed Controller instantiation, implemented **Permission Middleware** and updated **Router** to enforce security. | **Complete** |
 | **2025-10-15** | **Logging & UX Complete** | **Integrate Monolog** (daily rotation/expiration). Confirmed and implemented the **Tenant Admin Welcom Notification** on provisioning success.| **Complete** |
 | **2025-10-30** | **Employee Profile** | Rebuilt the employee profile page with a modern, two-column layout, profile picture upload, staff file management, and staff file deletion. | **Complete** |
-| **2025-10-30** | **Payroll Engine Foundation** | Designed database schema for `tax_bands`, `ssnit_rates`, `payroll_settings`, `payroll_periods`, `employee_payroll_details`. Implemented `PayrollService` with core calculation logic, `PayrollController`, and `payroll/index` view. Payslip PDF generation and viewing functionality implemented. | **In Progress** |
+| **Payroll** | Core Payroll Data & Logic | `tax_bands`, `ssnit_rates`, `payroll_settings`, `payroll_periods`, `payslips`, `employee_payroll_details`, `PayrollService`, `PayrollController`. Payslip PDF generation and viewing functionality implemented. | **Complete** |
+| **Statutory Reports** | Generation of PAYE and SSNIT reports in PDF and Excel formats. | **Complete** | Allows tenants to generate statutory reports for compliance. |
 
 
 ## Next Focus Area
 
-**User Experience Refinement & Monolog**
-* **Objective:** Enhance application stability and security logging.
-* **Tasks:**
-    1. **Install and integrate Monolog** for structured application and security logging.
-    2. Implement notification trigger for the newly created Tenant Admin.
-    3. Implement auto-mark-as-read functionality upon viewing the notifications page.
-
+**User Experience and Feature Enhancement**
+* **Objective:** Enhance the user experience and add more value to the platform.
+* **Immediate Tasks:**
+    *   Enhance the dashboard with key payroll metrics.
+    *   Create a self-service portal for employees.
+    *   Integrate an email service for notifications.
 ---
