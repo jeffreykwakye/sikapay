@@ -99,4 +99,48 @@ class PayrollPeriodModel extends Model
             return false;
         }
     }
+
+    /**
+     * Retrieves all payroll periods for a tenant.
+     *
+     * @param int $tenantId
+     * @return array An array of payroll period records.
+     */
+    public function getAllPeriods(int $tenantId): array
+    {
+        $sql = "SELECT id, period_name, start_date, end_date, payment_date, is_closed FROM {$this->table} 
+                WHERE tenant_id = :tenant_id
+                ORDER BY start_date DESC";
+
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                ':tenant_id' => $tenantId,
+            ]);
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            Log::error("Failed to retrieve all payroll periods for tenant {$tenantId}. Error: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function getLatestClosedPeriod(int $tenantId): ?array
+    {
+        $sql = "SELECT id, period_name, start_date, end_date, payment_date, is_closed FROM {$this->table} 
+                WHERE tenant_id = :tenant_id AND is_closed = TRUE
+                ORDER BY end_date DESC
+                LIMIT 1";
+
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                ':tenant_id' => $tenantId,
+            ]);
+            $result = $stmt->fetch(\PDO::FETCH_ASSOC);
+            return $result ?: null;
+        } catch (PDOException $e) {
+            Log::error("Failed to retrieve latest closed payroll period for tenant {$tenantId}. Error: " . $e->getMessage());
+            return null;
+        }
+    }
 }

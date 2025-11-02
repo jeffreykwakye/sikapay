@@ -181,10 +181,8 @@
                             <li><a href="/payroll"><span class="sub-item">Prepare Payroll</span></a></li>
                             <?php endif; ?>
                             <?php if ($auth->hasPermission('payroll:view_all')): ?>
-                            <li><a href="/payroll-history"><span class="sub-item">Payroll History</span></a></li>
-                            <?php endif; ?>
-                            <?php if ($auth->hasPermission('payroll:run_reports')): ?>
-                            <li><a href="/payroll-reports"><span class="sub-item">Statutory Reports</span></a></li>
+                            <li><a href="/payroll/payslips"><span class="sub-item">Payslip History</span></a></li>
+                            <li><a href="/reports"><span class="sub-item">Statutory Reports</span></a></li>
                             <?php endif; ?>
                         </ul>
                     </div>

@@ -13,6 +13,7 @@ use Jeffrey\Sikapay\Models\PayrollSettingsModel;
 use Jeffrey\Sikapay\Models\PayrollPeriodModel;
 use Jeffrey\Sikapay\Models\PayslipModel;
 use Jeffrey\Sikapay\Models\EmployeePayrollDetailsModel; // New model for allowances/deductions
+use Jeffrey\Sikapay\Helpers\PayslipPdfGenerator;
 use \PDO;
 use \Exception;
 
@@ -189,11 +190,43 @@ class PayrollService
             // 1. Delete existing payslips for this period to prevent duplicate entry errors on re-run
             $this->payslipModel->deletePayslipsForPeriod((int)$payrollPeriod['id'], $tenantId);
 
+            // Fetch tenant profile data for payslip header
+            $tenantProfileModel = new \Jeffrey\Sikapay\Models\TenantProfileModel();
+            $tenantData = $tenantProfileModel->findByTenantId($tenantId);
+
+            // Define payslip storage path
+            $basePublicPath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'public';
+            $payslipRelativeDir = "payslips" . DIRECTORY_SEPARATOR . $tenantId . DIRECTORY_SEPARATOR . date('Y', strtotime($payrollPeriod['start_date'])) . DIRECTORY_SEPARATOR . date('m', strtotime($payrollPeriod['start_date']));
+            $fullPayslipDirPath = $basePublicPath . DIRECTORY_SEPARATOR . $payslipRelativeDir;
+
+            if (!is_dir($fullPayslipDirPath)) {
+                $mkdirResult = mkdir($fullPayslipDirPath, 0777, true);
+                Log::debug("mkdir result for {$fullPayslipDirPath}: ", ['result' => $mkdirResult]);
+            }
+
             foreach ($employees as $employee) {
                 $calculatedPayroll = $this->calculateEmployeePayroll((int)$employee['user_id'], $tenantId, $payrollPeriod);
 
                 // Log calculated payroll for debugging PAYE issue
                 Log::debug("Calculated Payroll for Employee " . $employee['user_id'], $calculatedPayroll);
+
+                // Generate PDF Payslip
+                $employeeFullData = $this->employeeModel->getEmployeeProfile((int)$employee['user_id']); // Get full employee data for payslip
+                $payslipFileName = "payslip_" . $employeeFullData['user_id'] . "_" . date('YmdHis') . ".pdf"; // Using user ID and timestamp
+                $payslipRelativeFilePath = $payslipRelativeDir . DIRECTORY_SEPARATOR . $payslipFileName; // Relative path for DB
+                $fullPayslipFilePath = $basePublicPath . DIRECTORY_SEPARATOR . $payslipRelativeFilePath; // Absolute path for file_put_contents
+
+                Log::debug("Payslip File Path: ", ['path' => $fullPayslipFilePath]);
+
+                $pdf = new PayslipPdfGenerator($calculatedPayroll, $employeeFullData, $tenantData, $payrollPeriod);
+                $pdfContent = $pdf->generatePayslip();
+                $filePutContentsResult = file_put_contents($fullPayslipFilePath, $pdfContent);
+
+                if ($filePutContentsResult === false) {
+                    Log::error("Failed to save payslip PDF to {$fullPayslipFilePath}. Check directory permissions.");
+                }
+
+                Log::debug("file_put_contents result: ", ['result' => $filePutContentsResult]);
 
                 // Save payslip data
                 $payslipData = [
@@ -206,11 +239,9 @@ class PayrollService
                     'paye_amount' => $calculatedPayroll['paye'],
                     'ssnit_employee_amount' => $calculatedPayroll['employee_ssnit'],
                     'ssnit_employer_amount' => $calculatedPayroll['employer_ssnit'],
-                    'payslip_path' => null, // Will be updated after PDF generation
+                    'payslip_path' => $payslipRelativeFilePath, // Store relative path in DB
                 ];
                 $this->payslipModel->createPayslip($payslipData);
-
-                // TODO: Generate PDF Payslip and update payslip_path
             }
 
             // Mark payroll period as closed
@@ -218,10 +249,59 @@ class PayrollService
 
             $this->db->commit();
         } catch (\Throwable $e) {
-            $this->db->rollBack();
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
             Log::critical("Payroll run transaction failed for Tenant {$tenantId}, Period {$payrollPeriod['id']}: " . $e->getMessage());
             throw new Exception("Payroll processing failed: " . $e->getMessage());
         }
+    }
+
+    /**
+     * Retrieves payslips for a specific payroll period and tenant.
+     *
+     * @param int $periodId
+     * @param int $tenantId
+     * @return array An array of payslip records.
+     */
+    public function getPayslipsByPeriod(int $periodId, int $tenantId): array
+    {
+        return $this->payslipModel->getPayslipsByPeriod($periodId, $tenantId);
+    }
+
+    /**
+     * Retrieves a single payslip record by its ID and tenant.
+     *
+     * @param int $payslipId
+     * @param int $tenantId
+     * @return array|null The payslip record, or null if not found.
+     */
+    public function getPayslipById(int $payslipId, int $tenantId): ?array
+    {
+        return $this->payslipModel->find($payslipId, $tenantId);
+    }
+
+    /**
+     * Retrieves full employee data for payslip generation.
+     *
+     * @param int $userId
+     * @return array|null
+     */
+    public function getEmployeeFullData(int $userId): ?array
+    {
+        return $this->employeeModel->getEmployeeProfile($userId);
+    }
+
+    /**
+     * Retrieves tenant data for payslip generation.
+     *
+     * @param int $tenantId
+     * @return array|null
+     */
+    public function getTenantData(int $tenantId): ?array
+    {
+        $tenantProfileModel = new \Jeffrey\Sikapay\Models\TenantProfileModel();
+        return $tenantProfileModel->findByTenantId($tenantId);
     }
 
     // Other payroll-related methods will go here

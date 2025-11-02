@@ -153,7 +153,51 @@ return [
         'auth' => 'AuthMiddleware',
         'permission' => ['PermissionMiddleware', 'payroll:prepare'],
         'handler' => ['PayrollController', 'runPayroll']
-    ]],    // NOTE: The API Route for Cascading Dropdown is REMOVED as it's now handled by client-side JS.
+    ]],
+    ['GET', '/payroll/payslips', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'payroll:view_all'],
+        'handler' => ['PayrollController', 'viewPayslips']
+    ]],
+    ['GET', '/payroll/payslips/{periodId:\d+}', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'payroll:view_all'],
+        'handler' => ['PayrollController', 'getPayslipsByPeriod']
+    ]],
+    ['GET', '/payroll/payslips/download/{payslipId:\d+}', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'payroll:view_all'],
+        'handler' => ['PayrollController', 'downloadPayslip']
+    ]],
+
+    // Statutory Reports Routes
+    ['GET', '/reports', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'payroll:view_all'],
+        'handler' => ['StatutoryReportController', 'index']
+    ]],
+    ['GET', '/reports/paye/pdf', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'payroll:view_all'],
+        'handler' => ['StatutoryReportController', 'generatePayeReportPdf']
+    ]],
+    ['GET', '/reports/paye/excel', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'payroll:view_all'],
+        'handler' => ['StatutoryReportController', 'generatePayeReportExcel']
+    ]],
+    ['GET', '/reports/ssnit/pdf', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'payroll:view_all'],
+        'handler' => ['StatutoryReportController', 'generateSsnitReportPdf']
+    ]],
+    ['GET', '/reports/ssnit/excel', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'payroll:view_all'],
+        'handler' => ['StatutoryReportController', 'generateSsnitReportExcel']
+    ]],
+
+    // NOTE: The API Route for Cascading Dropdown is REMOVED as it's now handled by client-side JS.
  
     // =========================================================
     // Configuration Routes: Company Profile (Protected)

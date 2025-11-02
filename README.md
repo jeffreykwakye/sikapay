@@ -48,7 +48,7 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 | **Multi-Tenancy** | Data Scoping & Isolation | Core Complete | Base Model enforces `WHERE tenant_id = X`. |
 | **Tenant Provisioning** | **Full Creation Workflow (CRUD-C)** | **Complete** | **Transactional creation** of Tenant, Admin User, Subscription, and Audit Log records. |
 | **Employee Management** | CRUD for Employees, Departments, and Positions | **Complete** | Full employee lifecycle management, including personal, statutory, and bank information. |
-| **Payroll Core** | Database schema for tax bands, SSNIT rates, payroll settings, periods, payslips, and employee payroll details; Core calculation logic, service, controller, and view implemented. | **In Progress** | Foundation laid for the core payroll engine. |
+| **Payroll Core** | Database schema for tax bands, SSNIT rates, payroll settings, periods, payslips, and employee payroll details; Core calculation logic, service, controller, and view implemented. Payslip generation and viewing functionality included. | **In Progress** | Foundation laid for the core payroll engine. |
 | **Company Profile** | Tenant Profile Management | **Complete** | Allows tenants to manage their own company profile, including logo upload. |
 | **Subscriptions** | Initial Trial Provisioning | Complete | Dedicated tables populated transactionally. |
 | **Audit/Compliance** | Audit Logging | Complete | Logs critical actions using the acting Super Admin's ID. |

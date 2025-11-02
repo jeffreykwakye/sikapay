@@ -153,5 +153,102 @@ class PayrollController extends Controller
 
         $this->redirect('/payroll');
     }
+
+    public function downloadPayslip(int $payslipId): void
+    {
+        $this->checkPermission('payroll:view_all');
+
+        try {
+            $payslip = $this->payrollService->getPayslipById($payslipId, $this->tenantId);
+
+            if (!$payslip) {
+                ErrorResponder::respond(404, "Payslip not found.");
+                return;
+            }
+
+            $payslipRelativeFilePath = $payslip['payslip_path'];
+            $basePublicPath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'public';
+            $fullPayslipFilePath = $basePublicPath . DIRECTORY_SEPARATOR . $payslipRelativeFilePath;
+
+            // Check if the file exists on disk
+            if (file_exists($fullPayslipFilePath)) {
+                // Serve the existing file
+                header('Content-Type: application/pdf');
+                header('Content-Disposition: attachment; filename="' . basename($fullPayslipFilePath) . '"');
+                readfile($fullPayslipFilePath);
+                exit;
+            } else {
+                // File does not exist, generate on the fly and save it
+                Log::warning("Payslip file not found on disk, generating on the fly: {$fullPayslipFilePath}");
+
+                // Fetch additional data needed for PDF generation
+                $employeeFullData = $this->payrollService->getEmployeeFullData((int)$payslip['user_id']);
+                $tenantData = $this->payrollService->getTenantData($this->tenantId);
+                $payrollPeriodData = $this->payrollPeriodModel->find((int)$payslip['payroll_period_id']);
+
+                if (!$employeeFullData || !$tenantData || !$payrollPeriodData) {
+                    Log::error("Missing data for payslip PDF generation. Payslip ID: {$payslipId}");
+                    ErrorResponder::respond(500, "Could not generate payslip due to missing data.");
+                    return;
+                }
+
+                // Generate PDF
+                $pdf = new \Jeffrey\Sikapay\Helpers\PayslipPdfGenerator($payslip, $employeeFullData, $tenantData, $payrollPeriodData);
+                $pdfContent = $pdf->generatePayslip();
+
+                // Save the generated PDF to disk (for future requests within retention period)
+                $mkdirResult = mkdir(dirname($fullPayslipFilePath), 0777, true); // Ensure directory exists
+                if ($mkdirResult === false && !is_dir(dirname($fullPayslipFilePath))) {
+                    Log::error("Failed to create directory for payslip: " . dirname($fullPayslipFilePath));
+                    ErrorResponder::respond(500, "Could not create directory for payslip.");
+                    return;
+                }
+                file_put_contents($fullPayslipFilePath, $pdfContent);
+
+                // Serve the newly generated file
+                header('Content-Type: application/pdf');
+                header('Content-Disposition: attachment; filename="' . basename($fullPayslipFilePath) . '"');
+                echo $pdfContent;
+                exit;
+            }
+
+        } catch (Throwable $e) {
+            Log::error("Failed to download payslip {$payslipId} for Tenant {$this->tenantId}: " . $e->getMessage());
+            ErrorResponder::respond(500, "Could not download payslip due to a system error.");
+        }
+    }
+
+    public function getPayslipsByPeriod(int $periodId): void
+    {
+        $this->checkPermission('payroll:view_all');
+
+        try {
+            $payslips = $this->payrollService->getPayslipsByPeriod($periodId, $this->tenantId);
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true, 'payslips' => $payslips]);
+        } catch (Throwable $e) {
+            Log::error("Failed to fetch payslips for period {$periodId} (Tenant {$this->tenantId}): " . $e->getMessage());
+            header('Content-Type: application/json');
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Could not retrieve payslips.']);
+        }
+    }
+
+    public function viewPayslips(): void
+    {
+        $this->checkPermission('payroll:view_all');
+
+        try {
+            $payrollPeriods = $this->payrollPeriodModel->getAllPeriods($this->tenantId);
+
+            $this->view('payroll/payslip-history', [
+                'title' => 'Payslip History',
+                'payrollPeriods' => $payrollPeriods,
+            ]);
+        } catch (Throwable $e) {
+            Log::error("Failed to load payslip list for Tenant {$this->tenantId}: " . $e->getMessage());
+            ErrorResponder::respond(500, "Could not load payslip history due to a system error.");
+        }
+    }
 }
 
