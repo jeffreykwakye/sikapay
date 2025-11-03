@@ -1,12 +1,11 @@
 -- Migration: create_employee_payroll_details_table
 
-CREATE TABLE IF NOT EXISTS employee_payroll_details (
+CREATE TABLE IF NOT EXISTS employee_payroll_details ( 
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     tenant_id INT NOT NULL,
-    allowance_type VARCHAR(100) NOT NULL, -- e.g., "Housing Allowance", "Transport Allowance"
-    amount DECIMAL(15, 2) NOT NULL,
-    is_taxable BOOLEAN NOT NULL DEFAULT TRUE,
+    payroll_element_id INT NOT NULL,
+    assigned_amount DECIMAL(15, 2) NOT NULL,
     effective_date DATE NOT NULL,
     end_date DATE NULL, -- NULL if ongoing
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -14,5 +13,6 @@ CREATE TABLE IF NOT EXISTS employee_payroll_details (
 
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
-    UNIQUE KEY unique_employee_allowance (user_id, allowance_type, effective_date)
+    FOREIGN KEY (payroll_element_id) REFERENCES tenant_payroll_elements(id) ON DELETE RESTRICT,
+    UNIQUE KEY unique_employee_payroll_element (user_id, payroll_element_id)
 ) ENGINE=INNODB;

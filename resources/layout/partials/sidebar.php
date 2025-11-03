@@ -141,6 +141,9 @@
                             <?php if ($auth->hasPermission('config:manage_positions')): ?>
                             <li><a href="/positions"><span class="sub-item">Positions</span></a></li>
                             <?php endif; ?>
+                            <?php if ($auth->hasPermission('config:manage_payroll_elements')): ?>
+                            <li><a href="/payroll-elements"><span class="sub-item">Payroll Elements</span></a></li>
+                            <?php endif; ?>
                         </ul>
                     </div>
                 </li>

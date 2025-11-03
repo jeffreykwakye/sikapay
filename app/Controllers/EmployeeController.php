@@ -22,6 +22,8 @@ use Jeffrey\Sikapay\Models\EmploymentHistoryModel; // Added for updateSalary()
 use Jeffrey\Sikapay\Services\SubscriptionService;
 use Jeffrey\Sikapay\Models\StaffFileModel;
 use Jeffrey\Sikapay\Helpers\FileUploader;
+use Jeffrey\Sikapay\Models\CustomPayrollElementModel;
+use Jeffrey\Sikapay\Models\EmployeePayrollDetailsModel;
 
 
 class EmployeeController extends Controller
@@ -29,6 +31,8 @@ class EmployeeController extends Controller
     private EmployeeModel $employeeModel;
     private DepartmentModel $departmentModel;
     private PositionModel $positionModel;
+    private CustomPayrollElementModel $customPayrollElementModel;
+    private EmployeePayrollDetailsModel $employeePayrollDetailsModel;
     
     // Permission Constants 
     public const PERM_EDIT_PERSONAL = 'employee:update';
@@ -47,6 +51,8 @@ class EmployeeController extends Controller
             $this->employeeModel = new EmployeeModel();
             $this->departmentModel = new DepartmentModel();
             $this->positionModel = new PositionModel();
+            $this->customPayrollElementModel = new CustomPayrollElementModel();
+            $this->employeePayrollDetailsModel = new EmployeePayrollDetailsModel();
             
         } catch (Throwable $e) {
             Log::critical("EmployeeController failed to initialize core models: " . $e->getMessage());
@@ -122,10 +128,15 @@ class EmployeeController extends Controller
             $staffFileModel = new StaffFileModel();
             $staffFiles = $staffFileModel->getFilesByUserId($userId);
 
+            $availablePayrollElements = $this->customPayrollElementModel->getAllByTenant($this->tenantId);
+            $assignedPayrollElements = $this->employeePayrollDetailsModel->getDetailsForEmployee($userId, $this->tenantId);
+
             $this->view('employee/show', [
                 'title' => 'Employee Profile: ' . $employee['first_name'] . ' ' . $employee['last_name'],
                 'employee' => $employee,
                 'staffFiles' => $staffFiles,
+                'availablePayrollElements' => $availablePayrollElements,
+                'assignedPayrollElements' => $assignedPayrollElements,
             ]);
         } catch (Throwable $e) {
             Log::error("Failed to load employee profile (show) for User {$userId}: " . $e->getMessage());
@@ -978,4 +989,78 @@ class EmployeeController extends Controller
             echo json_encode(['success' => false, 'message' => 'An error occurred while deleting the file.']);
         }
     }
-}
+
+    public function assignPayrollElement(int $userId): void
+    {
+        $this->checkPermission('employee:assign_payroll_elements');
+
+        if (!$this->employeeModel->isEmployeeInTenant($userId, $this->tenantId)) {
+            http_response_code(404);
+            echo json_encode(['success' => false, 'message' => 'The specified employee was not found.']);
+            return;
+        }
+
+        $validator = new Validator($_POST);
+        $validator->validate([
+            'payroll_element_id' => 'required|int|min:1',
+            'assigned_amount' => 'required|numeric|min:0',
+            'effective_date' => 'required|date',
+            'end_date' => 'optional|date',
+        ]);
+
+        if ($validator->fails()) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Validation failed: ' . implode(', ', $validator->errors())]);
+            return;
+        }
+
+        try {
+            $data = [
+                'user_id' => $userId,
+                'tenant_id' => $this->tenantId,
+                'payroll_element_id' => $validator->get('payroll_element_id', 'int'),
+                'assigned_amount' => $validator->get('assigned_amount', 'float'),
+                'effective_date' => $validator->get('effective_date'),
+                'end_date' => $validator->get('end_date', 'string', null),
+            ];
+
+            $success = $this->employeePayrollDetailsModel->create($data);
+
+            if ($success) {
+                echo json_encode(['success' => true, 'message' => 'Payroll element assigned successfully.']);
+            } else {
+                http_response_code(500);
+                echo json_encode(['success' => false, 'message' => 'Failed to assign payroll element.']);
+            }
+        } catch (\Throwable $e) {
+            Log::error("Failed to assign payroll element to User {$userId} for Tenant {$this->tenantId}: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'An error occurred while assigning the payroll element.']);
+        }
+    }
+
+    public function unassignPayrollElement(int $userId, int $payrollElementId): void
+    {
+        $this->checkPermission('employee:assign_payroll_elements');
+
+        if (!$this->employeeModel->isEmployeeInTenant($userId, $this->tenantId)) {
+            http_response_code(404);
+            echo json_encode(['success' => false, 'message' => 'The specified employee was not found.']);
+            return;
+        }
+
+        try {
+            $success = $this->employeePayrollDetailsModel->deleteByEmployeeAndElement($userId, $payrollElementId, $this->tenantId);
+
+            if ($success) {
+                echo json_encode(['success' => true, 'message' => 'Payroll element unassigned successfully.']);
+            } else {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Failed to unassign payroll element or element not found.']);
+            }
+        } catch (\Throwable $e) {
+            Log::error("Failed to unassign payroll element {$payrollElementId} from User {$userId} for Tenant {$this->tenantId}: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'An error occurred while unassigning the payroll element.']);
+        }
+    }}

@@ -106,6 +106,7 @@ class SeedCommand
             ['key_name' => 'employee:delete', 'description' => 'Can delete or deactivate employee records.'],
             ['key_name' => 'employee:manage_docs', 'description' => 'Can upload, view, and manage employee documents.'],
             ['key_name' => 'employee:manage_contracts', 'description' => 'Can create/edit employment contract details.'],
+            ['key_name' => 'employee:assign_payroll_elements', 'description' => 'Can assign custom payroll allowances and deductions to employees.'],
 
             // --- PAYROLL MANAGEMENT (6 Permissions) ---
             ['key_name' => 'payroll:manage_rules', 'description' => 'Can modify tenant-specific payroll items (bonuses, allowances, deductions, Tier 3 rates).'],
@@ -126,9 +127,10 @@ class SeedCommand
             ['key_name' => 'tenant:view_audit_logs', 'description' => 'Can access the tenant-specific security audit trail.'],
             ['key_name' => 'tenant:configure_roles', 'description' => 'Can assign or modify role permissions.'],
 
-            // --- CONFIGURATION MANAGEMENT (2 Permissions) ---
+            // --- CONFIGURATION MANAGEMENT (3 Permissions) ---
             ['key_name' => 'config:manage_departments', 'description' => 'Can create, edit, and delete company departments.'],
             ['key_name' => 'config:manage_positions', 'description' => 'Can create, edit, and delete company job titles/positions.'],
+            ['key_name' => 'config:manage_payroll_elements', 'description' => 'Can create, edit, and delete custom payroll allowances and deductions.'],
 
             // --- LEAVE MANAGEMENT (1 Permission) ---
             ['key_name' => 'leave:approve', 'description' => 'Can approve or reject employee leave/time-off requests.'],
@@ -267,10 +269,11 @@ class SeedCommand
                 $permissionMap['self:view_payslip'], $permissionMap['self:manage_leave'],
                 $permissionMap['self:view_docs'], $permissionMap['self:manage_loan'],
                 $permissionMap['self:view_notifications'],
-                // EMPLOYEE (6)
+                // EMPLOYEE (7)
                 $permissionMap['employee:create'], $permissionMap['employee:read_all'], 
                 $permissionMap['employee:update'], $permissionMap['employee:delete'],
                 $permissionMap['employee:manage_docs'], $permissionMap['employee:manage_contracts'],
+                $permissionMap['employee:assign_payroll_elements'],
                 // PAYROLL (6)
                 $permissionMap['payroll:manage_rules'], $permissionMap['payroll:prepare'],
                 $permissionMap['payroll:audit'], $permissionMap['payroll:approve'], 
@@ -281,9 +284,10 @@ class SeedCommand
                 $permissionMap['tenant:manage_users'], $permissionMap['tenant:manage_settings'], 
                 $permissionMap['tenant:manage_subscription'], $permissionMap['tenant:view_audit_logs'],
                 $permissionMap['tenant:configure_roles'],
-                // CONFIG & LEAVE (3)
+                // CONFIG & LEAVE (4)
                 $permissionMap['config:manage_departments'],
                 $permissionMap['config:manage_positions'],
+                $permissionMap['config:manage_payroll_elements'],
                 $permissionMap['leave:approve'],
             ],
 
@@ -294,10 +298,11 @@ class SeedCommand
                 $permissionMap['self:view_payslip'], $permissionMap['self:manage_leave'],
                 $permissionMap['self:view_docs'], $permissionMap['self:manage_loan'],
                 $permissionMap['self:view_notifications'],
-                // EMPLOYEE (5)
+                // EMPLOYEE (6)
                 $permissionMap['employee:create'], $permissionMap['employee:read_all'], 
                 $permissionMap['employee:update'], $permissionMap['employee:manage_docs'],
                 $permissionMap['employee:manage_contracts'],
+                $permissionMap['employee:assign_payroll_elements'],
                 // PAYROLL (3)
                 $permissionMap['payroll:prepare'],
                 $permissionMap['payroll:view_all'],
@@ -327,6 +332,8 @@ class SeedCommand
                 $permissionMap['payroll:run_reports'],
                 // LOAN MANAGEMENT (1)
                 $permissionMap['loan:approve'],
+                // CONFIG (1)
+                $permissionMap['config:manage_payroll_elements'],
             ],
 
             // Employee:

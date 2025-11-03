@@ -138,6 +138,20 @@ return [
         'handler' => ['EmployeeController', 'deleteStaffFile']
     ]],
 
+    // Route for Assigning Payroll Elements
+    ['POST', '/employees/{userId:\d+}/payroll-elements', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'employee:assign_payroll_elements'],
+        'handler' => ['EmployeeController', 'assignPayrollElement']
+    ]],
+
+    // Route for Unassigning Payroll Elements
+    ['POST', '/employees/{userId:\d+}/payroll-elements/{payrollElementId:\d+}/unassign', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'employee:assign_payroll_elements'],
+        'handler' => ['EmployeeController', 'unassignPayrollElement']
+    ]],
+
     // Payroll Routes
     ['GET', '/payroll', [
         'auth' => 'AuthMiddleware',
@@ -283,5 +297,36 @@ return [
         'auth' => 'AuthMiddleware',
         'permission' => ['PermissionMiddleware', 'config:manage_positions'],
         'handler' => ['PositionController', 'delete']
+    ]],
+
+    // =========================================================
+    // Configuration Routes: Payroll Elements Management (Protected)
+    // =========================================================
+    // List/Index Payroll Elements
+    ['GET', '/payroll-elements', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'config:manage_payroll_elements'],
+        'handler' => ['AllowanceAndDeductionController', 'index']
+    ]],
+
+    // Create/Store a new Payroll Element
+    ['POST', '/payroll-elements', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'config:manage_payroll_elements'],
+        'handler' => ['AllowanceAndDeductionController', 'store']
+    ]],
+
+    // Update an existing Payroll Element by ID
+    ['POST', '/payroll-elements/{id:\d+}', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'config:manage_payroll_elements'],
+        'handler' => ['AllowanceAndDeductionController', 'update']
+    ]],
+
+    // Delete a Payroll Element by ID
+    ['POST', '/payroll-elements/{id:\d+}/delete', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'config:manage_payroll_elements'],
+        'handler' => ['AllowanceAndDeductionController', 'delete']
     ]],
 ];

@@ -185,8 +185,9 @@ if (!isset($h)) {
                     <h5 class="mt-4 mb-3 border-bottom pb-2 text-primary"><i class="icon-wallet me-2"></i> Salary & Payment Details</h5>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="monthly_base_salary" class="form-label">Monthly Base Salary (GHS) <span class="text-danger">*</span></label>
+                            <label for="monthly_base_salary" class="form-label">Monthly Basic Salary (GHS) <span class="text-danger">*</span></label>
                             <input type="number" class="form-control" id="monthly_base_salary" name="monthly_base_salary" step="0.01" min="0" value="<?= $v('monthly_base_salary') ?>" required>
+                            <small class="form-text text-muted">This is the employee's basic salary, before any allowances or deductions.</small>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="payment_method" class="form-label">Payment Method</label>

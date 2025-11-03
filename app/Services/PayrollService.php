@@ -60,34 +60,70 @@ class PayrollService
         $ssnitRate = $this->ssnitRateModel->getCurrentSsnitRate();
         $taxBands = $this->taxBandModel->getTaxBandsForYear((int)date('Y', strtotime($payrollPeriod['start_date'])), false); // Monthly bands
 
-        // 1. Fetch employee-specific allowances and deductions
-        $employeePayrollDetails = $this->employeePayrollDetailsModel->getDetailsForEmployee($employeeUserId, $tenantId);
+        // 1. Fetch employee-specific assigned payroll elements
+        $assignedElements = $this->employeePayrollDetailsModel->getDetailsForEmployee($employeeUserId, $tenantId);
 
+        $totalAllowances = 0.0;
         $totalTaxableAllowances = 0.0;
-        $totalNonTaxableAllowances = 0.0;
+        $totalSsnitChargeableAllowances = 0.0;
         $totalDeductions = 0.0;
 
-        foreach ($employeePayrollDetails as $detail) {
-            if ($detail['allowance_type'] === 'Allowance') {
-                if ($detail['is_taxable']) {
-                    $totalTaxableAllowances += (float)$detail['amount'];
-                } else {
-                    $totalNonTaxableAllowances += (float)$detail['amount'];
+        // Process assigned payroll elements
+        foreach ($assignedElements as $element) {
+            $elementValue = (float)$element['assigned_amount'];
+
+            // If percentage, calculate actual amount based on calculation_base
+            if ($element['amount_type'] === 'percentage') {
+                $baseAmount = 0.0;
+                switch ($element['calculation_base']) {
+                    case 'basic_salary':
+                        $baseAmount = $grossSalary; // current_salary_ghs is basic salary
+                        break;
+                    case 'gross_salary':
+                        // This will be calculated later, so for now, we can't use it as a base for other percentages
+                        // For simplicity, we'll assume percentage allowances based on gross_salary are applied AFTER basic allowances
+                        // and before deductions. This might need refinement based on specific rules.
+                        // For now, let's assume basic_salary as the most common base for percentage allowances.
+                        $baseAmount = $grossSalary; 
+                        break;
+                    case 'net_salary':
+                        // Net salary is calculated at the very end, so it cannot be a base for allowances/deductions
+                        // that contribute to gross/taxable income.
+                        $baseAmount = 0.0; // Should not happen for allowances/deductions affecting gross/taxable
+                        break;
+                    default:
+                        $baseAmount = $grossSalary; // Fallback to basic salary
+                        break;
                 }
-            } elseif ($detail['allowance_type'] === 'Deduction') {
-                $totalDeductions += (float)$detail['amount'];
+                $elementValue = $baseAmount * ($elementValue / 100); // Convert percentage to actual amount
+            }
+
+            if ($element['category'] === 'allowance') {
+                $totalAllowances += $elementValue;
+                if ((bool)$element['is_taxable']) {
+                    $totalTaxableAllowances += $elementValue;
+                }
+                if ((bool)$element['is_ssnit_chargeable']) {
+                    $totalSsnitChargeableAllowances += $elementValue;
+                }
+            } elseif ($element['category'] === 'deduction') {
+                $totalDeductions += $elementValue;
             }
         }
 
-        // 2. Calculate Gross Pay (Basic Salary + Taxable Allowances)
-        $grossPay = $grossSalary + $totalTaxableAllowances;
+        // 2. Calculate Gross Pay (Basic Salary + Total Allowances)
+        $grossPay = $grossSalary + $totalAllowances;
 
         // 3. Calculate SSNIT Contribution (5.5% of basic salary for employee, 13% for employer)
-        $employeeSsnit = $grossSalary * $ssnitRate['employee_rate'];
-        $employerSsnit = $grossSalary * $ssnitRate['employer_rate'];
+        // SSNIT is calculated on basic salary + SSNIT-chargeable allowances
+        $ssnitBase = $grossSalary + $totalSsnitChargeableAllowances;
+        $employeeSsnit = $ssnitBase * $ssnitRate['employee_rate'];
+        $employerSsnit = $ssnitBase * $ssnitRate['employer_rate'];
 
-        // 4. Calculate Taxable Income (Gross Pay - Employee SSNIT)
-        $taxableIncome = $grossPay - $employeeSsnit;
+        // 4. Calculate Taxable Income (Gross Pay - Employee SSNIT - Non-taxable deductions)
+        // For now, all deductions are applied after tax calculation for simplicity, except employee SSNIT.
+        // If there are non-taxable deductions that reduce taxable income, they need to be factored here.
+        $taxableIncome = $grossPay - $employeeSsnit - ($totalAllowances - $totalTaxableAllowances); // Gross - Employee SSNIT - Non-taxable allowances
 
         // 5. Calculate PAYE (directly use monthly taxable income with monthly bands)
         $monthlyPaye = $this->calculatePaye($taxableIncome, $taxBands, false);
@@ -97,10 +133,11 @@ class PayrollService
 
         return [
             'gross_salary' => $grossPay,
+            'total_allowances' => $totalAllowances,
             'total_taxable_allowances' => $totalTaxableAllowances,
-            'total_non_taxable_allowances' => $totalNonTaxableAllowances,
+            'total_non_taxable_allowances' => $totalAllowances - $totalTaxableAllowances,
             'employee_ssnit' => $employeeSsnit,
-            'employer_ssnit' => $employerSsnit, // Added employer SSNIT
+            'employer_ssnit' => $employerSsnit,
             'taxable_income' => $taxableIncome,
             'paye' => $monthlyPaye,
             'total_deductions' => $totalDeductions + $employeeSsnit + $monthlyPaye,
