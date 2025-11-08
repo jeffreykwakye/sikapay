@@ -158,21 +158,33 @@
                                         $now = new DateTime;
                                         $ago = new DateTime($datetime);
                                         $diff = $now->diff($ago);
-
-                                        $diff->w = floor($diff->d / 7);
-                                        $diff->d -= $diff->w * 7;
-
-                                        $string = ['y' => 'year', 'm' => 'month', 'w' => 'week', 'd' => 'day', 'h' => 'hour', 'i' => 'minute', 's' => 'second'];
-                                        foreach ($string as $k => &$v) {
-                                            if ($diff->$k) {
-                                                $v = $diff->$k . ' ' . $v . ($diff->$k > 1 ? 's' : '');
-                                            } else {
-                                                unset($string[$k]);
+                                
+                                        // Manually calculate weeks from the total days
+                                        $weeks = floor($diff->d / 7);
+                                        $diff->d -= $weeks * 7;
+                                
+                                        $string = [
+                                            'y' => $diff->y,
+                                            'm' => $diff->m,
+                                            'w' => $weeks,
+                                            'd' => $diff->d,
+                                            'h' => $diff->h,
+                                            'i' => $diff->i,
+                                            's' => $diff->s,
+                                        ];
+                                
+                                        $string_map = ['y' => 'year', 'm' => 'month', 'w' => 'week', 'd' => 'day', 'h' => 'hour', 'i' => 'minute', 's' => 'second'];
+                                        $result_string = [];
+                                
+                                        foreach ($string as $key => $value) {
+                                            if ($value > 0) {
+                                                $result_string[] = $value . ' ' . $string_map[$key] . ($value > 1 ? 's' : '');
                                             }
                                         }
-
-                                        if (!$full) $string = array_slice($string, 0, 1);
-                                        return $string ? implode(', ', $string) . ' ago' : 'just now';
+                                
+                                        if (!$full) $result_string = array_slice($result_string, 0, 1);
+                                
+                                        return $result_string ? implode(', ', $result_string) . ' ago' : 'just now';
                                     }
                                 }
 

@@ -286,5 +286,6 @@
         <script src="/assets/js/basic-datatable.js"></script>
         <script src="/assets/js/multi-select-datatable.js"></script>
         <script src="/assets/js/tenants/dashboard.js"></script>
+        <script src="/assets/js/sidebar-active.js"></script>
     </body>
 </html>

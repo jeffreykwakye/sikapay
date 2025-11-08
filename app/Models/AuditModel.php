@@ -97,26 +97,32 @@ class AuditModel extends Model
      * Retrieves a comprehensive list of audit log entries for a given tenant.
      *
      * @param int $tenantId The ID of the tenant.
-     * @param int $limit The maximum number of entries to retrieve.
+     * @param int|null $limit The maximum number of entries to retrieve. If null, all entries are returned.
      * @return array An array of audit log entries.
      */
-    public function getLogsByTenantId(int $tenantId, int $limit = 200): array
+    public function getLogsByTenantId(int $tenantId, ?int $limit = 200): array
     {
         $sql = "SELECT 
-                    al.action as log_message, 
+                    al.action as action_message, 
+                    al.details as details_json,
                     al.created_at, 
                     u.first_name, 
                     u.last_name
                 FROM audit_logs al
                 LEFT JOIN users u ON al.user_id = u.id
                 WHERE al.tenant_id = :tenant_id
-                ORDER BY al.created_at DESC
-                LIMIT :limit";
+                ORDER BY al.created_at DESC";
+
+        if ($limit !== null) {
+            $sql .= " LIMIT :limit";
+        }
 
         try {
             $stmt = $this->db->prepare($sql);
             $stmt->bindValue(':tenant_id', $tenantId, \PDO::PARAM_INT);
-            $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
+            if ($limit !== null) {
+                $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
+            }
             $stmt->execute();
             return $stmt->fetchAll(\PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
@@ -128,13 +134,14 @@ class AuditModel extends Model
     /**
      * Retrieves all audit log entries across all tenants for super admin view.
      *
-     * @param int $limit The maximum number of entries to retrieve.
+     * @param int|null $limit The maximum number of entries to retrieve. If null, all entries are returned.
      * @return array An array of audit log entries.
      */
-    public function getAllLogs(int $limit = 200): array
+    public function getAllLogs(?int $limit = 200): array
     {
         $sql = "SELECT 
-                    al.action as log_message, 
+                    al.action as action_message, 
+                    al.details as details_json,
                     al.created_at, 
                     u.first_name, 
                     u.last_name,
@@ -142,12 +149,17 @@ class AuditModel extends Model
                 FROM audit_logs al
                 LEFT JOIN users u ON al.user_id = u.id
                 LEFT JOIN tenants t ON al.tenant_id = t.id
-                ORDER BY al.created_at DESC
-                LIMIT :limit";
+                ORDER BY al.created_at DESC";
+
+        if ($limit !== null) {
+            $sql .= " LIMIT :limit";
+        }
 
         try {
             $stmt = $this->db->prepare($sql);
-            $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
+            if ($limit !== null) {
+                $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
+            }
             $stmt->execute();
             return $stmt->fetchAll(\PDO::FETCH_ASSOC);
         } catch (PDOException $e) {

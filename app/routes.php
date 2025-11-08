@@ -245,6 +245,16 @@ return [
         'permission' => ['PermissionMiddleware', 'tenant:view_audit_logs'],
         'handler' => ['ActivityLogController', 'index']
     ]],
+    ['GET', '/activity-log/csv', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'tenant:view_audit_logs'],
+        'handler' => ['ActivityLogController', 'exportCsv']
+    ]],
+    ['GET', '/activity-log/pdf', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'tenant:view_audit_logs'],
+        'handler' => ['ActivityLogController', 'exportPdf']
+    ]],
 
     // =========================================================
     // Configuration Routes: Department Management (Protected)

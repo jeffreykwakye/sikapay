@@ -207,7 +207,7 @@
 
                 <?php if ($auth->hasPermission('tenant:view_audit_logs')): ?>
                 <li class="nav-item">
-                    <a href="/tenant-audit-logs">
+                    <a href="/activity-log">
                         <i class="far fa-eye"></i>
                         <p>Audit Logs</p>
                     </a>

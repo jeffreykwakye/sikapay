@@ -11,7 +11,17 @@
     <div class="col-md-12">
         <div class="card">
             <div class="card-header">
-                <h4 class="card-title">Recent Tenant Activity</h4>
+                <div class="d-flex align-items-center">
+                    <h4 class="card-title">Recent Tenant Activity</h4>
+                    <div class="ms-auto">
+                        <a href="/activity-log/csv" class="btn btn-secondary btn-sm">
+                            <i class="fa fa-file-csv"></i> Export as CSV
+                        </a>
+                        <a href="/activity-log/pdf" class="btn btn-danger btn-sm">
+                            <i class="fa fa-file-pdf"></i> Export as PDF
+                        </a>
+                    </div>
+                </div>
                 <p class="card-category">Showing the last <?= count($activities) ?> recorded events.</p>
             </div>
             <div class="card-body">
@@ -24,7 +34,7 @@
                                     <th>Tenant</th>
                                 <?php endif; ?>
                                 <th>User</th>
-                                <th>Action</th>
+                                <th>Description</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -40,7 +50,19 @@
                                             <td><?= htmlspecialchars($activity['tenant_name'] ?? 'N/A') ?></td>
                                         <?php endif; ?>
                                         <td><?= htmlspecialchars(($activity['first_name'] ?? 'System') . ' ' . ($activity['last_name'] ?? '')) ?></td>
-                                        <td><?= htmlspecialchars($activity['log_message']) ?></td>
+                                        <td>
+                                            <strong><?= htmlspecialchars($activity['action_message']) ?></strong>
+                                            <?php
+                                            $details = json_decode($activity['details_json'] ?? '', true);
+                                            if (is_array($details) && !empty($details)): ?>
+                                                <dl class="row mt-2 mb-0 small text-muted">
+                                                    <?php foreach ($details as $key => $value): ?>
+                                                        <dt class="col-sm-4 text-truncate"><?= htmlspecialchars(ucwords(str_replace('_', ' ', $key))) ?>:</dt>
+                                                        <dd class="col-sm-8"><?= htmlspecialchars(is_array($value) ? json_encode($value) : $value) ?></dd>
+                                                    <?php endforeach; ?>
+                                                </dl>
+                                            <?php endif; ?>
+                                        </td>
                                     </tr>
                                 <?php endforeach; ?>
                             <?php endif; ?>

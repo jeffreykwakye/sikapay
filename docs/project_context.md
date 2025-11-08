@@ -44,8 +44,9 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 | **Super Admin** | **Tenant Management (CRUD-C)** | **Complete** | Full transactional creation of Tenant, Admin User, Subscription, and Audit Log. |
 | **System Tables** | Plans, Roles | Complete | Scoping bypass implemented for system-wide read access. |
 | **Subscriptions** | Initial Trial Provisioning | Complete | Dedicated `subscriptions` and `subscription_history` tables populated transactionally. |
-| **Audit/Compliance** | Audit Logging | Complete | Logs critical actions using the acting Super Admin's ID. |
-| **Notifications (NEW)** | **E2E In-App System** | **Complete** | Includes service, model, controller, display, mark-as-read functionality, and UI badge counter. |
+| **Audit/Compliance** | Audit Logging & Activity Page | **Complete** | Logs critical actions and provides a dedicated, role-aware page for viewing system and tenant-level activity. |
+| **Notifications (NEW)** | **E2E In-App System** | **Complete** | Includes service, model, controller, dynamic navbar dropdown, and a dedicated page for all notifications. |
+| **Dashboard (NEW)** | **Tenant Dashboard Overhaul** | **Complete** | Features dynamic KPI cards for key metrics, a payroll summary graph, and lists for recent hires and anniversaries. |
 | **Employee Profile** | View, Profile Picture Upload, Staff File Upload, Staff File Deletion | **Complete** | Modern, two-column layout with tabbed navigation. |
 | **Payroll Configuration** | Manage custom Allowances & Deductions. | **Complete** | Full CRUD UI for tenant admins to define and manage payroll elements. |
 
@@ -128,6 +129,7 @@ The tenant creation process adheres to the **Single Responsibility Principle (SR
 | **Payroll** | Core Payroll Data & Logic | `tax_bands`, `ssnit_rates`, `payroll_settings`, `payroll_periods`, `payslips`, `employee_payroll_details`, `PayrollService`, `PayrollController`. Payslip PDF generation and viewing functionality implemented. | **Complete** |
 | **Statutory Reports** | Generation of PAYE and SSNIT reports in PDF and Excel formats. | **Complete** | Allows tenants to generate statutory reports for compliance. |
 | **2025-11-03** | **Payroll Element Management** | Implemented and fixed the full feature for creating, updating, and deleting tenant-level allowances and deductions. This includes the backend models, controllers, routes, and the frontend UI with its client-side logic. | **Complete** |
+| **2025-11-08** | **Dashboard & Notifications UX** | Overhauled the tenant dashboard with dynamic KPI cards and graphs. Implemented a fully dynamic notification dropdown. Created a dedicated, role-aware Activity Log page. | **Complete** |
 
 
 ## Next Focus Area
