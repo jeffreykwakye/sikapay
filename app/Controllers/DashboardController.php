@@ -7,45 +7,106 @@ use Jeffrey\Sikapay\Controllers\Controller;
 use Jeffrey\Sikapay\Core\Auth; // Kept for the static check
 use Jeffrey\Sikapay\Core\Log;
 use Jeffrey\Sikapay\Core\ErrorResponder; 
+use Jeffrey\Sikapay\Models\PayrollPeriodModel;
+use Jeffrey\Sikapay\Models\PayslipModel;
+use Jeffrey\Sikapay\Models\EmployeeModel;
+use Jeffrey\Sikapay\Models\DepartmentModel;
+use Jeffrey\Sikapay\Models\PositionModel;
+use Jeffrey\Sikapay\Models\AuditModel;
 use \Throwable;
 
 class DashboardController extends Controller
 {
+    private PayrollPeriodModel $payrollPeriodModel;
+    private PayslipModel $payslipModel;
+    private EmployeeModel $employeeModel;
+    private DepartmentModel $departmentModel;
+    private PositionModel $positionModel;
+    private AuditModel $auditModel;
+
+    public function __construct()
+    {
+        parent::__construct();
+        $this->payrollPeriodModel = new PayrollPeriodModel();
+        $this->payslipModel = new PayslipModel();
+        $this->employeeModel = new EmployeeModel();
+        $this->departmentModel = new DepartmentModel();
+        $this->positionModel = new PositionModel();
+        $this->auditModel = new AuditModel();
+    }
+
     /**
      * Displays the primary application dashboard.
      */
     public function index(): void
     {
         try {
-            // 🚨 REMOVED: $this->preventCache() is now called globally 
-            // in the parent Controller's constructor for authenticated pages.
-
-            // --- Authentication Checks & Data Retrieval ---
-            // Relying on parent properties ($this->auth, $this->tenantId, etc.) 
-            // initialized in the base Controller's constructor.
-            
-            // Check authorization if needed (e.g., if different permissions were required)
-            // $this->checkPermission('self:view_dashboard'); 
-
             $isSuperAdmin = $this->auth->isSuperAdmin();
-            // $this->tenantId is already available from the parent constructor.
+            $tenantId = $this->tenantId;
 
-            // Data we pass to the view
+            // Base data structure
             $data = [
-                'title' => $isSuperAdmin ? 'Super Admin Dashboard' : 'Tenant Dashboard',
-                'userRole' => $isSuperAdmin ? 'Super Admin (System-wide access)' : 'Tenant User (Limited access)',
-                // Use $this->tenantName from the parent for cleaner context
-                'tenantInfo' => $isSuperAdmin ? 'Operating in System Context' : "Operating under Tenant: {$this->tenantName} (ID: {$this->tenantId})",
-                'welcomeMessage' => "Welcome to SikaPay!",
+                'isSuperAdmin' => $isSuperAdmin,
+                'userRole' => $this->auth->getRoleName(),
+                'title' => $isSuperAdmin ? 'Super Admin Dashboard' : $this->tenantName . ' Dashboard', 
+                'welcomeMessage' => 'Welcome back, ' . ($this->userName['first_name'] ?? 'Admin ').'',
             ];
+
+            if (!$isSuperAdmin && $tenantId) {
+                // Initialize all keys to safe defaults
+                $data += [
+                    'activeEmployees' => 0,
+                    'departmentCount' => 0,
+                    'grossPayrollLastMonth' => 0.0,
+                    'netPayLastMonth' => 0.0,
+                    'payeLastMonth' => 0.0,
+                    'ssnitCostLastMonth' => 0.0,
+                    'nextPayrollDate' => 'Not Set',
+                    'subscriptionEndDate' => 'N/A', // Initialize
+                    'payrollSummary' => [],
+                    'employeeCountByDepartment' => [],
+                    'upcomingAnniversaries' => [],
+                    'newHires' => [],
+                    'recentActivities' => [],
+                ];
+
+                // 1. Fetch KPI data
+                $data['activeEmployees'] = $this->employeeModel->getEmployeeCount($tenantId);
+                $data['departmentCount'] = $this->departmentModel->countAllByTenant();
+                
+                $latestClosedPeriod = $this->payrollPeriodModel->getLatestClosedPeriod($tenantId);
+                if ($latestClosedPeriod) {
+                    $kpiData = $this->payslipModel->getAggregatedPayslipData((int)$latestClosedPeriod['id'], $tenantId);
+                    $data['grossPayrollLastMonth'] = $kpiData['total_gross_pay'] ?? 0.0;
+                    $data['netPayLastMonth'] = $kpiData['total_net_pay'] ?? 0.0;
+                    $data['payeLastMonth'] = $kpiData['total_paye'] ?? 0.0;
+                    $data['ssnitCostLastMonth'] = $kpiData['total_employer_ssnit'] ?? 0.0;
+                }
+
+                $currentPeriod = $this->payrollPeriodModel->getCurrentPeriod($tenantId);
+                if ($currentPeriod && !empty($currentPeriod['payment_date'])) {
+                    $data['nextPayrollDate'] = date('F j, Y', strtotime($currentPeriod['payment_date']));
+                }
+
+                // Fetch Subscription End Date
+                $currentSubscription = $this->subscriptionModel->getCurrentSubscription($tenantId);
+                if ($currentSubscription && !empty($currentSubscription['end_date'])) {
+                    $data['subscriptionEndDate'] = date('M d, Y', strtotime($currentSubscription['end_date']));
+                }
+
+                // 2. Fetch Chart Data
+                $data['payrollSummary'] = $this->payslipModel->getPayrollHistory($tenantId, 6); // Last 6 months
+                $data['employeeCountByDepartment'] = $this->departmentModel->getEmployeeCountPerDepartment($tenantId);
+
+                // 3. Fetch List Data
+                $data['upcomingAnniversaries'] = $this->employeeModel->getUpcomingAnniversaries($tenantId, 30); // Next 30 days
+                $data['newHires'] = $this->employeeModel->getRecentEmployees($tenantId, 5); // Last 5 new hires
+                $data['recentActivities'] = $this->auditModel->getRecentActivity($tenantId, 10); // Last 10 activities
+            }
 
             $this->view('dashboard/index', $data);
 
         } catch (Throwable $e) {
-            // Catch any critical error during dashboard load
-            
-            // Log the critical failure
-            // Use parent properties for safer logging context
             $userId = $this->userId > 0 ? (string)$this->userId : 'N/A';
             
             Log::critical("Dashboard Load Failed for User {$userId}.", [
@@ -55,7 +116,6 @@ class DashboardController extends Controller
                 'ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'N/A'
             ]);
 
-            // Respond with a controlled 500 error page
             ErrorResponder::respond(500, "We could not load your dashboard due to a system error.");
         }
     }

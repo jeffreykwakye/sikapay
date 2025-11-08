@@ -185,4 +185,56 @@ class DepartmentModel extends Model
             throw $e;
         }
     }
+
+    /**
+     * Counts all departments for the current tenant.
+     *
+     * @return int The count of departments.
+     */
+    public function countAllByTenant(): int
+    {
+        try {
+            $whereClause = $this->getTenantScope([]);
+            
+            $sql = "SELECT COUNT(id) FROM {$this->table} {$whereClause}";
+            
+            $stmt = $this->db->query($sql);
+            return (int)$stmt->fetchColumn();
+        } catch (PDOException $e) {
+            Log::error("DB Count Error in DepartmentModel::countAllByTenant. Error: " . $e->getMessage(), [
+                'user_id' => Auth::userId(), 
+                'tenant_id' => $this->currentTenantId,
+                'sql' => $sql
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Retrieves the number of employees in each department for a given tenant.
+     *
+     * @param int $tenantId The ID of the tenant.
+     * @return array An array of departments with their employee counts.
+     */
+    public function getEmployeeCountPerDepartment(int $tenantId): array
+    {
+        $sql = "SELECT 
+                    d.name as department_name,
+                    COUNT(e.user_id) as employee_count
+                FROM departments d
+                LEFT JOIN positions p ON d.id = p.department_id
+                LEFT JOIN employees e ON p.id = e.current_position_id AND e.tenant_id = d.tenant_id
+                WHERE d.tenant_id = :tenant_id
+                GROUP BY d.name
+                ORDER BY employee_count DESC";
+
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([':tenant_id' => $tenantId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            Log::error("Failed to retrieve employee count per department for tenant {$tenantId}. Error: " . $e->getMessage());
+            return [];
+        }
+    }
 }

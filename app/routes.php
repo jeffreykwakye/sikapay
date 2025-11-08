@@ -238,6 +238,15 @@ return [
     ]],
 
     // =========================================================
+    // Tenant Activity Log
+    // =========================================================
+    ['GET', '/activity-log', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'tenant:view_audit_logs'],
+        'handler' => ['ActivityLogController', 'index']
+    ]],
+
+    // =========================================================
     // Configuration Routes: Department Management (Protected)
     // =========================================================
     // List/Index Departments

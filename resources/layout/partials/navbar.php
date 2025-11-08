@@ -152,49 +152,71 @@
                     <li>
                         <div class="notif-scroll scrollbar-outer">
                             <div class="notif-center">
-                                <a href="#">
-                                    <div class="notif-icon notif-primary">
-                                        <i class="fa fa-user-plus"></i>
-                                    </div>
+                                <?php
+                                if (!function_exists('time_ago')) {
+                                    function time_ago($datetime, $full = false) {
+                                        $now = new DateTime;
+                                        $ago = new DateTime($datetime);
+                                        $diff = $now->diff($ago);
+
+                                        $diff->w = floor($diff->d / 7);
+                                        $diff->d -= $diff->w * 7;
+
+                                        $string = ['y' => 'year', 'm' => 'month', 'w' => 'week', 'd' => 'day', 'h' => 'hour', 'i' => 'minute', 's' => 'second'];
+                                        foreach ($string as $k => &$v) {
+                                            if ($diff->$k) {
+                                                $v = $diff->$k . ' ' . $v . ($diff->$k > 1 ? 's' : '');
+                                            } else {
+                                                unset($string[$k]);
+                                            }
+                                        }
+
+                                        if (!$full) $string = array_slice($string, 0, 1);
+                                        return $string ? implode(', ', $string) . ' ago' : 'just now';
+                                    }
+                                }
+
+                                if (!function_exists('get_notification_icon_class')) {
+                                    function get_notification_icon_class($type) {
+                                        switch ($type) {
+                                            case 'payroll_run': return 'fa fa-coins';
+                                            case 'employee_added': return 'fa fa-user-plus';
+                                            case 'subscription': return 'fa fa-credit-card';
+                                            case 'report_generated': return 'fa fa-file-alt';
+                                            default: return 'fa fa-bell';
+                                        }
+                                    }
+                                }
+                                
+                                if (!function_exists('get_notification_color_class')) {
+                                    function get_notification_color_class($type) {
+                                        switch ($type) {
+                                            case 'payroll_run': return 'notif-success';
+                                            case 'employee_added': return 'notif-primary';
+                                            case 'subscription': return 'notif-warning';
+                                            case 'report_generated': return 'notif-info';
+                                            default: return 'notif-default';
+                                        }
+                                    }
+                                }
+
+                                if (empty($navbarNotifications)): ?>
                                     <div class="notif-content">
-                                        <span class="block"> New user registered </span>
-                                        <span class="time">5 minutes ago</span>
+                                        <span class="block text-center">No new notifications</span>
                                     </div>
-                                </a>
-                                <a href="#">
-                                    <div class="notif-icon notif-success">
-                                        <i class="fa fa-comment"></i>
-                                    </div>
-                                    <div class="notif-content">
-                                        <span class="block">
-                                            Rahmad commented on Admin
-                                        </span>
-                                        <span class="time">12 minutes ago</span>
-                                    </div>
-                                </a>
-                                <a href="#">
-                                    <div class="notif-img">
-                                        <img
-                                            src="/assets/img/profile2.jpg"
-                                            alt="Img Profile"
-                                        />
-                                    </div>
-                                    <div class="notif-content">
-                                        <span class="block">
-                                            Reza send messages to you
-                                        </span>
-                                        <span class="time">12 minutes ago</span>
-                                    </div>
-                                </a>
-                                <a href="#">
-                                    <div class="notif-icon notif-danger">
-                                        <i class="fa fa-heart"></i>
-                                    </div>
-                                    <div class="notif-content">
-                                        <span class="block"> Farrah liked Admin </span>
-                                        <span class="time">17 minutes ago</span>
-                                    </div>
-                                </a>
+                                <?php else: ?>
+                                    <?php foreach ($navbarNotifications as $notification): ?>
+                                        <a href="#">
+                                            <div class="notif-icon <?= get_notification_color_class($notification['type']) ?>">
+                                                <i class="<?= get_notification_icon_class($notification['type']) ?>"></i>
+                                            </div>
+                                            <div class="notif-content">
+                                                <span class="block"><?= htmlspecialchars($notification['title']) ?></span>
+                                                <span class="time"><?= time_ago($notification['created_at']) ?></span>
+                                            </div>
+                                        </a>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </li>
@@ -222,117 +244,142 @@
                     <div class="quick-actions-scroll scrollbar-outer">
                         <div class="quick-actions-items">
                             <?php if (isset($isSuperAdmin) && $isSuperAdmin):?>
-                            <div class="row m-0">   
+                            <div class="row m-0">
+                                <?php if ($auth->hasPermission('tenant:manage')): ?>
+                                <a class="col-6 col-md-4 p-0" href="/tenants">
+                                    <div class="quick-actions-item">
+                                        <div class="avatar-item bg-success rounded-circle">
+                                            <i class="fas fa-users-cog"></i>
+                                        </div>
+                                        <span class="text">Manage Tenants</span>
+                                    </div>
+                                </a>
+                                <?php endif; ?>
+                                <?php if ($auth->hasPermission('plan:manage')): ?>
                                 <a class="col-6 col-md-4 p-0" href="/plans">
                                     <div class="quick-actions-item">
                                         <div class="avatar-item bg-danger rounded-circle">
                                             <i class="fas fa-file-invoice"></i>
                                         </div>
-                                        <span class="text">Plans</span>
+                                        <span class="text">Subscription Plans</span>
                                     </div>
                                 </a>
-                               
-                                <a class="col-6 col-md-4 p-0" href="/subscriptions">
-                                    <div class="quick-actions-item">
-                                        <div class="avatar-item bg-warning rounded-circle">
-                                            <i class="fas fa-file-invoice-dollar"></i>
-                                        </div>
-                                        <span class="text">Subscriptions</span>
-                                    </div>
-                                </a>
+                                <?php endif; ?>
+                                <?php if ($auth->hasPermission('system:view_reports')): ?>
                                 <a class="col-6 col-md-4 p-0" href="/reports">
                                     <div class="quick-actions-item">
                                         <div class="avatar-item bg-info rounded-circle">
                                             <i class="fas fa-chart-bar"></i>
                                         </div>
-                                        <span class="text">Reports</span>
+                                        <span class="text">System Reports</span>
                                     </div>
                                 </a>
-                                <a class="col-6 col-md-4 p-0" href="/tenants">
-                                    <div class="quick-actions-item">
-                                        <div class="avatar-item bg-success rounded-circle">
-                                            <i class="fas fa-users"></i>
-                                        </div>
-                                        <span class="text">Tenant Management</span>
-                                    </div>
-                                </a>
+                                <?php endif; ?>
+                                <?php if ($auth->hasPermission('user:manage_all')): ?>
                                 <a class="col-6 col-md-4 p-0" href="/users">
                                     <div class="quick-actions-item">
                                         <div class="avatar-item bg-primary rounded-circle">
                                             <i class="fas fa-user-friends"></i>
                                         </div>
-                                        <span class="text">Users</span>
+                                        <span class="text">All Users</span>
                                     </div>
                                 </a>
+                                <?php endif; ?>
+                                <?php if ($auth->hasPermission('audit:view_all')): ?>
                                 <a class="col-6 col-md-4 p-0" href="/audit-logs">
                                     <div class="quick-actions-item">
-                                        <div
-                                            class="avatar-item bg-secondary rounded-circle"
-                                        >
+                                        <div class="avatar-item bg-secondary rounded-circle">
                                             <i class="far fa-eye"></i>
                                         </div>
-                                        <span class="text">Audit Logs</span>
+                                        <span class="text">System Audit Logs</span>
                                     </div>
                                 </a>
+                                <?php endif; ?>
+                                <?php if ($auth->hasPermission('system:manage_settings')): ?>
+                                <a class="col-6 col-md-4 p-0" href="/settings">
+                                    <div class="quick-actions-item">
+                                        <div class="avatar-item bg-warning rounded-circle">
+                                            <i class="fas fa-cogs"></i>
+                                        </div>
+                                        <span class="text">Settings</span>
+                                    </div>
+                                </a>
+                                <?php endif; ?>
                             </div>
 
                             <?php else: ?>
 
-                             <div class="row m-0">   
-                                <a class="col-6 col-md-4 p-0" href="/departments">
+                            <div class="row m-0">
+                                <?php if ($auth->hasPermission('employee:create')): ?>
+                                <a class="col-6 col-md-4 p-0" href="/employees/create">
                                     <div class="quick-actions-item">
                                         <div class="avatar-item bg-primary rounded-circle">
-                                            <i class="fas fa-building"></i>
+                                            <i class="fas fa-user-plus"></i>
                                         </div>
-                                        <span class="text">Departments</span>
+                                        <span class="text">Add Employee</span>
                                     </div>
                                 </a>
-                                <a class="col-6 col-md-4 p-0" href="/positions">
-                                    <div class="quick-actions-item">
-                                        <div
-                                            class="avatar-item bg-secondary rounded-circle"
-                                        >
-                                            <i class="fas fa-briefcase"></i>
-                                        </div>
-                                        <span class="text">Positions</span>
-                                    </div>
-                                </a>
-
-                                <a class="col-6 col-md-4 p-0" href="/employees">
-                                    <div class="quick-actions-item">
-                                        <div class="avatar-item bg-danger rounded-circle">
-                                            <i class="fas fa-id-badge"></i>
-                                        </div>
-                                        <span class="text">Staff</span>
-                                    </div>
-                                </a>
-
+                                <?php endif; ?>
+                                <?php if ($auth->hasPermission('payroll:prepare')): ?>
                                 <a class="col-6 col-md-4 p-0" href="/payroll">
                                     <div class="quick-actions-item">
                                         <div class="avatar-item bg-info rounded-circle">
                                             <i class="fas fa-coins"></i>
                                         </div>
-                                        <span class="text">Prepare Payroll</span>
+                                        <span class="text">Run Payroll</span>
                                     </div>
                                 </a>
-                                <a class="col-6 col-md-4 p-0" href="/payroll-history">
+                                <?php endif; ?>
+                                <?php if ($auth->hasPermission('payroll:run_reports')): ?>
+                                <a class="col-6 col-md-4 p-0" href="/reports">
                                     <div class="quick-actions-item">
-                                        <div class="avatar-item bg-success rounded-circle">
-                                            <i class="fas fa-file-invoice-dollar"></i>
+                                        <div class="avatar-item bg-dark rounded-circle">
+                                            <i class="fas fa-file-alt"></i>
                                         </div>
-                                        <span class="text">Payroll History</span>
+                                        <span class="text">Statutory Reports</span>
                                     </div>
                                 </a>
-                               
-                                <a class="col-6 col-md-4 p-0" href="/subscription-history">
+                                <?php endif; ?>
+                                <?php if ($auth->hasPermission('config:manage_departments')): ?>
+                                <a class="col-6 col-md-4 p-0" href="/departments">
+                                    <div class="quick-actions-item">
+                                        <div class="avatar-item bg-secondary rounded-circle">
+                                            <i class="fas fa-building"></i>
+                                        </div>
+                                        <span class="text">Departments</span>
+                                    </div>
+                                </a>
+                                <?php endif; ?>
+                                <?php if ($auth->hasPermission('config:manage_positions')): ?>
+                                <a class="col-6 col-md-4 p-0" href="/positions">
+                                    <div class="quick-actions-item">
+                                        <div class="avatar-item bg-danger rounded-circle">
+                                            <i class="fas fa-briefcase"></i>
+                                        </div>
+                                        <span class="text">Positions</span>
+                                    </div>
+                                </a>
+                                <?php endif; ?>
+                                <?php if ($auth->hasPermission('tenant:manage_subscription')): ?>
+                                <a class="col-6 col-md-4 p-0" href="/subscription">
                                     <div class="quick-actions-item">
                                         <div class="avatar-item bg-warning rounded-circle">
                                             <i class="fas fa-credit-card"></i>
                                         </div>
-                                        <span class="text">Subscription History</span>
+                                        <span class="text">Manage Subscription</span>
                                     </div>
                                 </a>
-                                                                
+                                <?php endif; ?>
+                                <?php if ($auth->hasPermission('tenant:view_audit_logs')): ?>
+                                <a class="col-6 col-md-4 p-0" href="/activity-log">
+                                    <div class="quick-actions-item">
+                                        <div class="avatar-item bg-success rounded-circle">
+                                            <i class="fas fa-history"></i>
+                                        </div>
+                                        <span class="text">Recent Activity</span>
+                                    </div>
+                                </a>
+                                <?php endif; ?>
                             </div>
                             <?php endif; ?>
                         </div>

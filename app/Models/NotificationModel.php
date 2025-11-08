@@ -73,6 +73,29 @@ class NotificationModel extends Model
     }
     
     /**
+     * Retrieves the most recent notifications for a user, for the navbar dropdown.
+     */
+    public function getRecentNotifications(int $userId, int $limit = 5): array
+    {
+        $sql = "SELECT id, type, title, body, is_read, created_at 
+                FROM {$this->table} 
+                WHERE user_id = :user_id
+                ORDER BY created_at DESC 
+                LIMIT :limit";
+                
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindValue(':user_id', $userId, \PDO::PARAM_INT);
+            $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            Log::error("Notification READ (getRecentNotifications) failed for User {$userId}. Error: " . $e->getMessage());
+            return []; // Return empty array as a safe fallback
+        }
+    }
+    
+    /**
      * Retrieves unread notifications for a specific user (used for count).
      */
     public function getUnreadForUser(int $userId): array

@@ -224,4 +224,31 @@ class PositionModel extends Model
             throw $e;
         }
     }
+
+    /**
+     * Counts all positions for the current tenant.
+     *
+     * @return int The count of positions.
+     */
+    public function countAllByTenant(): int
+    {
+        try {
+            $whereClause = "";
+            if (!$this->isSuperAdmin && $this->currentTenantId !== null) {
+                $whereClause = "WHERE tenant_id = {$this->currentTenantId}";
+            }
+            
+            $sql = "SELECT COUNT(id) FROM {$this->table} {$whereClause}";
+            
+            $stmt = $this->db->query($sql);
+            return (int)$stmt->fetchColumn();
+        } catch (PDOException $e) {
+            Log::error("DB Count Error in PositionModel::countAllByTenant. Error: " . $e->getMessage(), [
+                'user_id' => Auth::userId(), 
+                'tenant_id' => $this->currentTenantId,
+                'sql' => $sql
+            ]);
+            throw $e;
+        }
+    }
 }

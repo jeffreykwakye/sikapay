@@ -47,6 +47,7 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 | **Audit/Compliance** | Audit Logging | Complete | Logs critical actions using the acting Super Admin's ID. |
 | **Notifications (NEW)** | **E2E In-App System** | **Complete** | Includes service, model, controller, display, mark-as-read functionality, and UI badge counter. |
 | **Employee Profile** | View, Profile Picture Upload, Staff File Upload, Staff File Deletion | **Complete** | Modern, two-column layout with tabbed navigation. |
+| **Payroll Configuration** | Manage custom Allowances & Deductions. | **Complete** | Full CRUD UI for tenant admins to define and manage payroll elements. |
 
 ---
 
@@ -126,6 +127,7 @@ The tenant creation process adheres to the **Single Responsibility Principle (SR
 | **2025-10-30** | **Employee Profile** | Rebuilt the employee profile page with a modern, two-column layout, profile picture upload, staff file management, and staff file deletion. | **Complete** |
 | **Payroll** | Core Payroll Data & Logic | `tax_bands`, `ssnit_rates`, `payroll_settings`, `payroll_periods`, `payslips`, `employee_payroll_details`, `PayrollService`, `PayrollController`. Payslip PDF generation and viewing functionality implemented. | **Complete** |
 | **Statutory Reports** | Generation of PAYE and SSNIT reports in PDF and Excel formats. | **Complete** | Allows tenants to generate statutory reports for compliance. |
+| **2025-11-03** | **Payroll Element Management** | Implemented and fixed the full feature for creating, updating, and deleting tenant-level allowances and deductions. This includes the backend models, controllers, routes, and the frontend UI with its client-side logic. | **Complete** |
 
 
 ## Next Focus Area

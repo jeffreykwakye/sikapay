@@ -117,4 +117,30 @@ class SubscriptionModel extends Model
             return 0;
         }
     }
+
+    /**
+     * Retrieves the current subscription for a tenant, including the plan name.
+     *
+     * @param int $tenantId The ID of the tenant.
+     * @return array|null The subscription details, or null if not found.
+     */
+    public function getCurrentSubscription(int $tenantId): ?array
+    {
+        $sql = "SELECT 
+                    s.*, 
+                    p.name AS plan_name
+                FROM subscriptions s
+                JOIN plans p ON s.current_plan_id = p.id
+                WHERE s.tenant_id = :tenant_id";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([':tenant_id' => $tenantId]);
+            $result = $stmt->fetch(\PDO::FETCH_ASSOC);
+            return $result ?: null;
+        } catch (PDOException $e) {
+            Log::error("Failed to retrieve current subscription for tenant {$tenantId}. Error: " . $e->getMessage());
+            return null;
+        }
+    }
 }

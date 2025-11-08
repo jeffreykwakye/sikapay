@@ -12,6 +12,7 @@ class EmployeePayrollDetailsModel extends Model
 {
     public function __construct()
     {
+        Log::info('Inside EmployeePayrollDetailsModel constructor');
         parent::__construct('employee_payroll_details');
     }
 
@@ -100,3 +101,4 @@ class EmployeePayrollDetailsModel extends Model
             return false;
         }
     }
+}

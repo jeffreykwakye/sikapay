@@ -341,7 +341,7 @@ class EmployeeController extends Controller
             // 7. Audit Logging 
             $auditModel->log(
                 $this->tenantId, 
-                'EMPLOYEE_CREATED_QUICK',
+                'New Employee Added: ' . $userData['first_name'] . ' ' . $userData['last_name'],
                 ['employee_id' => $employeeData['employee_id'], 'user_id' => $newUserId]
             );
 
@@ -425,7 +425,7 @@ class EmployeeController extends Controller
             
             $this->employeeModel->updateEmployeeRecord($userId, $employeeData);
             
-            $auditModel->log($this->tenantId, 'EMPLOYEE_EMPLOYMENT_UPDATED', ['user_id' => $userId]);
+            $auditModel->log($this->tenantId, 'Employee employment data updated for user with ID: ' . $userId, ['user_id' => $userId]);
 
             $db->commit();
             
@@ -504,7 +504,7 @@ class EmployeeController extends Controller
             ];
             $userProfileModel->updateProfile($userId, $profileData); 
             
-            $auditModel->log($this->tenantId, 'EMPLOYEE_PERSONAL_UPDATED', ['user_id' => $userId]);
+            $auditModel->log($this->tenantId, 'Employee personal data updated for user with ID: ' . $userId, ['user_id' => $userId]);
 
             $db->commit();
             
@@ -563,7 +563,7 @@ class EmployeeController extends Controller
             ];
             $userProfileModel->updateProfile($userId, $profileData); 
             
-            $auditModel->log($this->tenantId, 'EMPLOYEE_STATUTORY_UPDATED', ['user_id' => $userId]);
+            $auditModel->log($this->tenantId, 'Employee statutory data updated for user with ID: ' . $userId, ['user_id' => $userId]);
 
             $db->commit();
             
@@ -625,7 +625,7 @@ class EmployeeController extends Controller
             
             $this->employeeModel->updateEmployeeRecord($userId, $employeeData);
             
-            $auditModel->log($this->tenantId, 'EMPLOYEE_BANK_UPDATED', ['user_id' => $userId]);
+            $auditModel->log($this->tenantId, 'Employee bank data updated for user with ID: ' . $userId, ['user_id' => $userId]);
 
             $db->commit();
             
@@ -680,7 +680,7 @@ class EmployeeController extends Controller
             ];
             $userProfileModel->updateProfile($userId, $profileData); 
             
-            $auditModel->log($this->tenantId, 'EMPLOYEE_EMERGENCY_UPDATED', ['user_id' => $userId]);
+            $auditModel->log($this->tenantId, 'Employee emergency contact data updated for user with ID: ' . $userId, ['user_id' => $userId]);
 
             $db->commit();
             
@@ -749,7 +749,7 @@ class EmployeeController extends Controller
                 'notes' => $validator->get('notes', 'string', null),
             ]);
             
-            $auditModel->log($this->tenantId, 'EMPLOYEE_SALARY_UPDATED', [
+            $auditModel->log($this->tenantId, 'Employee salary updated for user with ID: ' . $userId, [
                 'user_id' => $userId, 
                 'old' => $oldSalary, 
                 'new' => $newSalary
@@ -807,7 +807,7 @@ class EmployeeController extends Controller
             
             $userModel->updateUser($userId, $userData);
             
-            $auditModel->log($this->tenantId, 'EMPLOYEE_ROLE_UPDATED', ['user_id' => $userId, 'new_role_id' => $userData['role_id']]);
+            $auditModel->log($this->tenantId, 'Employee role updated for user with ID: ' . $userId, ['user_id' => $userId, 'new_role_id' => $userData['role_id']]);
 
             $db->commit();
             

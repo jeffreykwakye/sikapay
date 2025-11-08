@@ -318,4 +318,73 @@ class EmployeeModel extends Model
             return [];
         }
     }
+
+    /**
+     * Retrieves the most recently hired employees for a given tenant.
+     *
+     * @param int $tenantId The ID of the tenant.
+     * @param int $limit The maximum number of employees to retrieve.
+     * @return array An array of employee records.
+     */
+    public function getRecentEmployees(int $tenantId, int $limit = 5): array
+    {
+        $sql = "SELECT 
+                    e.user_id, e.employee_id, e.hire_date,
+                    u.first_name, u.last_name, u.email,
+                    d.name as department_name
+                FROM employees e
+                JOIN users u ON e.user_id = u.id
+                LEFT JOIN positions p ON e.current_position_id = p.id
+                LEFT JOIN departments d ON p.department_id = d.id
+                WHERE e.tenant_id = :tenant_id AND u.is_active = TRUE
+                ORDER BY e.hire_date DESC
+                LIMIT :limit";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindValue(':tenant_id', $tenantId, \PDO::PARAM_INT);
+            $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
+            $stmt->execute();
+            
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            Log::error("Failed to retrieve recent employees for Tenant {$tenantId}. Error: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Retrieves employees with upcoming work anniversaries.
+     *
+     * @param int $tenantId The ID of the tenant.
+     * @param int $days The number of days to look ahead for anniversaries.
+     * @return array An array of employee records.
+     */
+    public function getUpcomingAnniversaries(int $tenantId, int $days = 30): array
+    {
+        $sql = "SELECT 
+                    e.user_id, e.hire_date,
+                    u.first_name, u.last_name
+                FROM employees e
+                JOIN users u ON e.user_id = u.id
+                WHERE e.tenant_id = :tenant_id AND u.is_active = TRUE
+                AND (
+                    DATE_ADD(e.hire_date, INTERVAL YEAR(CURDATE()) - YEAR(e.hire_date) YEAR) BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL :days DAY)
+                    OR
+                    DATE_ADD(e.hire_date, INTERVAL YEAR(CURDATE()) - YEAR(e.hire_date) + 1 YEAR) BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL :days DAY)
+                )
+                ORDER BY MONTH(e.hire_date), DAY(e.hire_date) ASC";
+
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindValue(':tenant_id', $tenantId, \PDO::PARAM_INT);
+            $stmt->bindValue(':days', $days, \PDO::PARAM_INT);
+            $stmt->execute();
+            
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            Log::error("Failed to retrieve upcoming anniversaries for Tenant {$tenantId}. Error: " . $e->getMessage());
+            return [];
+        }
+    }
 }

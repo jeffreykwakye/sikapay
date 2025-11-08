@@ -10,6 +10,8 @@ use Jeffrey\Sikapay\Core\ErrorResponder;
 use Jeffrey\Sikapay\Services\NotificationService;
 use Jeffrey\Sikapay\Models\TenantModel;
 use Jeffrey\Sikapay\Models\UserModel;
+use Jeffrey\Sikapay\Models\TenantProfileModel;
+use Jeffrey\Sikapay\Models\SubscriptionModel;
 use Jeffrey\Sikapay\Helpers\ViewHelper;
 use Jeffrey\Sikapay\Security\CsrfToken;
 
@@ -24,9 +26,13 @@ abstract class Controller
     protected NotificationService $notificationService; 
     protected TenantModel $tenantModel;
     protected UserModel $userModel; 
+    protected TenantProfileModel $tenantProfileModel;
+    protected SubscriptionModel $subscriptionModel;
     
 
     protected ?string $tenantName = null;
+    protected ?string $tenantLogo = null;
+    protected ?string $subscriptionPlan = null;
     protected array $userName = ['first_name' => null, 'last_name' => null];
 
     
@@ -52,6 +58,8 @@ abstract class Controller
             $this->userModel = new UserModel();
             $this->notificationService = new NotificationService();
             $this->tenantModel = new TenantModel();
+            $this->tenantProfileModel = new TenantProfileModel();
+            $this->subscriptionModel = new SubscriptionModel();
 
             // Fetch contextual data
             try {
@@ -59,6 +67,10 @@ abstract class Controller
 
                 if ($this->tenantId > 0) {
                     $this->tenantName = $this->tenantModel->getNameById($this->tenantId);
+                    $tenantProfile = $this->tenantProfileModel->findByTenantId($this->tenantId);
+                    $this->tenantLogo = $tenantProfile['logo_path'] ?? null;
+                    $subscription = $this->subscriptionModel->getCurrentSubscription($this->tenantId);
+                    $this->subscriptionPlan = $subscription['plan_name'] ?? null;
                 }
             } catch (\Exception $e) {
                 // Catch model initialization failure (e.g., DB down)
@@ -112,6 +124,8 @@ abstract class Controller
             'tenantId' => $this->tenantId,
             
             'tenantName' => $this->tenantName ?? 'System/Public',
+            'tenantLogo' => $this->tenantLogo,
+            'subscriptionPlan' => $this->subscriptionPlan,
             'userFirstName' => $this->userName['first_name'] ?? 'User',
             'userLastName' => $this->userName['last_name'] ?? '',
 
@@ -120,6 +134,9 @@ abstract class Controller
             'unreadNotificationCount' => (isset($this->notificationService) && $this->userId > 0)
                 ? $this->notificationService->getUnreadCount($this->userId) 
                 : 0,
+            'navbarNotifications' => (isset($this->notificationService) && $this->userId > 0)
+                ? $this->notificationService->getRecentNotifications($this->userId, 5)
+                : [],
         ];
 
         // 2. Security-focused helpers to be available in all views

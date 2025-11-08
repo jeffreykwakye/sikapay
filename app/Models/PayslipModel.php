@@ -90,7 +90,7 @@ class PayslipModel extends Model
     public function getPayslipsByPeriod(int $payrollPeriodId, int $tenantId): array
     {
         $sql = "SELECT 
-                    p.id, p.user_id, p.gross_pay, p.net_pay, p.paye_amount, p.ssnit_employee_amount, p.payslip_path,
+                    p.id, p.user_id, p.gross_pay, p.net_pay, p.paye_amount, p.ssnit_employee_amount, p.ssnit_employer_amount, p.payslip_path,
                     u.first_name, u.last_name, u.email, e.employee_id
                 FROM {$this->table} p
                 JOIN users u ON p.user_id = u.id
@@ -107,6 +107,71 @@ class PayslipModel extends Model
             return $stmt->fetchAll(\PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
             Log::error("Failed to retrieve payslips for period {$payrollPeriodId} (tenant {$tenantId}). Error: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Retrieves aggregated payroll data for a specific period.
+     *
+     * @param int $payrollPeriodId
+     * @param int $tenantId
+     * @return array An array of aggregated data.
+     */
+    public function getAggregatedPayslipData(int $payrollPeriodId, int $tenantId): array
+    {
+        $sql = "SELECT 
+                    SUM(gross_pay) as total_gross_pay,
+                    SUM(net_pay) as total_net_pay,
+                    SUM(paye_amount) as total_paye,
+                    SUM(ssnit_employer_amount) as total_employer_ssnit
+                FROM {$this->table}
+                WHERE payroll_period_id = :payroll_period_id AND tenant_id = :tenant_id";
+
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                ':payroll_period_id' => $payrollPeriodId,
+                ':tenant_id' => $tenantId,
+            ]);
+            $result = $stmt->fetch(\PDO::FETCH_ASSOC);
+            return $result ?: [];
+        } catch (PDOException $e) {
+            Log::error("Failed to retrieve aggregated payslip data for period {$payrollPeriodId} (tenant {$tenantId}). Error: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Retrieves the total payroll cost for the last specified number of months.
+     *
+     * @param int $tenantId The ID of the tenant.
+     * @param int $months The number of months of history to retrieve.
+     * @return array An array of payroll history data.
+     */
+    public function getPayrollHistory(int $tenantId, int $months = 6): array
+    {
+        $sql = "SELECT 
+                    pp.period_name as month,
+                    SUM(p.gross_pay) as total_gross,
+                    SUM(p.net_pay) as total_net,
+                    SUM(p.paye_amount) as total_paye
+                FROM payslips p
+                JOIN payroll_periods pp ON p.payroll_period_id = pp.id
+                WHERE p.tenant_id = :tenant_id
+                AND pp.is_closed = TRUE
+                AND pp.start_date >= DATE_SUB(CURDATE(), INTERVAL :months MONTH)
+                GROUP BY pp.id, pp.period_name, pp.start_date
+                ORDER BY pp.start_date ASC";
+
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindValue(':tenant_id', $tenantId, \PDO::PARAM_INT);
+            $stmt->bindValue(':months', $months, \PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            Log::error("Failed to retrieve payroll history for tenant {$tenantId}. Error: " . $e->getMessage());
             return [];
         }
     }

@@ -74,6 +74,22 @@ class NotificationService
     }
 
     /**
+     * Retrieves the most recent notifications for a user (for navbar).
+     * @return array An array of notification records.
+     */
+    public function getRecentNotifications(int $userId, int $limit = 5): array
+    {
+        try {
+            return $this->notificationModel->getRecentNotifications($userId, $limit);
+        } catch (Throwable $e) {
+            Log::error("Failed to fetch recent notifications for User {$userId}.", [
+                'error' => $e->getMessage()
+            ]);
+            return []; // Return empty array on failure
+        }
+    }
+
+    /**
      * Gets the count of unread notifications for a user.
      */
     public function getUnreadCount(int $userId): int

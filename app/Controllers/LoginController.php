@@ -7,10 +7,19 @@ use Jeffrey\Sikapay\Controllers\Controller;
 use Jeffrey\Sikapay\Core\Log;
 use Jeffrey\Sikapay\Core\ErrorResponder;
 use Jeffrey\Sikapay\Core\Validator;
+use Jeffrey\Sikapay\Models\AuditModel;
 use \Throwable;
 
 class LoginController extends Controller
 {
+    private AuditModel $auditModel;
+
+    public function __construct()
+    {
+        parent::__construct();
+        $this->auditModel = new AuditModel();
+    }
+
     /**
      * Displays the login form (main entry point for /login).
      */
@@ -90,6 +99,9 @@ class LoginController extends Controller
             
             // Core authentication attempt, relies on Auth service
             if ($this->auth->login($email, $password)) {
+                // Log the successful login
+                $this->auditModel->log($this->auth->tenantId(), 'User logged in');
+
                 // Success: Redirect to the intended page or dashboard
                 $redirectTo = $_SESSION['redirect_back_to'] ?? '/dashboard';
                 unset($_SESSION['redirect_back_to']); // Clear the redirect target

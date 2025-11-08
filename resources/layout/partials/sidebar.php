@@ -9,7 +9,11 @@
     <div class="sidebar-logo">
         <div class="logo-header" data-background-color="dark">
             <a href="/" class="logo">
-                <img src="/assets/img/kaiadmin/logo_light.svg" alt="navbar brand" class="navbar-brand" height="20" />
+                <?php if (isset($tenantLogo) && ($subscriptionPlan === 'Professional' || $subscriptionPlan === 'Enterprise')): ?>
+                    <img src="<?= htmlspecialchars($tenantLogo) ?>" alt="navbar brand" class="navbar-brand" height="20" />
+                <?php else: ?>
+                    <img src="/assets/img/kaiadmin/logo_light.svg" alt="navbar brand" class="navbar-brand" height="20" />
+                <?php endif; ?>
             </a>
             <div class="nav-toggle">
                 <button class="btn btn-toggle toggle-sidebar">

@@ -17,7 +17,7 @@ class StatutoryReportController extends Controller
 {
     private PayrollPeriodModel $payrollPeriodModel;
     private PayslipModel $payslipModel;
-    private TenantProfileModel $tenantProfileModel;
+    protected TenantProfileModel $tenantProfileModel;
 
     public function __construct()
     {
