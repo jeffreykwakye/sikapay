@@ -4,6 +4,9 @@ declare(strict_types=1);
 namespace Jeffrey\Sikapay\Controllers;
 
 use Jeffrey\Sikapay\Models\DepartmentModel;
+use Jeffrey\Sikapay\Models\EmployeeModel;
+use Jeffrey\Sikapay\Models\PayrollPeriodModel;
+use Jeffrey\Sikapay\Models\PayslipModel;
 use Jeffrey\Sikapay\Security\CsrfToken;
 use Jeffrey\Sikapay\Core\Log;
 use Jeffrey\Sikapay\Helpers\Sanitizer;
@@ -12,6 +15,9 @@ use Jeffrey\Sikapay\Core\ErrorResponder;
 class DepartmentController extends Controller
 {
     private DepartmentModel $departmentModel;
+    private EmployeeModel $employeeModel;
+    private PayrollPeriodModel $payrollPeriodModel;
+    private PayslipModel $payslipModel; // Added this line
     private const PERMISSION_MANAGE = 'config:manage_departments'; 
 
     public function __construct()
@@ -25,6 +31,9 @@ class DepartmentController extends Controller
         
         // This relies on the Router Middleware to check PERMISSION_MANAGE.
         $this->departmentModel = new DepartmentModel();
+        $this->employeeModel = new EmployeeModel();
+        $this->payrollPeriodModel = new PayrollPeriodModel();
+        $this->payslipModel = new PayslipModel(); // Added this line
     }
 
     // ----------------------------------------------------------------
@@ -32,15 +41,44 @@ class DepartmentController extends Controller
     // ----------------------------------------------------------------
 
     /**
-     * Renders the list of all departments for the tenant. (READ)
+     * Renders the list of all departments for the tenant, enriched with payroll and employee stats.
      */
     public function index(): void
     {
         try {
+            $latestPeriod = $this->payrollPeriodModel->getLatestClosedPeriod($this->tenantId);
+            $payrollStats = [];
+            if ($latestPeriod) {
+                $payrollStats = $this->payslipModel->getAggregatedPayrollStatsByDepartment($this->tenantId, (int)$latestPeriod['id']);
+            }
+
+            $employeeCounts = $this->employeeModel->getEmployeeCountByDepartment($this->tenantId);
             $departments = $this->departmentModel->getAllByTenant();
 
+            $departmentData = [];
+            foreach ($departments as $dept) {
+                $deptId = (int)$dept['id'];
+                $departmentData[$deptId] = [
+                    'id' => $deptId,
+                    'name' => $dept['name'],
+                    'employee_count' => $employeeCounts[$deptId] ?? 0,
+                    'total_gross_pay' => $payrollStats[$deptId]['total_gross_pay'] ?? 0,
+                    'total_net_pay' => $payrollStats[$deptId]['total_net_pay'] ?? 0,
+                    'total_paye' => $payrollStats[$deptId]['total_paye'] ?? 0,
+                ];
+            }
+
+            // Prepare data for charts
+            $chartLabels = array_column($departmentData, 'name');
+            $grossPayData = array_column($departmentData, 'total_gross_pay');
+            $employeeCountData = array_column($departmentData, 'employee_count');
+
             $this->view('departments/index', [
-                'departments' => $departments,
+                'departments' => $departmentData,
+                'latestPeriodName' => $latestPeriod['period_name'] ?? 'N/A',
+                'chartLabels' => json_encode($chartLabels),
+                'grossPayData' => json_encode($grossPayData),
+                'employeeCountData' => json_encode($employeeCountData),
                 'successMessage' => $_SESSION['flash_success'] ?? null,
                 'errorMessage' => $_SESSION['flash_error'] ?? null,
             ]);

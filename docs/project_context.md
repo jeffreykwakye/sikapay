@@ -54,9 +54,7 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 
 ### **Upcoming Features**
 
-* **Monolog Integration** for structured logging
 * **Auto-Mark Read** on notification view
-* **Tenant Admin Welcome Notification**
 * **Employee Management Module**
 * Tenant Admin Dashboard & Payroll Approval Flow
 
@@ -137,7 +135,6 @@ The tenant creation process adheres to the **Single Responsibility Principle (SR
 **User Experience and Feature Enhancement**
 * **Objective:** Enhance the user experience and add more value to the platform.
 * **Immediate Tasks:**
-    *   Enhance the dashboard with key payroll metrics.
     *   Create a self-service portal for employees.
     *   Integrate an email service for notifications.
 ---

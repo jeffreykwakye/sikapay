@@ -76,6 +76,5 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 **User Experience and Feature Enhancement**
 * **Objective:** Enhance the user experience and add more value to the platform.
 * **Immediate Tasks:**
-    *   Enhance the dashboard with key payroll metrics.
     *   Create a self-service portal for employees.
     *   Integrate an email service for notifications.

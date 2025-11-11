@@ -387,4 +387,33 @@ class EmployeeModel extends Model
             return [];
         }
     }
+
+    /**
+     * Gets the count of active employees for each department in a given tenant.
+     *
+     * @param int $tenantId The ID of the tenant.
+     * @return array An associative array mapping department_id to employee_count.
+     */
+    public function getEmployeeCountByDepartment(int $tenantId): array
+    {
+        $sql = "SELECT 
+                    p.department_id,
+                    COUNT(e.user_id) as employee_count
+                FROM employees e
+                JOIN users u ON e.user_id = u.id
+                JOIN positions p ON e.current_position_id = p.id
+                WHERE e.tenant_id = :tenant_id AND u.is_active = TRUE
+                GROUP BY p.department_id";
+
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([':tenant_id' => $tenantId]);
+            
+            // Fetch as key-value pairs (department_id => employee_count)
+            return $stmt->fetchAll(\PDO::FETCH_KEY_PAIR);
+        } catch (PDOException $e) {
+            Log::error("Failed to get employee count by department for Tenant {$tenantId}. Error: " . $e->getMessage());
+            return [];
+        }
+    }
 }

@@ -175,4 +175,46 @@ class PayslipModel extends Model
             return [];
         }
     }
+
+    /**
+     * Retrieves aggregated payroll statistics for a specific period, grouped by department.
+     *
+     * @param int $tenantId The ID of the tenant.
+     * @param int $payrollPeriodId The ID of the payroll period.
+     * @return array An array of aggregated data, keyed by department ID.
+     */
+    public function getAggregatedPayrollStatsByDepartment(int $tenantId, int $payrollPeriodId): array
+    {
+        $sql = "SELECT 
+                    pos.department_id,
+                    SUM(ps.gross_pay) as total_gross_pay,
+                    SUM(ps.net_pay) as total_net_pay,
+                    SUM(ps.paye_amount) as total_paye
+                FROM payslips ps
+                JOIN employees e ON ps.user_id = e.user_id
+                JOIN positions pos ON e.current_position_id = pos.id
+                WHERE ps.tenant_id = :tenant_id AND ps.payroll_period_id = :payroll_period_id
+                GROUP BY pos.department_id";
+
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                ':tenant_id' => $tenantId,
+                ':payroll_period_id' => $payrollPeriodId
+            ]);
+            
+            $results = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            
+            // Re-key the array by department_id for easier lookup
+            $keyedResults = [];
+            foreach ($results as $row) {
+                $keyedResults[$row['department_id']] = $row;
+            }
+            
+            return $keyedResults;
+        } catch (PDOException $e) {
+            Log::error("Failed to retrieve aggregated payroll stats by department for period {$payrollPeriodId} (tenant {$tenantId}). Error: " . $e->getMessage());
+            return [];
+        }
+    }
 }

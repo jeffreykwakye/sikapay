@@ -18,50 +18,134 @@ if ($userRole !== 'tenant_admin') {
 
 
 <!-- KPI CARDS ROW -->
+
 <div class="row">
-    <div class="col-lg-3">
-        <div class="card card-stats card-round">
+
+    <div class="col-sm-6 col-md-3">
+        <div class="card card-stats card-info card-round">
             <div class="card-body">
-                <div class="row align-items-center">
-                    <div class="col-icon"><div class="icon-big text-center icon-primary bubble-shadow-small"><i class="fas fa-users"></i></div></div>
-                    <div class="col col-stats ms-3 ms-sm-0">
-                        <div class="numbers"><p class="card-category">Active Employees</p><h4 class="card-title"><?= $activeEmployees ?></h4></div>
+                <div class="row">
+                    <div class="col-5">
+                        <div class="icon-big text-center">
+                            <i class="fas fa-users"></i>
+                        </div>
+                    </div>
+                    <div class="col-7 col-stats">
+                        <div class="numbers">
+                            <p class="card-category">Active Employees</p>
+                            <p class="card-title fs-5"><?= htmlspecialchars($activeEmployees) ?></p>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-lg-3">
-        <div class="card card-stats card-round">
+
+    <div class="col-sm-6 col-md-3">
+        <div class="card card-stats card-secondary card-round">
             <div class="card-body">
-                <div class="row align-items-center">
-                    <div class="col-icon"><div class="icon-big text-center icon-success bubble-shadow-small"><i class="fas fa-building"></i></div></div>
-                    <div class="col col-stats ms-3 ms-sm-0">
-                        <div class="numbers"><p class="card-category">Departments</p><h4 class="card-title"><?= $departmentCount ?></h4></div>
+                <div class="row">
+                    <div class="col-5">
+                        <div class="icon-big text-center">
+                            <i class="fas fa-building"></i>
+                        </div>
+                    </div>
+                    <div class="col-7 col-stats">
+                        <div class="numbers">
+                            <p class="card-category">Departments</p>
+                            <p class="card-title fs-5"><?= htmlspecialchars($departmentCount) ?></p>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-lg-3">
-        <div class="card card-stats card-round">
+
+    <div class="col-sm-6 col-md-3">
+        <div class="card card-stats card-success card-round">
             <div class="card-body">
-                <div class="row align-items-center">
-                    <div class="col-icon"><div class="icon-big text-center icon-info bubble-shadow-small"><i class="fas fa-star"></i></div></div>
-                    <div class="col col-stats ms-3 ms-sm-0">
-                        <div class="numbers"><p class="card-category">Current Plan</p><h4 class="card-title"><?= htmlspecialchars($subscriptionPlan ?? 'N/A') ?></h4></div>
+                <div class="row">
+                    <div class="col-5">
+                        <div class="icon-big text-center">
+                            <i class="fas fa-star"></i>
+                        </div>
+                    </div>
+                    <div class="col-7 col-stats">
+                        <div class="numbers">
+                            <p class="card-category">Current Plan</p>
+                            <p class="card-title fs-5"><?= htmlspecialchars($subscriptionPlan ?? 'N/A') ?></p>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-lg-3">
+
+    <div class="col-sm-6 col-md-3">
+        <div class="card card-stats card-danger card-round">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-5">
+                        <div class="icon-big text-center">
+                            <i class="fas fa-calendar-alt"></i>
+                        </div>
+                    </div>
+                    <div class="col-7 col-stats">
+                        <div class="numbers">
+                            <p class="card-category">Subscription Ends</p>
+                            <p class="card-title fs-5"><?= htmlspecialchars($subscriptionEndDate) ?></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+</div>
+
+
+<div class="row">
+    <div class="col-md-12">
+        <h4 class="lead mb-3">Last Payroll Run Summary</h4>
+    </div>
+</div>
+
+
+
+<div class="row row-card-no-pd">
+    <div class="col-sm-6 col-md-6">
         <div class="card card-stats card-round">
             <div class="card-body">
-                <div class="row align-items-center">
-                    <div class="col-icon"><div class="icon-big text-center icon-warning bubble-shadow-small"><i class="fas fa-calendar-alt"></i></div></div>
-                    <div class="col col-stats ms-3 ms-sm-0">
-                        <div class="numbers"><p class="card-category">Subscription Ends</p><h4 class="card-title"><?= htmlspecialchars($subscriptionEndDate) ?></h4></div>
+                <div class="row">
+                    <div class="col-5">
+                        <div class="icon-big text-center">
+                            <i class="icon-wallet text-info"></i>
+                        </div>
+                    </div>
+                    <div class="col-7 col-stats">
+                        <div class="numbers">
+                            <p class="card-category">Gross Payroll</p>
+                            <h4 class="card-title">GH&cent; <?= htmlspecialchars(number_format($grossPayrollLastMonth, 2)) ?></h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-6">
+        <div class="card card-stats card-round">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-5">
+                        <div class="icon-big text-center">
+                            <i class="icon-wallet text-success"></i>
+                        </div>
+                    </div>
+                    <div class="col-7 col-stats">
+                        <div class="numbers">
+                            <p class="card-category">Net Pay</p>
+                            <h4 class="card-title">GH&cent; <?= htmlspecialchars(number_format($netPayLastMonth, 2)) ?></h4>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -69,49 +153,28 @@ if ($userRole !== 'tenant_admin') {
     </div>
 </div>
 
+
 <div class="row">
-    <div class="col-md-12">
-        <h4 class="fw-bold mb-3">Last Payroll Run Summary</h4>
-    </div>
-</div>
-<div class="row">
-    <div class="col-lg-3">
+    <div class="col-lg-6">
         <div class="card card-stats card-round">
             <div class="card-body">
                 <div class="row align-items-center">
-                    <div class="col-icon"><div class="icon-big text-center icon-dark bubble-shadow-small"><i class="fas fa-wallet"></i></div></div>
+                    <div class="col-icon">
+                        <div class="icon-big text-center icon-danger bubble-shadow-small">
+                            <i class="fas fa-file-invoice-dollar"></i>
+                        </div>
+                    </div>
                     <div class="col col-stats ms-3 ms-sm-0">
-                        <div class="numbers"><p class="card-category">Gross Payroll</p><h4 class="card-title">GHS <?= number_format($grossPayrollLastMonth, 2) ?></h4></div>
+                        <div class="numbers">
+                            <p class="card-category">Total Tax (PAYE)</p>
+                            <h4 class="card-title">GHS <?= number_format($payeLastMonth, 2) ?></h4>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-lg-3">
-        <div class="card card-stats card-round">
-            <div class="card-body">
-                <div class="row align-items-center">
-                    <div class="col-icon"><div class="icon-big text-center icon-primary bubble-shadow-small"><i class="fas fa-money-bill-wave"></i></div></div>
-                    <div class="col col-stats ms-3 ms-sm-0">
-                        <div class="numbers"><p class="card-category">Net Pay</p><h4 class="card-title">GHS <?= number_format($netPayLastMonth, 2) ?></h4></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-lg-3">
-        <div class="card card-stats card-round">
-            <div class="card-body">
-                <div class="row align-items-center">
-                    <div class="col-icon"><div class="icon-big text-center icon-danger bubble-shadow-small"><i class="fas fa-file-invoice-dollar"></i></div></div>
-                    <div class="col col-stats ms-3 ms-sm-0">
-                        <div class="numbers"><p class="card-category">Total Tax (PAYE)</p><h4 class="card-title">GHS <?= number_format($payeLastMonth, 2) ?></h4></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-lg-3">
+    <div class="col-lg-6">
         <div class="card card-stats card-round">
             <div class="card-body">
                 <div class="row align-items-center">
@@ -128,36 +191,57 @@ if ($userRole !== 'tenant_admin') {
 
 <!-- CHARTS ROW -->
 <div class="row">
+    
     <div class="col-lg-8">
         <div class="card">
             <div class="card-header">
                 <div class="card-title">Payroll Summary (Last 6 Months)</div>
             </div>
-            <div class="card-body"><div class="chart-container"><canvas id="payrollSummaryChart"></canvas></div></div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="payrollSummaryChart"></canvas>
+                </div>
+            </div>
         </div>
     </div>
+
     <div class="col-lg-4">
         <div class="card">
             <div class="card-header">
                 <div class="card-title">Employees by Department</div>
             </div>
-            <div class="card-body"><div class="chart-container"><canvas id="departmentDonutChart"></canvas></div></div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="departmentDonutChart"></canvas>
+                </div>
+            </div>
         </div>
     </div>
+
 </div>
 
 <!-- INFORMATION & ACTIVITY ROW -->
 <div class="row">
     <div class="col-lg-6">
         <div class="card">
-            <div class="card-header"><div class="card-title">Upcoming Anniversaries</div></div>
+            <div class="card-header">
+                <div class="card-title">Upcoming Anniversaries</div>
+            </div>
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table table-striped mt-3">
-                        <thead><tr><th>Employee</th><th>Anniversary</th><th>Years</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Anniversary</th>
+                                <th>Years</th>
+                            </tr>
+                        </thead>
                         <tbody>
                             <?php if (empty($upcomingAnniversaries)): ?>
-                                <tr><td colspan="3" class="text-center">No upcoming anniversaries in the next 30 days.</td></tr>
+                                <tr>
+                                    <td colspan="3" class="text-center">No upcoming anniversaries in the next 30 days.</td>
+                                </tr>
                             <?php else: ?>
                                 <?php foreach ($upcomingAnniversaries as $employee): ?>
                                     <tr>
@@ -175,7 +259,9 @@ if ($userRole !== 'tenant_admin') {
     </div>
     <div class="col-lg-6">
         <div class="card">
-            <div class="card-header"><div class="card-title">New Hires (Last 30 Days)</div></div>
+            <div class="card-header">
+                <div class="card-title">New Hires (Last 30 Days)</div>
+            </div>
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table table-striped mt-3">
@@ -188,7 +274,9 @@ if ($userRole !== 'tenant_admin') {
                         </thead>
                         <tbody>
                             <?php if (empty($newHires)): ?>
-                                <tr><td colspan="3" class="text-center">No new hires in the last 30 days.</td></tr>
+                                <tr>
+                                    <td colspan="3" class="text-center">No new hires in the last 30 days.</td>
+                                </tr>
                             <?php else: ?>
                                 <?php foreach ($newHires as $employee): ?>
                                     <tr>

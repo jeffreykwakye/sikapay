@@ -1,114 +1,149 @@
 <?php
-// Variables provided by the Controller: $departments, $successMessage, $errorMessage, $flashWarning.
+// Variables provided by the Controller: $departments, $latestPeriodName, $chartLabels, $grossPayData, $employeeCountData, $successMessage, $errorMessage
 // Helpers: $h, $CsrfToken
 
 $departments = $departments ?? [];
+$latestPeriodName = $latestPeriodName ?? 'N/A';
 
 // Helper to escape HTML output
 $h = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
 ?>
 
 <div class="page-header">
-    <h3 class="fw-bold mb-3">Department Management</h3>
+    <h3 class="fw-bold mb-3">Departments</h3>
     <ul class="breadcrumbs mb-3">
         <li class="nav-home"><a href="/dashboard"><i class="icon-home"></i></a></li>
         <li class="separator"><i class="icon-arrow-right"></i></li>
         <li class="nav-item"><a href="/dashboard">Dashboard</a></li>
         <li class="separator"><i class="icon-arrow-right"></i></li>
-        <li class="nav-item"><a href="#">Department Management</a></li>
+        <li class="nav-item"><a href="#">Departments</a></li>
     </ul>
 </div>
 
 <div class="page-inner">
     
+    <!-- Data Table Row -->
     <div class="row">
-        <div class="col-sm-12 col-xl-12">
-            <div class="bg-light rounded p-4">
-                <div class="d-flex align-items-center justify-content-between mb-4">
-                    <h6 class="mb-0">Department Management</h6>
-                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createModal">
-                        <i class="icon-plus me-2"></i> Add New Department
-                    </button>
-                </div>
-
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title">Available Departments</div> 
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex align-items-center">
+                        <h4 class="card-title">Available Departments</h4>
+                        <button class="btn btn-primary btn-round ms-auto" data-bs-toggle="modal" data-bs-target="#createModal">
+                            <i class="fa fa-plus"></i>
+                            Add New Department
+                        </button>
                     </div>
-                    <div class="card-body">
-
-                        <?php if (!empty($successMessage)): ?>
-                        <div class="alert alert-success alert-dismissible fade show" role="alert">
-                            <?= $h($successMessage) ?>
+                </div>
+                <div class="card-body">
+                    <?php if (!empty($successMessage)): ?>
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <?= $h($successMessage) ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                    <?php endif; ?>
+                    <?php if (!empty($errorMessage)): ?>
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <?= $h($errorMessage) ?>
                             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                         </div>
-                        <?php endif; ?>
-                        <?php if (!empty($errorMessage)): ?>
-                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                                <?= $h($errorMessage) ?>
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            </div>
-                        <?php endif; ?>
+                    <?php endif; ?>
 
-
-                        <div class="table-responsive">
-                            <?php if (empty($departments)): ?>
-                            <p class="text-center text-muted">No departments have been created yet.</p>
-                            <?php else: ?>
-                            <table id="multi-filter-select" class="display table table-striped table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Department Name</th>
-                                        <th class="text-center">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tfoot>
-                                    <tr>
-                                        <th>Department Name</th>
-                                        </tr>
-                                </tfoot>
-                                <tbody>
-                                    <?php foreach ($departments as $dept): ?>
-                                    <tr>
-                                        <td><?= $h($dept['name']) ?></td>
-                                        <td class="text-center">
-                                            <button 
-                                                class="btn btn-sm btn-info me-1" 
-                                                title="Edit" 
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#editModal"
-                                                data-id="<?= $dept['id'] ?>"
-                                                data-name="<?= $h($dept['name']) ?>"
-                                            >
-                                                <i class="icon-pencil"></i>
-                                            </button>
-                                            
-                                            <button 
-                                                class="btn btn-sm btn-danger delete-btn" 
-                                                title="Delete"
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#deleteConfirmModal"
-                                                data-id="<?= $dept['id'] ?>"
-                                                data-name="<?= $h($dept['name']) ?>"
-                                            >
-                                                <i class="icon-trash"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                            <?php endif; ?>
-                        </div>
-                            
+                    <div class="table-responsive">
+                        <?php if (empty($departments)): ?>
+                        <p class="text-center text-muted">No departments have been created yet.</p>
+                        <?php else: ?>
+                        <table id="multi-filter-select" class="display table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Department Name</th>
+                                    <th>Staff Count</th>
+                                    <th>Gross Pay (GHS)</th>
+                                    <th>Net Pay (GHS)</th>
+                                    <th>PAYE (GHS)</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($departments as $dept): ?>
+                                <tr>
+                                    <td><?= $h($dept['name']) ?></td>
+                                    <td><?= $h($dept['employee_count']) ?></td>
+                                    <td><?= number_format($dept['total_gross_pay'], 2) ?></td>
+                                    <td><?= number_format($dept['total_net_pay'], 2) ?></td>
+                                    <td><?= number_format($dept['total_paye'], 2) ?></td>
+                                    <td class="text-center">
+                                        <button 
+                                            class="btn btn-sm btn-info me-1" 
+                                            title="Edit" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#editModal"
+                                            data-id="<?= $dept['id'] ?>"
+                                            data-name="<?= $h($dept['name']) ?>"
+                                        >
+                                            <i class="icon-pencil"></i>
+                                        </button>
+                                        
+                                        <button 
+                                            class="btn btn-sm btn-danger delete-btn" 
+                                            title="Delete"
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#deleteConfirmModal"
+                                            data-id="<?= $dept['id'] ?>"
+                                            data-name="<?= $h($dept['name']) ?>"
+                                        >
+                                            <i class="icon-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                        <?php endif; ?>
                     </div>
                 </div>
-                
             </div>
         </div>
     </div>
+
+    <!-- Chart Row -->
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Gross Payroll by Department (Last Run: <?= $h($latestPeriodName) ?>)</div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="departmentPayrollChart"
+                                data-labels='<?= $h($chartLabels) ?>'
+                                data-gross-pay='<?= $h($grossPayData) ?>'
+                        ></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Employee Distribution</div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="departmentDistributionChart"
+                                data-labels='<?= $h($chartLabels) ?>'
+                                data-employee-counts='<?= $h($employeeCountData) ?>'
+                        ></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
 </div>
 
+<!-- Modals -->
 <div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -182,4 +217,6 @@ $h = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
     </div>
 </div>
 
+<!-- Charting and Modal handling scripts -->
 <script src="/assets/js/tenants/department-management.js"></script>
+<script src="/assets/js/tenants/department-stats.js"></script>
