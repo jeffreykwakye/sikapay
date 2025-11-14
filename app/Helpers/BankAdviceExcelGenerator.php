@@ -8,7 +8,7 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Font;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 
-class SsnitReportExcelGenerator
+class BankAdviceExcelGenerator
 {
     private array $reportData;
     private array $tenantData;
@@ -28,7 +28,7 @@ class SsnitReportExcelGenerator
 
         // Title
         $sheet->mergeCells('A1:F1');
-        $sheet->setCellValue('A1', 'SSNIT Report');
+        $sheet->setCellValue('A1', 'Bank Advice Report');
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
         $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
@@ -43,50 +43,38 @@ class SsnitReportExcelGenerator
         $sheet->getRowDimension(2)->setRowHeight(18);
         $sheet->getRowDimension(3)->setRowHeight(18);
 
+
         // Set headers
         $sheet->setCellValue('A5', 'Employee Name');
-        $sheet->setCellValue('B5', 'SSNIT Number');
-        $sheet->setCellValue('C5', 'Basic Salary');
-        $sheet->setCellValue('D5', 'Employee SSNIT (5.5%)');
-        $sheet->setCellValue('E5', 'Employer SSNIT (13%)');
-        $sheet->setCellValue('F5', 'Total SSNIT (18.5%)');
+        $sheet->setCellValue('B5', 'Bank');
+        $sheet->setCellValue('C5', 'Branch');
+        $sheet->setCellValue('D5', 'Account Number');
+        $sheet->setCellValue('E5', 'Account Name');
+        $sheet->setCellValue('F5', 'Net Salary');
 
         // Bold headers
         $sheet->getStyle('A5:F5')->getFont()->setBold(true);
 
         // Set data
         $row = 6;
-        $totalBasicSalary = 0;
-        $totalEmployeeSsnit = 0;
-        $totalEmployerSsnit = 0;
-        $totalOverallSsnit = 0;
-
+        $totalNetPay = 0;
         foreach ($this->reportData as $data) {
             $sheet->setCellValue('A' . $row, $data['employee_name']);
-            $sheet->setCellValue('B' . $row, $data['ssnit_number']);
-            $sheet->setCellValue('C' . $row, number_format((float)$data['basic_salary'], 2));
-            $sheet->setCellValue('D' . $row, number_format((float)$data['employee_ssnit'], 2));
-            $sheet->setCellValue('E' . $row, number_format((float)$data['employer_ssnit'], 2));
-            $sheet->setCellValue('F' . $row, number_format((float)$data['total_ssnit'], 2));
-            
-            $sheet->getStyle('C' . $row . ':F' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-
-            $totalBasicSalary += (float)$data['basic_salary'];
-            $totalEmployeeSsnit += (float)$data['employee_ssnit'];
-            $totalEmployerSsnit += (float)$data['employer_ssnit'];
-            $totalOverallSsnit += (float)$data['total_ssnit'];
+            $sheet->setCellValue('B' . $row, $data['bank_name']);
+            $sheet->setCellValue('C' . $row, $data['bank_branch']);
+            $sheet->setCellValue('D' . $row, $data['bank_account_number']);
+            $sheet->setCellValue('E' . $row, $data['bank_account_name']);
+            $sheet->setCellValue('F' . $row, number_format((float)$data['net_pay'], 2));
+            $sheet->getStyle('F' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+            $totalNetPay += (float)$data['net_pay'];
             $row++;
         }
 
         // Total
-        $sheet->setCellValue('B' . $row, 'TOTALS');
-        $sheet->setCellValue('C' . $row, number_format($totalBasicSalary, 2));
-        $sheet->setCellValue('D' . $row, number_format($totalEmployeeSsnit, 2));
-        $sheet->setCellValue('E' . $row, number_format($totalEmployerSsnit, 2));
-        $sheet->setCellValue('F' . $row, number_format($totalOverallSsnit, 2));
-        
-        $sheet->getStyle('A' . $row . ':F' . $row)->getFont()->setBold(true);
-        $sheet->getStyle('C' . $row . ':F' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+        $sheet->setCellValue('E' . $row, 'Total');
+        $sheet->setCellValue('F' . $row, number_format($totalNetPay, 2));
+        $sheet->getStyle('E' . $row . ':F' . $row)->getFont()->setBold(true);
+        $sheet->getStyle('F' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
 
 
         // Auto size columns
@@ -98,7 +86,7 @@ class SsnitReportExcelGenerator
         $writer = new Xlsx($spreadsheet);
 
         // Create a temporary file
-        $tempFile = tempnam(sys_get_temp_dir(), 'ssnit_report_');
+        $tempFile = tempnam(sys_get_temp_dir(), 'bank_advice_');
         $writer->save($tempFile);
 
         // Return the path to the temporary file

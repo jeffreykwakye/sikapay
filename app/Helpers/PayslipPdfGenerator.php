@@ -75,8 +75,15 @@ class PayslipPdfGenerator extends FPDF
         // Earnings
         $this->SetFillColor(230, 230, 230);
         $this->Cell(0, 7, 'EARNINGS', 0, 1, 'L', true);
-        $this->Cell(50, 6, 'Basic Salary:', 0); $this->Cell(0, 6, number_format((float)($this->employeeData['current_salary_ghs'] ?? 0.0), 2) . ' GHS', 0, 1);
-        // Add allowances here later
+        $this->Cell(50, 6, 'Basic Salary:', 0); $this->Cell(0, 6, number_format((float)($this->payslipData['basic_salary'] ?? 0.0), 2) . ' GHS', 0, 1);
+        
+        // Detailed Allowances
+        if (!empty($this->payslipData['detailed_allowances'])) {
+            foreach ($this->payslipData['detailed_allowances'] as $allowance) {
+                $this->Cell(50, 6, $allowance['name'] . ':', 0);
+                $this->Cell(0, 6, number_format((float)$allowance['amount'], 2) . ' GHS', 0, 1);
+            }
+        }
         $this->Ln(5);
 
         // Deductions
@@ -84,13 +91,20 @@ class PayslipPdfGenerator extends FPDF
         $this->Cell(0, 7, 'DEDUCTIONS', 0, 1, 'L', true);
         $this->Cell(50, 6, 'Employee SSNIT:', 0); $this->Cell(0, 6, number_format((float)($this->payslipData['employee_ssnit'] ?? 0.0), 2) . ' GHS', 0, 1);
         $this->Cell(50, 6, 'PAYE Tax:', 0); $this->Cell(0, 6, number_format((float)($this->payslipData['paye'] ?? 0.0), 2) . ' GHS', 0, 1);
-        // Add other deductions here later
+        
+        // Detailed Deductions
+        if (!empty($this->payslipData['detailed_deductions'])) {
+            foreach ($this->payslipData['detailed_deductions'] as $deduction) {
+                $this->Cell(50, 6, $deduction['name'] . ':', 0);
+                $this->Cell(0, 6, number_format((float)$deduction['amount'], 2) . ' GHS', 0, 1);
+            }
+        }
         $this->Ln(5);
 
         // Summary
         $this->SetFillColor(200, 200, 200);
         $this->SetFont('Arial', 'B', 10);
-        $this->Cell(50, 7, 'GROSS PAY:', 0); $this->Cell(0, 7, number_format((float)($this->payslipData['gross_salary'] ?? 0.0), 2) . ' GHS', 0, 1);
+        $this->Cell(50, 7, 'GROSS PAY:', 0); $this->Cell(0, 7, number_format((float)($this->payslipData['gross_pay'] ?? 0.0), 2) . ' GHS', 0, 1);
         $this->Cell(50, 7, 'TOTAL DEDUCTIONS:', 0); $this->Cell(0, 7, number_format((float)($this->payslipData['total_deductions'] ?? 0.0), 2) . ' GHS', 0, 1);
         $this->Cell(50, 7, 'NET PAY:', 0); $this->Cell(0, 7, number_format((float)($this->payslipData['net_pay'] ?? 0.0), 2) . ' GHS', 0, 1);
         $this->Ln(10);

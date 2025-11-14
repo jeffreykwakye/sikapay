@@ -12,12 +12,20 @@ use Jeffrey\Sikapay\Helpers\PayeReportPdfGenerator;
 use Jeffrey\Sikapay\Helpers\PayeReportExcelGenerator;
 use Jeffrey\Sikapay\Helpers\SsnitReportPdfGenerator;
 use Jeffrey\Sikapay\Helpers\SsnitReportExcelGenerator;
+use Jeffrey\Sikapay\Helpers\BankAdvicePdfGenerator;
+use Jeffrey\Sikapay\Helpers\BankAdviceExcelGenerator;
+use Jeffrey\Sikapay\Models\SsnitAdviceModel;
+use Jeffrey\Sikapay\Models\GraPayeAdviceModel;
+use Jeffrey\Sikapay\Models\BankAdviceModel;
 
 class StatutoryReportController extends Controller
 {
     private PayrollPeriodModel $payrollPeriodModel;
     private PayslipModel $payslipModel;
     protected TenantProfileModel $tenantProfileModel;
+    private SsnitAdviceModel $ssnitAdviceModel;
+    private GraPayeAdviceModel $graPayeAdviceModel;
+    private BankAdviceModel $bankAdviceModel;
 
     public function __construct()
     {
@@ -25,139 +33,208 @@ class StatutoryReportController extends Controller
         $this->payrollPeriodModel = new PayrollPeriodModel();
         $this->payslipModel = new PayslipModel();
         $this->tenantProfileModel = new TenantProfileModel();
+        $this->ssnitAdviceModel = new SsnitAdviceModel();
+        $this->graPayeAdviceModel = new GraPayeAdviceModel();
+        $this->bankAdviceModel = new BankAdviceModel();
     }
 
     public function index(): void
     {
-        $this->view('reports/index', ['title' => 'Statutory Reports']);
+        $periods = $this->payrollPeriodModel->getAllPeriods(Auth::tenantId());
+        $this->view('reports/index', [
+            'title' => 'Statutory Reports',
+            'periods' => $periods
+        ]);
     }
 
-    public function generatePayeReportPdf(): void
+    public function generatePayeReportPdf(int $periodId): void
     {
         $tenantId = Auth::tenantId();
-        $latestPeriod = $this->payrollPeriodModel->getLatestClosedPeriod($tenantId);
+        $period = $this->payrollPeriodModel->getPeriodById($periodId, $tenantId);
 
-        if (!$latestPeriod) {
-            // Handle case where no payroll has been run
-            // You might want to redirect with an error message
+        if (!$period || !$period['is_closed']) {
+            $this->redirect('/reports');
             return;
         }
 
-        $payslips = $this->payslipModel->getPayslipsByPeriod((int)$latestPeriod['id'], $tenantId);
+        $reportData = $this->graPayeAdviceModel->getAdviceByPeriod($periodId, $tenantId);
         $tenantData = $this->tenantProfileModel->findByTenantId($tenantId);
 
-        $reportData = [];
-        foreach ($payslips as $payslip) {
-            $reportData[] = [
-                'employee_id' => $payslip['employee_id'],
-                'employee_name' => $payslip['first_name'] . ' ' . $payslip['last_name'],
-                'gross_salary' => $payslip['gross_pay'],
-                'paye' => $payslip['paye_amount'],
-            ];
-        }
-
-        $pdf = new PayeReportPdfGenerator($reportData, $tenantData, $latestPeriod);
+        $pdf = new PayeReportPdfGenerator($reportData, $tenantData, $period);
         $pdfContent = $pdf->generate();
 
         header('Content-Type: application/pdf');
-        header('Content-Disposition: attachment; filename="paye_report.pdf"');
+        header('Content-Disposition: attachment; filename="paye_report_' . $period['period_name'] . '.pdf"');
         echo $pdfContent;
     }
 
-    public function generatePayeReportExcel(): void
+    public function generatePayeReportExcel(int $periodId): void
     {
         $tenantId = Auth::tenantId();
-        $latestPeriod = $this->payrollPeriodModel->getLatestClosedPeriod($tenantId);
+        $period = $this->payrollPeriodModel->getPeriodById($periodId, $tenantId);
 
-        if (!$latestPeriod) {
-            // Handle case where no payroll has been run
+        if (!$period || !$period['is_closed']) {
+            $this->redirect('/reports');
             return;
         }
 
-        $payslips = $this->payslipModel->getPayslipsByPeriod((int)$latestPeriod['id'], $tenantId);
+        $reportData = $this->graPayeAdviceModel->getAdviceByPeriod($periodId, $tenantId);
         $tenantData = $this->tenantProfileModel->findByTenantId($tenantId);
 
-        $reportData = [];
-        foreach ($payslips as $payslip) {
-            $reportData[] = [
-                'employee_id' => $payslip['employee_id'],
-                'employee_name' => $payslip['first_name'] . ' ' . $payslip['last_name'],
-                'gross_salary' => $payslip['gross_pay'],
-                'paye' => $payslip['paye_amount'],
-            ];
-        }
-
-        $excel = new PayeReportExcelGenerator($reportData, $tenantData, $latestPeriod);
+        $excel = new PayeReportExcelGenerator($reportData, $tenantData, $period);
         $excelFile = $excel->generate();
 
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment; filename="paye_report.xlsx"');
+        header('Content-Disposition: attachment; filename="paye_report_' . $period['period_name'] . '.xlsx"');
         readfile($excelFile);
         unlink($excelFile);
     }
 
-    public function generateSsnitReportPdf(): void
+    public function generateSsnitReportPdf(int $periodId): void
     {
         $tenantId = Auth::tenantId();
-        $latestPeriod = $this->payrollPeriodModel->getLatestClosedPeriod($tenantId);
+        $period = $this->payrollPeriodModel->getPeriodById($periodId, $tenantId);
 
-        if (!$latestPeriod) {
-            // Handle case where no payroll has been run
+        if (!$period || !$period['is_closed']) {
+            $this->redirect('/reports');
             return;
         }
 
-        $payslips = $this->payslipModel->getPayslipsByPeriod((int)$latestPeriod['id'], $tenantId);
+        $reportData = $this->ssnitAdviceModel->getAdviceByPeriod($periodId, $tenantId);
         $tenantData = $this->tenantProfileModel->findByTenantId($tenantId);
 
-        $reportData = [];
-        foreach ($payslips as $payslip) {
-            $reportData[] = [
-                'employee_id' => $payslip['employee_id'],
-                'employee_name' => $payslip['first_name'] . ' ' . $payslip['last_name'],
-                'gross_salary' => $payslip['gross_pay'],
-                'employee_ssnit' => $payslip['employee_ssnit'],
-                'employer_ssnit' => $payslip['employer_ssnit'],
-            ];
-        }
-
-        $pdf = new SsnitReportPdfGenerator($reportData, $tenantData, $latestPeriod);
+        $pdf = new SsnitReportPdfGenerator($reportData, $tenantData, $period);
         $pdfContent = $pdf->generate();
 
         header('Content-Type: application/pdf');
-        header('Content-Disposition: attachment; filename="ssnit_report.pdf"');
+        header('Content-Disposition: attachment; filename="ssnit_report_' . $period['period_name'] . '.pdf"');
         echo $pdfContent;
     }
 
-    public function generateSsnitReportExcel(): void
+    public function generateSsnitReportExcel(int $periodId): void
     {
         $tenantId = Auth::tenantId();
-        $latestPeriod = $this->payrollPeriodModel->getLatestClosedPeriod($tenantId);
+        $period = $this->payrollPeriodModel->getPeriodById($periodId, $tenantId);
 
-        if (!$latestPeriod) {
-            // Handle case where no payroll has been run
+        if (!$period || !$period['is_closed']) {
+            $this->redirect('/reports');
             return;
         }
 
-        $payslips = $this->payslipModel->getPayslipsByPeriod((int)$latestPeriod['id'], $tenantId);
+        $reportData = $this->ssnitAdviceModel->getAdviceByPeriod($periodId, $tenantId);
         $tenantData = $this->tenantProfileModel->findByTenantId($tenantId);
 
-        $reportData = [];
-        foreach ($payslips as $payslip) {
-            $reportData[] = [
-                'employee_id' => $payslip['employee_id'],
-                'employee_name' => $payslip['first_name'] . ' ' . $payslip['last_name'],
-                'gross_salary' => $payslip['gross_pay'],
-                'employee_ssnit' => $payslip['ssnit_employee_amount'],
-                'employer_ssnit' => $payslip['ssnit_employer_amount'],
-            ];
-        }
-
-        $excel = new SsnitReportExcelGenerator($reportData, $tenantData, $latestPeriod);
+        $excel = new SsnitReportExcelGenerator($reportData, $tenantData, $period);
         $excelFile = $excel->generate();
 
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment; filename="ssnit_report.xlsx"');
+        header('Content-Disposition: attachment; filename="ssnit_report_' . $period['period_name'] . '.xlsx"');
         readfile($excelFile);
         unlink($excelFile);
+    }
+
+    public function generateBankAdvicePdf(int $periodId): void
+    {
+        $tenantId = Auth::tenantId();
+        $period = $this->payrollPeriodModel->getPeriodById($periodId, $tenantId);
+
+        if (!$period || !$period['is_closed']) {
+            $this->redirect('/reports');
+            return;
+        }
+
+        $reportData = $this->bankAdviceModel->getAdviceByPeriod($periodId, $tenantId);
+        $tenantData = $this->tenantProfileModel->findByTenantId($tenantId);
+
+        if (empty($reportData) || empty($tenantData)) {
+            // Redirect or show an error if data is not available
+            $this->redirect('/reports');
+            return;
+        }
+
+        $pdf = new BankAdvicePdfGenerator($reportData, $tenantData, $period);
+        $pdfContent = $pdf->generate();
+
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: attachment; filename="bank_advice_' . $period['period_name'] . '.pdf"');
+        echo $pdfContent;
+    }
+
+    public function generateBankAdviceExcel(int $periodId): void
+    {
+        $tenantId = Auth::tenantId();
+        $period = $this->payrollPeriodModel->getPeriodById($periodId, $tenantId);
+
+        if (!$period || !$period['is_closed']) {
+            $this->redirect('/reports');
+            return;
+        }
+
+        $reportData = $this->bankAdviceModel->getAdviceByPeriod($periodId, $tenantId);
+        $tenantData = $this->tenantProfileModel->findByTenantId($tenantId);
+
+        if (empty($reportData) || empty($tenantData)) {
+            // Redirect or show an error if data is not available
+            $this->redirect('/reports');
+            return;
+        }
+
+        $excel = new BankAdviceExcelGenerator($reportData, $tenantData, $period);
+        $excelFile = $excel->generate();
+
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="bank_advice_' . $period['period_name'] . '.xlsx"');
+        readfile($excelFile);
+        unlink($excelFile);
+    }
+
+    public function downloadAllPayslipsAsZip(int $periodId): void
+    {
+        $tenantId = Auth::tenantId();
+        $period = $this->payrollPeriodModel->getPeriodById($periodId, $tenantId);
+
+        if (!$period || !$period['is_closed']) {
+            $this->redirect('/reports');
+            return;
+        }
+
+        $payslips = $this->payslipModel->getPayslipsByPeriod($periodId, $tenantId);
+
+        if (empty($payslips)) {
+            // Handle case with no payslips for the period
+            // Maybe redirect with a flash message
+            $this->redirect('/reports');
+            return;
+        }
+
+        $zip = new \ZipArchive();
+        $zipFileName = tempnam(sys_get_temp_dir(), 'payslips_') . '.zip';
+
+        if ($zip->open($zipFileName, \ZipArchive::CREATE) !== TRUE) {
+            // Handle error
+            // Log this error
+            $this->redirect('/reports');
+            return;
+        }
+
+        $publicPath = dirname(__DIR__, 2) . '/public';
+
+        foreach ($payslips as $payslip) {
+            if (!empty($payslip['payslip_path'])) {
+                $filePath = $publicPath . '/' . $payslip['payslip_path'];
+                if (file_exists($filePath)) {
+                    $zip->addFile($filePath, basename($filePath));
+                }
+            }
+        }
+
+        $zip->close();
+
+        header('Content-Type: application/zip');
+        header('Content-Disposition: attachment; filename="payslips_' . $period['period_name'] . '.zip"');
+        header('Content-Length: ' . filesize($zipFileName));
+
+        readfile($zipFileName);
+        unlink($zipFileName);
     }
 }

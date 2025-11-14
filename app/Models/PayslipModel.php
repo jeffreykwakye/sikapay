@@ -23,35 +23,25 @@ class PayslipModel extends Model
      */
     public function createPayslip(array $data): int
     {
-        $sql = "INSERT INTO {$this->table} (
-                    user_id, tenant_id, payroll_period_id, 
-                    gross_pay, total_deductions, net_pay, 
-                    paye_amount, ssnit_employee_amount, ssnit_employer_amount, 
-                    payslip_path, generated_at
-                ) VALUES (
-                    :user_id, :tenant_id, :payroll_period_id, 
-                    :gross_pay, :total_deductions, :net_pay, 
-                    :paye_amount, :ssnit_employee_amount, :ssnit_employer_amount, 
-                    :payslip_path, NOW()
-                )";
+        // Ensure generated_at is set if not provided
+        if (!isset($data['generated_at'])) {
+            $data['generated_at'] = date('Y-m-d H:i:s');
+        }
+
+        $columns = implode(', ', array_keys($data));
+        $placeholders = ':' . implode(', :', array_keys($data));
+
+        $sql = "INSERT INTO {$this->table} ({$columns}) VALUES ({$placeholders})";
 
         try {
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([
-                ':user_id' => $data['user_id'],
-                ':tenant_id' => $data['tenant_id'],
-                ':payroll_period_id' => $data['payroll_period_id'],
-                ':gross_pay' => $data['gross_pay'],
-                ':total_deductions' => $data['total_deductions'],
-                ':net_pay' => $data['net_pay'],
-                ':paye_amount' => $data['paye_amount'],
-                ':ssnit_employee_amount' => $data['ssnit_employee_amount'],
-                ':ssnit_employer_amount' => $data['ssnit_employer_amount'],
-                ':payslip_path' => $data['payslip_path'] ?? null,
-            ]);
+            $stmt->execute($data);
             return (int)$this->db->lastInsertId();
         } catch (PDOException $e) {
-            Log::error("Failed to create payslip record for user {$data['user_id']} in period {$data['payroll_period_id']}. Error: " . $e->getMessage());
+            Log::error("Failed to create payslip record for user {$data['user_id']} in period {$data['payroll_period_id']}. Error: " . $e->getMessage(), [
+                'sql' => $sql,
+                'data' => $data
+            ]);
             return 0;
         }
     }
@@ -90,11 +80,13 @@ class PayslipModel extends Model
     public function getPayslipsByPeriod(int $payrollPeriodId, int $tenantId): array
     {
         $sql = "SELECT 
-                    p.id, p.user_id, p.gross_pay, p.net_pay, p.paye_amount, p.ssnit_employee_amount, p.ssnit_employer_amount, p.payslip_path,
-                    u.first_name, u.last_name, u.email, e.employee_id
+                    p.id, p.user_id, p.gross_pay, p.net_pay, p.paye_amount, p.ssnit_employee_amount, p.ssnit_employer_amount, p.payslip_path, p.total_taxable_income,
+                    u.first_name, u.last_name, u.email, e.employee_id,
+                    up.tin_number
                 FROM {$this->table} p
                 JOIN users u ON p.user_id = u.id
                 JOIN employees e ON p.user_id = e.user_id
+                LEFT JOIN user_profiles up ON p.user_id = up.user_id
                 WHERE p.payroll_period_id = :payroll_period_id AND p.tenant_id = :tenant_id
                 ORDER BY u.last_name, u.first_name";
 
@@ -214,6 +206,65 @@ class PayslipModel extends Model
             return $keyedResults;
         } catch (PDOException $e) {
             Log::error("Failed to retrieve aggregated payroll stats by department for period {$payrollPeriodId} (tenant {$tenantId}). Error: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function getBankAdviceDataByPeriod(int $payrollPeriodId, int $tenantId): array
+    {
+        $sql = "SELECT 
+                    u.first_name, 
+                    u.last_name,
+                    e.bank_name,
+                    e.bank_branch,
+                    e.bank_account_number,
+                    e.bank_account_name,
+                    p.net_pay
+                FROM {$this->table} p
+                JOIN users u ON p.user_id = u.id
+                JOIN employees e ON p.user_id = e.user_id
+                WHERE p.payroll_period_id = :payroll_period_id AND p.tenant_id = :tenant_id
+                ORDER BY u.last_name, u.first_name";
+
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                ':payroll_period_id' => $payrollPeriodId,
+                ':tenant_id' => $tenantId,
+            ]);
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            Log::error("Failed to retrieve bank advice data for period {$payrollPeriodId} (tenant {$tenantId}). Error: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function getSsnitReportDataByPeriod(int $payrollPeriodId, int $tenantId): array
+    {
+        $sql = "SELECT 
+                    u.first_name, 
+                    u.last_name,
+                    up.ssnit_number,
+                    e.current_salary_ghs as basic_salary,
+                    p.ssnit_employee_amount,
+                    p.ssnit_employer_amount
+                FROM {$this->table} p
+                JOIN users u ON p.user_id = u.id
+                JOIN employees e ON p.user_id = e.user_id
+                LEFT JOIN user_profiles up ON p.user_id = up.user_id
+                WHERE p.payroll_period_id = :payroll_period_id 
+                AND p.tenant_id = :tenant_id
+                ORDER BY u.last_name, u.first_name";
+
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                ':payroll_period_id' => $payrollPeriodId,
+                ':tenant_id' => $tenantId,
+            ]);
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            Log::error("Failed to retrieve SSNIT report data for period {$payrollPeriodId} (tenant {$tenantId}). Error: " . $e->getMessage());
             return [];
         }
     }

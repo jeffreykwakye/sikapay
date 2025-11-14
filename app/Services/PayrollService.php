@@ -12,7 +12,14 @@ use Jeffrey\Sikapay\Models\SsnitRateModel;
 use Jeffrey\Sikapay\Models\PayrollSettingsModel;
 use Jeffrey\Sikapay\Models\PayrollPeriodModel;
 use Jeffrey\Sikapay\Models\PayslipModel;
-use Jeffrey\Sikapay\Models\EmployeePayrollDetailsModel; // New model for allowances/deductions
+use Jeffrey\Sikapay\Models\EmployeePayrollDetailsModel;
+use Jeffrey\Sikapay\Models\PayslipAllowanceModel;
+use Jeffrey\Sikapay\Models\PayslipDeductionModel;
+use Jeffrey\Sikapay\Models\PayslipOvertimeModel;
+use Jeffrey\Sikapay\Models\PayslipBonusModel;
+use Jeffrey\Sikapay\Models\SsnitAdviceModel;
+use Jeffrey\Sikapay\Models\GraPayeAdviceModel;
+use Jeffrey\Sikapay\Models\BankAdviceModel;
 use Jeffrey\Sikapay\Helpers\PayslipPdfGenerator;
 use \PDO;
 use \Exception;
@@ -27,6 +34,13 @@ class PayrollService
     private PayrollPeriodModel $payrollPeriodModel;
     private PayslipModel $payslipModel;
     private EmployeePayrollDetailsModel $employeePayrollDetailsModel;
+    private PayslipAllowanceModel $payslipAllowanceModel;
+    private PayslipDeductionModel $payslipDeductionModel;
+    private PayslipOvertimeModel $payslipOvertimeModel;
+    private PayslipBonusModel $payslipBonusModel;
+    private SsnitAdviceModel $ssnitAdviceModel;
+    private GraPayeAdviceModel $graPayeAdviceModel;
+    private BankAdviceModel $bankAdviceModel;
 
     public function __construct()
     {
@@ -38,6 +52,13 @@ class PayrollService
         $this->payrollPeriodModel = new PayrollPeriodModel();
         $this->payslipModel = new PayslipModel();
         $this->employeePayrollDetailsModel = new EmployeePayrollDetailsModel();
+        $this->payslipAllowanceModel = new PayslipAllowanceModel();
+        $this->payslipDeductionModel = new PayslipDeductionModel();
+        $this->payslipOvertimeModel = new PayslipOvertimeModel();
+        $this->payslipBonusModel = new PayslipBonusModel();
+        $this->ssnitAdviceModel = new SsnitAdviceModel();
+        $this->graPayeAdviceModel = new GraPayeAdviceModel();
+        $this->bankAdviceModel = new BankAdviceModel();
     }
 
     /**
@@ -56,7 +77,7 @@ class PayrollService
             throw new Exception("Employee with ID {$employeeUserId} not found.");
         }
 
-        $grossSalary = (float)$employee['current_salary_ghs'];
+        $basicSalary = (float)$employee['current_salary_ghs']; // Explicitly define basic salary
         $ssnitRate = $this->ssnitRateModel->getCurrentSsnitRate();
         $taxBands = $this->taxBandModel->getTaxBandsForYear((int)date('Y', strtotime($payrollPeriod['start_date'])), false); // Monthly bands
 
@@ -68,6 +89,12 @@ class PayrollService
         $totalSsnitChargeableAllowances = 0.0;
         $totalDeductions = 0.0;
 
+        // New arrays to store detailed components
+        $detailedAllowances = [];
+        $detailedDeductions = [];
+        $detailedOvertimes = []; // Assuming overtime is an allowance type for now, will refine if needed
+        $detailedBonuses = [];   // Assuming bonus is an allowance type for now, will refine if needed
+
         // Process assigned payroll elements
         foreach ($assignedElements as $element) {
             $elementValue = (float)$element['assigned_amount'];
@@ -77,22 +104,16 @@ class PayrollService
                 $baseAmount = 0.0;
                 switch ($element['calculation_base']) {
                     case 'basic_salary':
-                        $baseAmount = $grossSalary; // current_salary_ghs is basic salary
+                        $baseAmount = $basicSalary;
                         break;
                     case 'gross_salary':
-                        // This will be calculated later, so for now, we can't use it as a base for other percentages
-                        // For simplicity, we'll assume percentage allowances based on gross_salary are applied AFTER basic allowances
-                        // and before deductions. This might need refinement based on specific rules.
-                        // For now, let's assume basic_salary as the most common base for percentage allowances.
-                        $baseAmount = $grossSalary; 
+                        $baseAmount = $basicSalary; // Fallback, as gross is not yet final
                         break;
                     case 'net_salary':
-                        // Net salary is calculated at the very end, so it cannot be a base for allowances/deductions
-                        // that contribute to gross/taxable income.
-                        $baseAmount = 0.0; // Should not happen for allowances/deductions affecting gross/taxable
+                        $baseAmount = 0.0; 
                         break;
                     default:
-                        $baseAmount = $grossSalary; // Fallback to basic salary
+                        $baseAmount = $basicSalary; // Fallback to basic salary
                         break;
                 }
                 $elementValue = $baseAmount * ($elementValue / 100); // Convert percentage to actual amount
@@ -106,43 +127,68 @@ class PayrollService
                 if ((bool)$element['is_ssnit_chargeable']) {
                     $totalSsnitChargeableAllowances += $elementValue;
                 }
+                $detailedAllowances[] = [
+                    'name' => $element['name'],
+                    'amount' => $elementValue,
+                    'is_taxable' => (bool)$element['is_taxable'],
+                    'is_ssnit_chargeable' => (bool)$element['is_ssnit_chargeable'],
+                ];
             } elseif ($element['category'] === 'deduction') {
                 $totalDeductions += $elementValue;
+                $detailedDeductions[] = [
+                    'name' => $element['name'],
+                    'amount' => $elementValue,
+                ];
             }
+            // TODO: Implement specific logic for overtime and bonuses if they are distinct element types
+            // For now, they are treated as general allowances if configured as such.
         }
 
-        // 2. Calculate Gross Pay (Basic Salary + Total Allowances)
-        $grossPay = $grossSalary + $totalAllowances;
+        // 2. Calculate Gross Pay (Basic Salary + Total Allowances + Overtime + Bonuses)
+        // For now, assuming overtime and bonuses are part of totalAllowances if configured as such.
+        // If they are separate payroll elements, they need to be processed distinctly.
+        $totalOvertime = 0.0; // Placeholder for now
+        $totalBonuses = 0.0;  // Placeholder for now
+
+        $grossPay = $basicSalary + $totalAllowances + $totalOvertime + $totalBonuses;
 
         // 3. Calculate SSNIT Contribution (5.5% of basic salary for employee, 13% for employer)
         // SSNIT is calculated on basic salary + SSNIT-chargeable allowances
-        $ssnitBase = $grossSalary + $totalSsnitChargeableAllowances;
+        $ssnitBase = $basicSalary + $totalSsnitChargeableAllowances;
         $employeeSsnit = $ssnitBase * $ssnitRate['employee_rate'];
         $employerSsnit = $ssnitBase * $ssnitRate['employer_rate'];
 
-        // 4. Calculate Taxable Income (Gross Pay - Employee SSNIT - Non-taxable deductions)
+        // 4. Calculate Taxable Income (Gross Pay - Employee SSNIT - Non-taxable allowances/deductions)
         // For now, all deductions are applied after tax calculation for simplicity, except employee SSNIT.
         // If there are non-taxable deductions that reduce taxable income, they need to be factored here.
-        $taxableIncome = $grossPay - $employeeSsnit - ($totalAllowances - $totalTaxableAllowances); // Gross - Employee SSNIT - Non-taxable allowances
+        $totalTaxableIncome = $grossPay - $employeeSsnit - ($totalAllowances - $totalTaxableAllowances); // Gross - Employee SSNIT - Non-taxable allowances
 
         // 5. Calculate PAYE (directly use monthly taxable income with monthly bands)
-        $monthlyPaye = $this->calculatePaye($taxableIncome, $taxBands, false);
+        $monthlyPaye = $this->calculatePaye($totalTaxableIncome, $taxBands, false);
 
-        // 6. Calculate Net Pay
-        $netPay = $grossPay - $employeeSsnit - $monthlyPaye - $totalDeductions;
+        // 6. Calculate Total Deductions (Custom + Statutory)
+        $totalStatutoryDeductions = $employeeSsnit + $monthlyPaye;
+        $grandTotalDeductions = $totalDeductions + $totalStatutoryDeductions;
+
+        // 7. Calculate Net Pay
+        $netPay = $grossPay - $grandTotalDeductions;
 
         return [
-            'gross_salary' => $grossPay,
+            'basic_salary' => $basicSalary,
             'total_allowances' => $totalAllowances,
-            'total_taxable_allowances' => $totalTaxableAllowances,
-            'total_non_taxable_allowances' => $totalAllowances - $totalTaxableAllowances,
+            'total_overtime' => $totalOvertime, // Will be populated from detailedOvertimes
+            'total_bonuses' => $totalBonuses,   // Will be populated from detailedBonuses
+            'gross_pay' => $grossPay,
+            'total_taxable_income' => $totalTaxableIncome,
             'employee_ssnit' => $employeeSsnit,
             'employer_ssnit' => $employerSsnit,
-            'taxable_income' => $taxableIncome,
             'paye' => $monthlyPaye,
-            'total_deductions' => $totalDeductions + $employeeSsnit + $monthlyPaye,
+            'total_deductions' => $grandTotalDeductions, // Now includes custom and statutory deductions
             'net_pay' => $netPay,
-            // ... other details
+            'detailed_allowances' => $detailedAllowances,
+            'detailed_deductions' => $detailedDeductions,
+            'detailed_overtimes' => $detailedOvertimes,
+            'detailed_bonuses' => $detailedBonuses,
         ];
     }
 
@@ -224,8 +270,9 @@ class PayrollService
     {
         $this->db->beginTransaction();
         try {
-            // 1. Delete existing payslips for this period to prevent duplicate entry errors on re-run
+            // 1. Delete existing payslips and related details for this period to prevent duplicate entry errors on re-run
             $this->payslipModel->deletePayslipsForPeriod((int)$payrollPeriod['id'], $tenantId);
+            // TODO: Also delete from payslip_allowances, payslip_deductions, etc. for this period
 
             // Fetch tenant profile data for payslip header
             $tenantProfileModel = new \Jeffrey\Sikapay\Models\TenantProfileModel();
@@ -244,7 +291,7 @@ class PayrollService
             foreach ($employees as $employee) {
                 $calculatedPayroll = $this->calculateEmployeePayroll((int)$employee['user_id'], $tenantId, $payrollPeriod);
 
-                // Log calculated payroll for debugging PAYE issue
+                // Log calculated payroll for debugging
                 Log::debug("Calculated Payroll for Employee " . $employee['user_id'], $calculatedPayroll);
 
                 // Generate PDF Payslip
@@ -265,21 +312,51 @@ class PayrollService
 
                 Log::debug("file_put_contents result: ", ['result' => $filePutContentsResult]);
 
-                // Save payslip data
+                // Save main payslip data
                 $payslipData = [
                     'user_id' => (int)$employee['user_id'],
                     'tenant_id' => $tenantId,
                     'payroll_period_id' => (int)$payrollPeriod['id'],
-                    'gross_pay' => $calculatedPayroll['gross_salary'],
-                    'total_deductions' => $calculatedPayroll['total_deductions'],
+                    'basic_salary' => $calculatedPayroll['basic_salary'],
+                    'total_allowances' => $calculatedPayroll['total_allowances'],
+                    'total_overtime' => $calculatedPayroll['total_overtime'],
+                    'total_bonuses' => $calculatedPayroll['total_bonuses'],
+                    'gross_pay' => $calculatedPayroll['gross_pay'],
+                    'total_taxable_income' => $calculatedPayroll['total_taxable_income'],
+                    'total_deductions' => $calculatedPayroll['total_deductions'], // This is custom deductions only
                     'net_pay' => $calculatedPayroll['net_pay'],
                     'paye_amount' => $calculatedPayroll['paye'],
                     'ssnit_employee_amount' => $calculatedPayroll['employee_ssnit'],
                     'ssnit_employer_amount' => $calculatedPayroll['employer_ssnit'],
                     'payslip_path' => $payslipRelativeFilePath, // Store relative path in DB
                 ];
-                $this->payslipModel->createPayslip($payslipData);
+                $payslipId = $this->payslipModel->createPayslip($payslipData);
+
+                if ($payslipId > 0) {
+                    // Save detailed allowances
+                    foreach ($calculatedPayroll['detailed_allowances'] as $allowance) {
+                        $this->payslipAllowanceModel->create([
+                            'payslip_id' => $payslipId,
+                            'tenant_id' => $tenantId,
+                            'allowance_name' => $allowance['name'],
+                            'amount' => $allowance['amount'],
+                        ]);
+                    }
+                    // Save detailed deductions
+                    foreach ($calculatedPayroll['detailed_deductions'] as $deduction) {
+                        $this->payslipDeductionModel->create([
+                            'payslip_id' => $payslipId,
+                            'tenant_id' => $tenantId,
+                            'deduction_name' => $deduction['name'],
+                            'amount' => $deduction['amount'],
+                        ]);
+                    }
+                    // TODO: Save detailed overtimes and bonuses once implemented in calculateEmployeePayroll
+                }
             }
+
+            // After all payslips are processed, generate and save advice records
+            $this->saveAdviceRecords($tenantId, (int)$payrollPeriod['id'], $payrollPeriod, $tenantData);
 
             // Mark payroll period as closed
             $this->payrollPeriodModel->markPeriodAsClosed((int)$payrollPeriod['id'], $tenantId);
@@ -291,6 +368,62 @@ class PayrollService
             }
             Log::critical("Payroll run transaction failed for Tenant {$tenantId}, Period {$payrollPeriod['id']}: " . $e->getMessage());
             throw new Exception("Payroll processing failed: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Saves the immutable advice records for a given payroll period.
+     * This method should be called after all individual payslips have been processed.
+     *
+     * @param int $tenantId
+     * @param int $payrollPeriodId
+     * @param array $payrollPeriodData
+     * @param array $tenantData
+     */
+    private function saveAdviceRecords(int $tenantId, int $payrollPeriodId, array $payrollPeriodData, array $tenantData): void
+    {
+        // SSNIT Advice
+        $ssnitData = $this->payslipModel->getSsnitReportDataByPeriod($payrollPeriodId, $tenantId);
+        foreach ($ssnitData as $data) {
+            $totalSsnit = (float)$data['ssnit_employee_amount'] + (float)$data['ssnit_employer_amount'];
+            $this->ssnitAdviceModel->create([
+                'payroll_period_id' => $payrollPeriodId,
+                'tenant_id' => $tenantId,
+                'employee_name' => $data['first_name'] . ' ' . $data['last_name'],
+                'ssnit_number' => $data['ssnit_number'],
+                'basic_salary' => $data['basic_salary'],
+                'employee_ssnit' => $data['ssnit_employee_amount'],
+                'employer_ssnit' => $data['ssnit_employer_amount'],
+                'total_ssnit' => $totalSsnit,
+            ]);
+        }
+
+        // PAYE Advice
+        $payeData = $this->payslipModel->getPayslipsByPeriod($payrollPeriodId, $tenantId); // Re-using existing method
+        foreach ($payeData as $data) {
+            $this->graPayeAdviceModel->create([
+                'payroll_period_id' => $payrollPeriodId,
+                'tenant_id' => $tenantId,
+                'employee_name' => $data['first_name'] . ' ' . $data['last_name'],
+                'tin_number' => $data['tin_number'],
+                'taxable_income' => $data['total_taxable_income'], // Now using the correct column name
+                'paye_amount' => $data['paye_amount'],
+            ]);
+        }
+
+        // Bank Advice
+        $bankAdviceData = $this->payslipModel->getBankAdviceDataByPeriod($payrollPeriodId, $tenantId);
+        foreach ($bankAdviceData as $data) {
+            $this->bankAdviceModel->create([
+                'payroll_period_id' => $payrollPeriodId,
+                'tenant_id' => $tenantId,
+                'employee_name' => $data['first_name'] . ' ' . $data['last_name'],
+                'bank_name' => $data['bank_name'],
+                'bank_branch' => $data['bank_branch'],
+                'bank_account_number' => $data['bank_account_number'],
+                'bank_account_name' => $data['bank_account_name'],
+                'net_pay' => $data['net_pay'],
+            ]);
         }
     }
 
