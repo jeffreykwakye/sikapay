@@ -128,6 +128,7 @@ The tenant creation process adheres to the **Single Responsibility Principle (SR
 | **Statutory Reports** | Generation of PAYE and SSNIT reports in PDF and Excel formats. | **Complete** | Allows tenants to generate statutory reports for compliance. |
 | **2025-11-03** | **Payroll Element Management** | Implemented and fixed the full feature for creating, updating, and deleting tenant-level allowances and deductions. This includes the backend models, controllers, routes, and the frontend UI with its client-side logic. | **Complete** |
 | **2025-11-08** | **Dashboard & Notifications UX** | Overhauled the tenant dashboard with dynamic KPI cards and graphs. Implemented a fully dynamic notification dropdown. Created a dedicated, role-aware Activity Log page. | **Complete** |
+| **2025-11-14** | **Payroll & Reporting Fixes** | Resolved payslip generation errors, improved data accuracy (gross pay, total deductions), and enhanced statutory reports with SSNIT and TIN numbers. | **Complete** |
 
 
 ## Next Focus Area
@@ -137,4 +138,5 @@ The tenant creation process adheres to the **Single Responsibility Principle (SR
 * **Immediate Tasks:**
     *   Create a self-service portal for employees.
     *   Integrate an email service for notifications.
+
 ---

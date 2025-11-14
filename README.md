@@ -57,6 +57,7 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 | **Audit/Compliance** | Audit Logging & Activity Page | **Complete** | Logs critical actions and provides a dedicated, role-aware page for viewing system and tenant-level activity. |
 | **In-App Notifications**| Full System Pipeline | **Complete** | Real-time alerts, a dynamic navbar dropdown with recent notifications, and a dedicated page for all notifications. |
 | **Employee Profile** | View, Profile Picture Upload, Staff File Upload, Staff File Deletion | **Complete** | Modern, two-column layout with tabbed navigation. |
+| **Payroll & Reporting Fixes** | Payslip generation, data accuracy (gross pay, total deductions), and addition of SSNIT/TIN numbers to reports. | **Complete** | Resolved payroll run errors and enhanced statutory reports with critical employee identifiers. |
 
 ---
 
@@ -71,10 +72,22 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 
 ---
 
+
+
 ## 🚀 Next Focus Area
 
+
+
 **User Experience and Feature Enhancement**
+
 * **Objective:** Enhance the user experience and add more value to the platform.
+
 * **Immediate Tasks:**
+
     *   Create a self-service portal for employees.
+
     *   Integrate an email service for notifications.
+
+
+
+---
