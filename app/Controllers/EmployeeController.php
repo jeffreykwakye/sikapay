@@ -10,6 +10,7 @@ use Jeffrey\Sikapay\Controllers\Controller;
 use Jeffrey\Sikapay\Core\Log;
 use Jeffrey\Sikapay\Core\ErrorResponder; 
 use Jeffrey\Sikapay\Core\Validator;
+use Jeffrey\Sikapay\Security\CsrfToken; // Added
 // use Jeffrey\Sikapay\Core\Router; // <-- REMOVED as redundant based on base Controller::redirect() implementation
 use \Throwable;
 
@@ -24,6 +25,8 @@ use Jeffrey\Sikapay\Models\StaffFileModel;
 use Jeffrey\Sikapay\Helpers\FileUploader;
 use Jeffrey\Sikapay\Models\CustomPayrollElementModel;
 use Jeffrey\Sikapay\Models\EmployeePayrollDetailsModel;
+use Jeffrey\Sikapay\Models\PermissionModel;
+use Jeffrey\Sikapay\Models\UserPermissionModel;
 
 
 class EmployeeController extends Controller
@@ -33,6 +36,9 @@ class EmployeeController extends Controller
     private PositionModel $positionModel;
     private CustomPayrollElementModel $customPayrollElementModel;
     private EmployeePayrollDetailsModel $employeePayrollDetailsModel;
+    private RoleModel $roleModel;
+    private PermissionModel $permissionModel;
+    private UserPermissionModel $userPermissionModel;
     
     // Permission Constants 
     public const PERM_EDIT_PERSONAL = 'employee:update';
@@ -53,6 +59,9 @@ class EmployeeController extends Controller
             $this->positionModel = new PositionModel();
             $this->customPayrollElementModel = new CustomPayrollElementModel();
             $this->employeePayrollDetailsModel = new EmployeePayrollDetailsModel();
+            $this->roleModel = new RoleModel();
+            $this->permissionModel = new PermissionModel();
+            $this->userPermissionModel = new UserPermissionModel();
             
         } catch (Throwable $e) {
             Log::critical("EmployeeController failed to initialize core models: " . $e->getMessage());
@@ -131,6 +140,22 @@ class EmployeeController extends Controller
             $availablePayrollElements = $this->customPayrollElementModel->getAllByTenant($this->tenantId);
             $assignedPayrollElements = $this->employeePayrollDetailsModel->getDetailsForEmployee($userId, $this->tenantId);
 
+            // Calculate gross salary
+            $basicSalary = (float) $employee['current_salary_ghs'];
+            $totalAllowances = 0.0;
+
+            foreach ($assignedPayrollElements as $element) {
+                if ($element['category'] === 'allowance') {
+                    if ($element['amount_type'] === 'fixed') {
+                        $totalAllowances += (float) $element['assigned_amount'];
+                    } elseif ($element['amount_type'] === 'percentage' && $element['calculation_base'] === 'basic_salary') {
+                        $totalAllowances += $basicSalary * ((float) $element['assigned_amount'] / 100.0);
+                    }
+                }
+            }
+            $employee['calculated_gross_salary'] = $basicSalary + $totalAllowances;
+
+
             $this->view('employee/show', [
                 'title' => 'Employee Profile: ' . $employee['first_name'] . ' ' . $employee['last_name'],
                 'employee' => $employee,
@@ -167,6 +192,27 @@ class EmployeeController extends Controller
             $positions = $currentDepartmentId > 0 
                 ? $this->positionModel->all(['department_id' => $currentDepartmentId]) 
                 : $this->positionModel->all(); 
+            
+            $roles = $this->roleModel->all(); // Fetch all roles
+            $allPermissions = $this->permissionModel->all(); // Fetch all system permissions
+            $rolePermissions = $this->roleModel->getPermissionsForRole($employee['role_id']); // Permissions inherited from role
+            $individualPermissions = $this->userPermissionModel->getPermissionsForUser($userId); // Individual user overrides
+
+            // --- START NEW LOGIC FOR ROLE AND PERMISSION FILTERING ---
+            // Filter roles: Remove 'super_admin' role if the current user is not a super admin
+            if (!$this->auth->isSuperAdmin()) {
+                $roles = array_filter($roles, fn($role) => $role['name'] !== 'super_admin');
+                // Re-index the array after filtering
+                $roles = array_values($roles);
+            }
+
+            // Filter permissions: Remove 'super:' permissions if the current user is not a super admin
+            if (!$this->auth->isSuperAdmin()) {
+                $allPermissions = array_filter($allPermissions, fn($permission) => !str_starts_with($permission['key_name'], 'super:'));
+                // Re-index the array after filtering
+                $allPermissions = array_values($allPermissions);
+            }
+            // --- END NEW LOGIC FOR ROLE AND PERMISSION FILTERING ---
                 
             $this->view('employee/edit', [
                 'title' => 'Edit Employee: ' . $employee['first_name'] . ' ' . $employee['last_name'],
@@ -174,6 +220,10 @@ class EmployeeController extends Controller
                 'departments' => $departments,
                 'positions' => $positions,
                 'currentDepartmentId' => $currentDepartmentId,
+                'roles' => $roles, // Pass roles to the view
+                'allPermissions' => $allPermissions,
+                'rolePermissions' => array_column($rolePermissions, 'id'), // Just IDs for easy checking
+                'individualPermissions' => $individualPermissions, // Pass the associative array directly
             ]);
         } catch (Throwable $e) {
             Log::error("Failed to load employee profile (edit) for User {$userId}: " . $e->getMessage());
@@ -383,7 +433,7 @@ class EmployeeController extends Controller
      */
     public function updateEmploymentData(int $userId): void
     {
-        $this->checkPermission(self::PERM_EDIT_EMPLOYMENT);
+        header('Content-Type: application/json');
         
         // Security check: Must belong to tenant
         if (!$this->employeeModel->isEmployeeInTenant($userId, $this->tenantId)) {
@@ -402,9 +452,9 @@ class EmployeeController extends Controller
         ]);
         
         if ($validator->fails()) {
-            $_SESSION['flash_error'] = "Employment data update failed: " . implode('<br>', $validator->errors());
-            $this->redirect("/employees/{$userId}"); 
-            return;
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => "Employment data update failed: " . implode('<br>', $validator->errors())]);
+            exit;
         }
 
         $db = $this->employeeModel->getDB(); 
@@ -429,8 +479,8 @@ class EmployeeController extends Controller
 
             $db->commit();
             
-            $_SESSION['flash_success'] = "Employment details updated successfully. 👷";
-            $this->redirect("/employees/{$userId}");
+            echo json_encode(['success' => true, 'message' => "Employment details updated successfully. 👷"]);
+            exit;
 
         } catch (Throwable $e) { 
             if ($db->inTransaction()) { $db->rollBack(); }
@@ -438,8 +488,9 @@ class EmployeeController extends Controller
             $errorMsg = (strpos($e->getMessage(), 'Integrity constraint violation') !== false)
                 ? 'Error: Employee ID may already be in use.'
                 : 'Error updating employment data: A critical system error occurred.';
-            $_SESSION['flash_error'] = $errorMsg;
-            $this->redirect("/employees/{$userId}");
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => $errorMsg]);
+            exit;
         }
     }
     
@@ -450,7 +501,7 @@ class EmployeeController extends Controller
      */
     public function updatePersonalData(int $userId): void
     {
-        $this->checkPermission(self::PERM_EDIT_PERSONAL);
+        header('Content-Type: application/json');
         
         if (!$this->employeeModel->isEmployeeInTenant($userId, $this->tenantId)) {
             ErrorResponder::respond(404, "The specified employee was not found.");
@@ -471,9 +522,9 @@ class EmployeeController extends Controller
         ]);
         
         if ($validator->fails()) {
-            $_SESSION['flash_error'] = "Personal data update failed: " . implode('<br>', $validator->errors());
-            $this->redirect("/employees/{$userId}"); 
-            return;
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => "Personal data update failed: " . implode('<br>', $validator->errors())]);
+            exit;
         }
 
         $db = $this->employeeModel->getDB(); 
@@ -508,14 +559,15 @@ class EmployeeController extends Controller
 
             $db->commit();
             
-            $_SESSION['flash_success'] = "Personal details updated successfully. ✍️";
-            $this->redirect("/employees/{$userId}");
+            echo json_encode(['success' => true, 'message' => "Personal details updated successfully. ✍️"]);
+            exit;
 
         } catch (Throwable $e) { 
             if ($db->inTransaction()) { $db->rollBack(); }
             Log::critical("Personal Data Update Failed for User {$userId}: " . $e->getMessage());
-            $_SESSION['flash_error'] = "Error updating personal data: A critical system error occurred.";
-            $this->redirect("/employees/{$userId}");
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => "Error updating personal data: A critical system error occurred."]);
+            exit;
         }
     }
     
@@ -526,7 +578,7 @@ class EmployeeController extends Controller
      */
     public function updateStatutoryData(int $userId): void
     {
-        $this->checkPermission(self::PERM_EDIT_STATUTORY);
+        header('Content-Type: application/json');
         
         if (!$this->employeeModel->isEmployeeInTenant($userId, $this->tenantId)) {
             ErrorResponder::respond(404, "The specified employee was not found.");
@@ -542,9 +594,9 @@ class EmployeeController extends Controller
         ]);
         
         if ($validator->fails()) {
-            $_SESSION['flash_error'] = "Statutory data update failed: " . implode('<br>', $validator->errors());
-            $this->redirect("/employees/{$userId}"); 
-            return;
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => "Statutory data update failed: " . implode('<br>', $validator->errors())]);
+            exit;
         }
 
         $db = $this->employeeModel->getDB(); 
@@ -567,8 +619,8 @@ class EmployeeController extends Controller
 
             $db->commit();
             
-            $_SESSION['flash_success'] = "Statutory details updated successfully.";
-            $this->redirect("/employees/{$userId}");
+            echo json_encode(['success' => true, 'message' => "Statutory details updated successfully."]);
+            exit;
 
         } catch (Throwable $e) { 
             if ($db->inTransaction()) { $db->rollBack(); }
@@ -576,8 +628,9 @@ class EmployeeController extends Controller
             $errorMsg = (strpos($e->getMessage(), 'Integrity constraint violation') !== false)
                 ? 'Error: TIN, SSNIT, or ID Card number may already be in use.'
                 : 'Error updating statutory data: A critical system error occurred.';
-            $_SESSION['flash_error'] = $errorMsg;
-            $this->redirect("/employees/{$userId}");
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => $errorMsg]);
+            exit;
         }
     }
     
@@ -588,7 +641,7 @@ class EmployeeController extends Controller
      */
     public function updateBankData(int $userId): void
     {
-        $this->checkPermission(self::PERM_EDIT_BANK);
+        header('Content-Type: application/json');
         
         if (!$this->employeeModel->isEmployeeInTenant($userId, $this->tenantId)) {
             ErrorResponder::respond(404, "The specified employee was not found.");
@@ -599,14 +652,16 @@ class EmployeeController extends Controller
         $validator->validate([
             'payment_method'        => 'required|in:Bank Transfer,Cash,Mobile Money',
             'bank_name'             => 'optional|max:100',
+            'bank_branch'           => 'optional|max:100', // Added
+            'bank_account_name'     => 'optional|max:100', // Added
             'bank_account_number'   => 'optional|max:50',
             'is_payroll_eligible'   => 'required|bool',
         ]);
         
         if ($validator->fails()) {
-            $_SESSION['flash_error'] = "Bank data update failed: " . implode('<br>', $validator->errors());
-            $this->redirect("/employees/{$userId}"); 
-            return;
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => "Bank data update failed: " . implode('<br>', $validator->errors())]);
+            exit;
         }
 
         $db = $this->employeeModel->getDB(); 
@@ -619,6 +674,8 @@ class EmployeeController extends Controller
             $employeeData = [
                 'payment_method' => $validator->get('payment_method'),
                 'bank_name' => $validator->get('bank_name', 'string', null),
+                'bank_branch' => $validator->get('bank_branch', 'string', null), // Added
+                'bank_account_name' => $validator->get('bank_account_name', 'string', null), // Added
                 'bank_account_number' => $validator->get('bank_account_number', 'string', null),
                 'is_payroll_eligible' => $validator->get('is_payroll_eligible', 'int'), // Bool should be treated as int in DB
             ];
@@ -629,14 +686,15 @@ class EmployeeController extends Controller
 
             $db->commit();
             
-            $_SESSION['flash_success'] = "Bank/Payment details updated successfully.";
-            $this->redirect("/employees/{$userId}");
+            echo json_encode(['success' => true, 'message' => "Bank/Payment details updated successfully."]);
+            exit;
 
         } catch (Throwable $e) { 
             if ($db->inTransaction()) { $db->rollBack(); }
             Log::critical("Bank Data Update Failed for User {$userId}: " . $e->getMessage());
-            $_SESSION['flash_error'] = "Error updating bank data: A critical system error occurred.";
-            $this->redirect("/employees/{$userId}");
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => "Error updating bank data: A critical system error occurred."]);
+            exit;
         }
     }
     
@@ -647,7 +705,7 @@ class EmployeeController extends Controller
      */
     public function updateEmergencyContactData(int $userId): void
     {
-        $this->checkPermission(self::PERM_EDIT_PERSONAL); 
+        header('Content-Type: application/json');
         
         if (!$this->employeeModel->isEmployeeInTenant($userId, $this->tenantId)) {
             ErrorResponder::respond(404, "The specified employee was not found.");
@@ -661,9 +719,9 @@ class EmployeeController extends Controller
         ]);
         
         if ($validator->fails()) {
-            $_SESSION['flash_error'] = "Emergency contact update failed: " . implode('<br>', $validator->errors());
-            $this->redirect("/employees/{$userId}"); 
-            return;
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => "Emergency contact update failed: " . implode('<br>', $validator->errors())]);
+            exit;
         }
 
         $db = $this->employeeModel->getDB(); 
@@ -684,14 +742,15 @@ class EmployeeController extends Controller
 
             $db->commit();
             
-            $_SESSION['flash_success'] = "Emergency contact details updated successfully.";
-            $this->redirect("/employees/{$userId}");
+            echo json_encode(['success' => true, 'message' => "Emergency contact details updated successfully."]);
+            exit;
 
         } catch (Throwable $e) { 
             if ($db->inTransaction()) { $db->rollBack(); }
             Log::critical("Emergency Contact Update Failed for User {$userId}: " . $e->getMessage());
-            $_SESSION['flash_error'] = "Error updating emergency contact: A critical system error occurred.";
-            $this->redirect("/employees/{$userId}");
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => "Error updating emergency contact: A critical system error occurred."]);
+            exit;
         }
     }
     
@@ -702,6 +761,7 @@ class EmployeeController extends Controller
      */
     public function updateSalary(int $userId): void
     {
+        header('Content-Type: application/json');
         $this->checkPermission(self::PERM_EDIT_SALARY);
         
         if (!$this->employeeModel->isEmployeeInTenant($userId, $this->tenantId)) {
@@ -717,9 +777,9 @@ class EmployeeController extends Controller
         ]);
         
         if ($validator->fails()) {
-            $_SESSION['flash_error'] = "Salary update failed: " . implode('<br>', $validator->errors());
-            $this->redirect("/employees/{$userId}"); 
-            return;
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => "Salary update failed: " . implode('<br>', $validator->errors())]);
+            exit;
         }
         
         $db = $this->employeeModel->getDB(); 
@@ -757,14 +817,15 @@ class EmployeeController extends Controller
 
             $db->commit();
             
-            $_SESSION['flash_success'] = "Salary updated successfully! The change has been logged.";
-            $this->redirect("/employees/{$userId}");
+            echo json_encode(['success' => true, 'message' => "Salary updated successfully! The change has been logged."]);
+            exit;
 
         } catch (Throwable $e) { 
             if ($db->inTransaction()) { $db->rollBack(); }
             Log::critical("Salary Update Failed for User {$userId}: " . $e->getMessage());
-            $_SESSION['flash_error'] = "Error updating salary: A critical system error occurred.";
-            $this->redirect("/employees/{$userId}");
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => "Error updating salary: A critical system error occurred."]);
+            exit;
         }
     }
     
@@ -773,6 +834,7 @@ class EmployeeController extends Controller
      */
     public function updateRoleAndPermissions(int $userId): void
     {
+        header('Content-Type: application/json');
         $this->checkPermission(self::PERM_EDIT_ROLES);
         
         if (!$this->employeeModel->isEmployeeInTenant($userId, $this->tenantId)) {
@@ -787,9 +849,9 @@ class EmployeeController extends Controller
         ]);
         
         if ($validator->fails()) {
-            $_SESSION['flash_error'] = "Role update failed: " . implode('<br>', $validator->errors());
-            $this->redirect("/employees/{$userId}"); 
-            return;
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => "Role update failed: " . implode('<br>', $validator->errors())]);
+            exit;
         }
 
         $db = $this->employeeModel->getDB(); 
@@ -811,14 +873,139 @@ class EmployeeController extends Controller
 
             $db->commit();
             
-            $_SESSION['flash_success'] = "Role and account status updated successfully.";
-            $this->redirect("/employees/{$userId}");
+            echo json_encode(['success' => true, 'message' => "Role and account status updated successfully."]);
+            exit;
 
         } catch (Throwable $e) { 
             if ($db->inTransaction()) { $db->rollBack(); }
             Log::critical("Role Update Failed for User {$userId}: " . $e->getMessage());
-            $_SESSION['flash_error'] = "Error updating role: A critical system error occurred.";
-            $this->redirect("/employees/{$userId}");
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => "Error updating role: A critical system error occurred."]);
+            exit;
+        }
+    }
+
+    /**
+     * Handles the POST request to reset an employee's individual permissions to their role's defaults.
+     */
+    public function resetPermissionsToDefaults(int $userId): void
+    {
+        header('Content-Type: application/json');
+        $this->checkPermission('tenant:configure_roles'); // Same permission as updating individual permissions
+        
+        if (!$this->employeeModel->isEmployeeInTenant($userId, $this->tenantId)) {
+            ErrorResponder::respond(404, "The specified employee was not found.");
+            return;
+        }
+
+        // Validate CSRF token from POST data
+        if (!isset($_POST['csrf_token']) || !CsrfToken::validate($_POST['csrf_token'])) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'message' => 'CSRF token mismatch. Please refresh and try again.']);
+            exit;
+        }
+
+        $db = $this->employeeModel->getDB(); 
+        try {
+            $db->beginTransaction();
+
+            $auditModel = new AuditModel();
+            
+            // Delete all existing individual permissions for this user
+            $this->userPermissionModel->deletePermissionsForUser($userId);
+            
+            $auditModel->log($this->tenantId, 'Employee individual permissions reset to role defaults for user with ID: ' . $userId, ['user_id' => $userId]);
+
+            $db->commit();
+            
+            echo json_encode(['success' => true, 'message' => "Individual permissions reset to role defaults successfully."]);
+            exit;
+
+        } catch (Throwable $e) { 
+            if ($db->inTransaction()) { $db->rollBack(); }
+            Log::critical("Reset Individual Permissions Failed for User {$userId}: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => "Error resetting individual permissions: A critical system error occurred."]);
+            exit;
+        }
+    }
+
+    /**
+     * Handles the POST request to toggle an employee's individual permission.
+     * This method adds, updates, or deletes an individual permission override.
+     */
+    public function toggleIndividualPermission(int $userId, int $permissionId): void
+    {
+        header('Content-Type: application/json');
+        $this->checkPermission('tenant:configure_roles');
+        
+        if (!$this->employeeModel->isEmployeeInTenant($userId, $this->tenantId)) {
+            ErrorResponder::respond(404, "The specified employee was not found.");
+            return;
+        }
+
+        // Validate CSRF token from POST data
+        if (!isset($_POST['csrf_token']) || !CsrfToken::validate($_POST['csrf_token'])) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'message' => 'CSRF token mismatch. Please refresh and try again.']);
+            exit;
+        }
+
+        $validator = new Validator($_POST);
+        $validator->validate([
+            'is_allowed' => 'required|bool',
+            'is_role_default' => 'required|bool', // Indicates if the current state matches the role default
+        ]);
+
+        if ($validator->fails()) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => "Invalid input: " . implode('<br>', $validator->errors())]);
+            exit;
+        }
+
+        $isAllowed = (bool)$validator->get('is_allowed');
+        $isRoleDefault = (bool)$validator->get('is_role_default');
+
+        $db = $this->employeeModel->getDB(); 
+        try {
+            $db->beginTransaction();
+
+            $auditModel = new AuditModel();
+            $action = '';
+            $logMessage = '';
+
+            // Get the employee's current role permissions to determine if the change is an override or a revert
+            $employee = $this->employeeModel->getEmployeeProfile($userId);
+            $rolePermissions = $this->roleModel->getPermissionsForRole($employee['role_id']);
+            $rolePermissionIds = array_column($rolePermissions, 'id');
+            $isCurrentlyAllowedByRole = in_array($permissionId, $rolePermissionIds);
+
+            // Case 1: Setting to role default (delete override)
+            if ($isAllowed === $isCurrentlyAllowedByRole) {
+                $this->userPermissionModel->deletePermissionForUser($userId, $permissionId);
+                $action = 'reverted to role default';
+                $logMessage = "Employee permission (ID: {$permissionId}) reverted to role default for user ID: {$userId}.";
+            } 
+            // Case 2: Setting an explicit override (add/update override)
+            else {
+                $this->userPermissionModel->addPermissionToUser($userId, $permissionId, $isAllowed);
+                $action = $isAllowed ? 'granted' : 'explicitly denied';
+                $logMessage = "Employee permission (ID: {$permissionId}) {$action} for user ID: {$userId}.";
+            }
+            
+            $auditModel->log($this->tenantId, $logMessage, ['user_id' => $userId, 'permission_id' => $permissionId, 'is_allowed' => $isAllowed, 'action' => $action]);
+
+            $db->commit();
+            
+            echo json_encode(['success' => true, 'message' => "Permission {$action} successfully."]);
+            exit;
+
+        } catch (Throwable $e) { 
+            if ($db->inTransaction()) { $db->rollBack(); }
+            Log::critical("Toggle Individual Permission Failed for User {$userId}, Permission {$permissionId}: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => "Error toggling individual permission: A critical system error occurred."]);
+            exit;
         }
     }
 

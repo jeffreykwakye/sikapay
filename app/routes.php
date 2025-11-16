@@ -104,12 +104,54 @@ return [
         'handler' => ['EmployeeController', 'edit']
     ]],
     
-    // Process Update (PUT spoofed via POST)
-    ['POST', '/employees/{userId:\d+}', [
+    // Specific Update Routes for Employee Edit Page
+    ['POST', '/employees/{userId:\d+}/personal', [
         'auth' => 'AuthMiddleware',
-        'permission' => ['PermissionMiddleware', ['employee:update', 'self:update_profile']],
-        'handler' => ['EmployeeController', 'update'] // The method handles the PUT logic
+        'permission' => ['PermissionMiddleware', 'employee:update'],
+        'handler' => ['EmployeeController', 'updatePersonalData']
     ]],
+    ['POST', '/employees/{userId:\d+}/employment', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'employee:update'],
+        'handler' => ['EmployeeController', 'updateEmploymentData']
+    ]],
+    ['POST', '/employees/{userId:\d+}/statutory', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'employee:update'],
+        'handler' => ['EmployeeController', 'updateStatutoryData']
+    ]],
+    ['POST', '/employees/{userId:\d+}/bank', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'employee:update'],
+        'handler' => ['EmployeeController', 'updateBankData']
+    ]],
+    ['POST', '/employees/{userId:\d+}/emergency', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'employee:update'],
+        'handler' => ['EmployeeController', 'updateEmergencyContactData']
+    ]],
+    ['POST', '/employees/{userId:\d+}/role', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'employee:update'],
+        'handler' => ['EmployeeController', 'updateRoleAndPermissions']
+    ]],
+    ['POST', '/employees/{userId:\d+}/permissions', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'tenant:configure_roles'],
+        'handler' => ['EmployeeController', 'updateIndividualPermissions']
+    ]],
+    ['POST', '/employees/{userId:\d+}/permissions/reset-to-defaults', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'tenant:configure_roles'], // Same permission as updating individual permissions
+        'handler' => ['EmployeeController', 'resetPermissionsToDefaults']
+    ]],
+    ['POST', '/employees/{userId:\d+}/permissions/{permissionId:\d+}/toggle', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'tenant:configure_roles'],
+        'handler' => ['EmployeeController', 'toggleIndividualPermission']
+    ]],
+
+    // Note: Salary and Role updates are handled via modals on the profile view page.
 
     // Route for Viewing Employment History
     ['GET', '/employees/{userId:\d+}/history', [
@@ -184,34 +226,58 @@ return [
         'handler' => ['PayrollController', 'downloadPayslip']
     ]],
 
+
     // Statutory Reports Routes
     ['GET', '/reports', [
         'auth' => 'AuthMiddleware',
         'permission' => ['PermissionMiddleware', 'payroll:view_all'],
         'handler' => ['StatutoryReportController', 'index']
     ]],
-    ['GET', '/reports/paye/pdf', [
+    ['GET', '/reports/paye/pdf/{periodId:\d+}', [
         'auth' => 'AuthMiddleware',
         'permission' => ['PermissionMiddleware', 'payroll:view_all'],
         'handler' => ['StatutoryReportController', 'generatePayeReportPdf']
     ]],
-    ['GET', '/reports/paye/excel', [
+    ['GET', '/reports/paye/excel/{periodId:\d+}', [
         'auth' => 'AuthMiddleware',
         'permission' => ['PermissionMiddleware', 'payroll:view_all'],
         'handler' => ['StatutoryReportController', 'generatePayeReportExcel']
     ]],
-    ['GET', '/reports/ssnit/pdf', [
+    ['GET', '/reports/ssnit/pdf/{periodId:\d+}', [
         'auth' => 'AuthMiddleware',
         'permission' => ['PermissionMiddleware', 'payroll:view_all'],
         'handler' => ['StatutoryReportController', 'generateSsnitReportPdf']
     ]],
-    ['GET', '/reports/ssnit/excel', [
+    ['GET', '/reports/ssnit/excel/{periodId:\d+}', [
         'auth' => 'AuthMiddleware',
         'permission' => ['PermissionMiddleware', 'payroll:view_all'],
         'handler' => ['StatutoryReportController', 'generateSsnitReportExcel']
     ]],
+    // New Bank Advice Routes
+    ['GET', '/reports/bank-advice/pdf/{periodId:\d+}', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'payroll:view_all'],
+        'handler' => ['StatutoryReportController', 'generateBankAdvicePdf']
+    ]],
+    ['GET', '/reports/bank-advice/excel/{periodId:\d+}', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'payroll:view_all'],
+        'handler' => ['StatutoryReportController', 'generateBankAdviceExcel']
+    ]],
+    // New route for downloading all payslips as a ZIP
+    ['GET', '/reports/payslips/zip/{periodId:\d+}', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'payroll:view_all'],
+        'handler' => ['StatutoryReportController', 'downloadAllPayslipsAsZip']
+    ]],
 
     // NOTE: The API Route for Cascading Dropdown is REMOVED as it's now handled by client-side JS.
+ 
+    // API Route for fetching positions by department
+    ['GET', '/api/positions', [
+        'auth' => 'AuthMiddleware',
+        'handler' => ['EmployeeController', 'getPositionsByDepartment']
+    ]],
  
     // =========================================================
     // Configuration Routes: Company Profile (Protected)
