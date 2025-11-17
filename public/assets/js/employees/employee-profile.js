@@ -195,4 +195,63 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }
+
+    // --- Payroll Elements Logic (Checkbox-based) ---
+    const payrollElementsTbody = document.getElementById('payroll-elements-tbody');
+    if (payrollElementsTbody) {
+        const table = payrollElementsTbody.closest('table');
+        const userId = table.dataset.userId;
+        const csrfToken = table.dataset.csrfToken;
+        const spinner = document.getElementById('element-assignment-spinner');
+
+        payrollElementsTbody.addEventListener('change', function(e) {
+            if (!e.target.classList.contains('payroll-element-toggle')) {
+                return;
+            }
+
+            const checkbox = e.target;
+            const elementId = checkbox.dataset.elementId;
+            const defaultAmount = checkbox.dataset.defaultAmount;
+            const isAssigning = checkbox.checked;
+
+            const url = isAssigning 
+                ? `/employees/${userId}/payroll-elements` 
+                : `/employees/${userId}/payroll-elements/${elementId}/unassign`;
+
+            const formData = new FormData();
+            formData.append('csrf_token', csrfToken);
+            if (isAssigning) {
+                formData.append('payroll_element_id', elementId);
+                formData.append('assigned_amount', defaultAmount);
+                formData.append('effective_date', document.getElementById('effective_date_hidden').value);
+            }
+
+            spinner.style.display = 'inline-block';
+            checkbox.disabled = true;
+
+            fetch(url, {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showSuccess(data.message);
+                } else {
+                    showError(data.message || 'An unknown error occurred.');
+                    checkbox.checked = !isAssigning; // Revert checkbox on failure
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showError('An error occurred while updating the payroll element.');
+                checkbox.checked = !isAssigning; // Revert checkbox on failure
+            })
+            .finally(() => {
+                spinner.style.display = 'none';
+                checkbox.disabled = false;
+            });
+        });
+    }
 });

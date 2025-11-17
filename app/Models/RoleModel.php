@@ -9,6 +9,8 @@ use Jeffrey\Sikapay\Core\Auth;
 use \PDOException;
 
 
+use \PDO;
+
 class RoleModel extends Model
 {
     // Flag to bypass tenant scoping (Roles do not have a tenant_id column)
@@ -49,6 +51,33 @@ class RoleModel extends Model
             // Re-throw the exception. A failure to retrieve system data is critical 
             // and should interrupt the flow.
             throw $e;
+        }
+    }
+
+    /**
+     * Get all permissions associated with a specific role.
+     *
+     * @param int $roleId The ID of the role.
+     * @return array An array of permission records (id, key_name) for the role.
+     */
+    public function getPermissionsForRole(int $roleId): array
+    {
+        try {
+            $sql = "SELECT p.id, p.key_name 
+                    FROM role_permissions rp
+                    JOIN permissions p ON rp.permission_id = p.id
+                    WHERE rp.role_id = :role_id";
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([':role_id' => $roleId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            Log::error("Failed to get permissions for role {$roleId}: " . $e->getMessage(), [
+                'role_id' => $roleId,
+                'sql' => $sql,
+                'acting_user_id' => Auth::userId()
+            ]);
+            throw $e; // Re-throw for higher-level error handling
         }
     }
 }

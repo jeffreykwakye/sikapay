@@ -114,7 +114,35 @@ class UserModel extends Model
                 'acting_user_id' => Auth::userId()
             ]);
             // Return safe defaults, as this is used by the UI and shouldn't crash the page.
-            return ['first_name' => 'Error', 'last_name' => 'User']; 
-        }
-    }
-}
+                        return ['first_name' => 'Error', 'last_name' => 'User']; 
+                    }
+                }
+            
+                /**
+                 * Retrieves all users belonging to a specific role within a given tenant.
+                 * @param int $tenantId The ID of the tenant.
+                 * @param string $roleName The name of the role.
+                 * @return array An array of user records (id, email, etc.).
+                 */
+                public function getUsersByRole(int $tenantId, string $roleName): array
+                {
+                    $sql = "SELECT u.id, u.email, u.first_name, u.last_name 
+                            FROM users u
+                            JOIN roles r ON u.role_id = r.id
+                            WHERE u.tenant_id = :tenant_id AND r.name = :role_name AND u.is_active = TRUE";
+                    
+                    try {
+                        $stmt = $this->db->prepare($sql);
+                        $stmt->execute([
+                            ':tenant_id' => $tenantId,
+                            ':role_name' => $roleName
+                        ]);
+                        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+                    } catch (PDOException $e) {
+                        Log::error("Failed to retrieve users for role '{$roleName}' in Tenant {$tenantId}. Error: " . $e->getMessage(), [
+                            'acting_user_id' => Auth::userId()
+                        ]);
+                        return [];
+                    }
+                }
+            }

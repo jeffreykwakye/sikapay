@@ -5,14 +5,14 @@
 // The $isSuperAdmin variable is also available.
 ?>
 
-<div class="sidebar" data-background-color="dark">
+<div class="sidebar" data-background-color="light-blue">
     <div class="sidebar-logo">
-        <div class="logo-header" data-background-color="dark">
+        <div class="logo-header" data-background-color="light-blue">
             <a href="/" class="logo">
                 <?php if (isset($tenantLogo) && ($subscriptionPlan === 'Professional' || $subscriptionPlan === 'Enterprise')): ?>
                     <img src="<?= htmlspecialchars($tenantLogo) ?>" alt="navbar brand" class="navbar-brand" height="20" />
                 <?php else: ?>
-                    <img src="/assets/img/kaiadmin/logo_light.svg" alt="navbar brand" class="navbar-brand" height="20" />
+                    <img src="/assets/images/tenant_logos/1/main-logo.svg" alt="navbar brand" class="navbar-brand" height="42" />
                 <?php endif; ?>
             </a>
             <div class="nav-toggle">

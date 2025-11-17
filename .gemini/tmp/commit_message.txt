@@ -1,0 +1,19 @@
+feat: Implement individual permission toggling and reset functionality
+
+This commit refactors the employee permissions management to allow individual
+permissions to be toggled via AJAX requests, removing the need for a "Save Permissions" button.
+
+Key changes include:
+- `resources/views/employee/edit.php`: Permissions tab updated to use individual checkboxes with data attributes for AJAX. Removed the form and "Save Permissions" button.
+- `app/routes.php`: Added a new POST route for `/employees/{userId}/permissions/{permissionId}/toggle` to handle individual permission updates.
+- `app/Controllers/EmployeeController.php`:
+    - Removed `updateIndividualPermissions` method.
+    - Implemented `toggleIndividualPermission` to handle adding, updating, or deleting individual permission overrides based on the checkbox state and role defaults.
+- `app/Models/UserPermissionModel.php`:
+    - Added `deletePermissionForUser` method to remove a single permission override.
+    - Modified `addPermissionToUser` to use `INSERT ... ON DUPLICATE KEY UPDATE` for upsert functionality.
+- `public/assets/js/employees/employee-form-ajax.js`:
+    - Implemented event listeners for permission checkboxes to send AJAX requests for toggling.
+    - Fixed a `SyntaxError: Unexpected end of input` by adding a missing closing brace.
+- `public/assets/js/employees/edit-employee-positions.js`: Added as a new asset for employee editing functionality.
+- `app/Models/PermissionModel.php`: Added as a new model for managing permissions.

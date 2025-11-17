@@ -89,5 +89,3 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
     *   Integrate an email service for notifications.
 
 
-
----

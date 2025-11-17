@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return; // Nothing to fetch if no department is selected
         }
 
-        const apiUrl = '/api/positions?department_id=' + departmentId;
+        const apiUrl = '/employees/get-positions-by-department?department_id=' + departmentId;
 
         fetch(apiUrl)
             .then(response => {

@@ -12,7 +12,6 @@ class EmployeePayrollDetailsModel extends Model
 {
     public function __construct()
     {
-        Log::info('Inside EmployeePayrollDetailsModel constructor');
         parent::__construct('employee_payroll_details');
     }
 
@@ -26,7 +25,7 @@ class EmployeePayrollDetailsModel extends Model
     public function getDetailsForEmployee(int $userId, int $tenantId): array
     {
         $sql = "SELECT 
-                    epd.id, epd.assigned_amount, epd.effective_date, epd.end_date,
+                    epd.id, epd.payroll_element_id, epd.assigned_amount, epd.effective_date, epd.end_date,
                     tpe.name, tpe.category, tpe.amount_type, tpe.default_amount, tpe.calculation_base, tpe.is_taxable, tpe.is_ssnit_chargeable, tpe.is_recurring
                 FROM {$this->table} epd
                 JOIN tenant_payroll_elements tpe ON epd.payroll_element_id = tpe.id

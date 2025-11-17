@@ -21,6 +21,7 @@ use Jeffrey\Sikapay\Models\SsnitAdviceModel;
 use Jeffrey\Sikapay\Models\GraPayeAdviceModel;
 use Jeffrey\Sikapay\Models\BankAdviceModel;
 use Jeffrey\Sikapay\Helpers\PayslipPdfGenerator;
+use Jeffrey\Sikapay\Models\AuditModel;
 use \PDO;
 use \Exception;
 
@@ -41,6 +42,7 @@ class PayrollService
     private SsnitAdviceModel $ssnitAdviceModel;
     private GraPayeAdviceModel $graPayeAdviceModel;
     private BankAdviceModel $bankAdviceModel;
+    private AuditModel $auditModel;
 
     public function __construct()
     {
@@ -59,6 +61,7 @@ class PayrollService
         $this->ssnitAdviceModel = new SsnitAdviceModel();
         $this->graPayeAdviceModel = new GraPayeAdviceModel();
         $this->bankAdviceModel = new BankAdviceModel();
+        $this->auditModel = new AuditModel();
     }
 
     /**
@@ -189,6 +192,7 @@ class PayrollService
             'detailed_deductions' => $detailedDeductions,
             'detailed_overtimes' => $detailedOvertimes,
             'detailed_bonuses' => $detailedBonuses,
+            'applied_elements' => $assignedElements, // Return the raw elements for post-processing
         ];
     }
 
@@ -352,6 +356,28 @@ class PayrollService
                         ]);
                     }
                     // TODO: Save detailed overtimes and bonuses once implemented in calculateEmployeePayroll
+
+                    // Auto-unassign non-recurring elements
+                    foreach ($calculatedPayroll['applied_elements'] as $element) {
+                        if (!$element['is_recurring']) {
+                            $this->employeePayrollDetailsModel->deleteByEmployeeAndElement(
+                                (int)$employee['user_id'],
+                                (int)$element['payroll_element_id'],
+                                $tenantId
+                            );
+
+                            $this->auditModel->log(
+                                $tenantId,
+                                'NON_RECURRING_ELEMENT_REMOVED',
+                                [
+                                    'employee_user_id' => (int)$employee['user_id'],
+                                    'element_name' => $element['name'],
+                                    'payslip_id' => $payslipId,
+                                    'details' => 'Non-recurring element automatically unassigned after payroll run.'
+                                ]
+                            );
+                        }
+                    }
                 }
             }
 

@@ -65,6 +65,7 @@ if (isset($_SESSION['flash_success'])): ?>
                         <input type="hidden" name="payroll_period_id" value="<?= $currentPeriod['id'] ?>">
                         <button type="submit" class="btn btn-primary">Run Payroll for this Period</button>
                     </form>
+
                 <?php else: ?>
                     <div class="alert alert-warning" role="alert">
                         No active payroll period found. Please configure a new payroll period.

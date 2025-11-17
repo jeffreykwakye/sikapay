@@ -174,10 +174,12 @@ class EmployeeModel extends Model
         }
         
         $sql = "SELECT 
-                    u.*, 
+                    u.*,
+                    u.role_id, -- Explicitly select role_id
                     up.*,
                     e.employee_id, e.hire_date, e.employment_type, e.current_salary_ghs,
-                    e.payment_method, e.bank_name, e.bank_account_number, e.bank_branch, e.bank_account_name, -- Added new bank fields
+                    e.payment_method, e.bank_name, e.bank_account_number, e.bank_branch, e.bank_account_name,
+                    e.is_payroll_eligible, -- Added new bank fields
                     p.id AS position_id, p.title AS position_title,
                     d.id AS department_id, d.name AS department_name
                 FROM users u

@@ -18,10 +18,10 @@ class NotificationService
     {
         try {
             $this->notificationModel = new NotificationModel();
-            // $this->userModel = new UserModel();
+            $this->userModel = new UserModel();
         } catch (Throwable $e) {
             // CRITICAL: Failed to instantiate a required Model (DB connection or class loading error)
-            Log::critical("NotificationService failed to instantiate NotificationModel.", [
+            Log::critical("NotificationService failed to instantiate its models.", [
                 'error' => $e->getMessage(),
                 'file' => $e->getFile()
             ]);
@@ -29,7 +29,28 @@ class NotificationService
             throw $e;
         }
     }
-    
+
+    /**
+     * Notifies all users belonging to a specific role within a tenant.
+     */
+    public function createNotificationForRole(int $tenantId, string $roleName, string $type, string $title, ?string $body = null): void
+    {
+        try {
+            $usersInRole = $this->userModel->getUsersByRole($tenantId, $roleName);
+            
+            if (!empty($usersInRole)) {
+                foreach ($usersInRole as $user) {
+                    $this->notifyUser($tenantId, $user['id'], $type, $title, $body);
+                }
+            }
+        } catch (Throwable $e) {
+            Log::error("Failed to create notifications for role {$roleName} in Tenant {$tenantId}.", [
+                'error' => $e->getMessage(),
+                'type' => $type
+            ]);
+        }
+    }
+
     /**
      * Notifies a single, specific user. This is the primary method for sending alerts.
      */
@@ -53,6 +74,8 @@ class NotificationService
             // Return void, effectively swallowing the error but logging it.
         }
     }
+    
+
 
     /**
      * Retrieves all notifications for the current user.

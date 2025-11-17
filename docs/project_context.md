@@ -2,34 +2,8 @@
 
 SikaPay is a custom-built, multi-tenant web application designed to handle payroll processing in Ghana, strictly adhering to all statutory requirements (PAYE, SSNIT Tiers 1, 2, 3) and accommodating complex pay components and international hires.
 
-## 🛠️ Technology Stack
-
-* **Language:** PHP 8.1+ (Vanilla MVC)
-* **Database:** MySQL / MariaDB
-* **Dependencies:** Composer, FastRoute, FPDF, PhpSpreadsheet, vlucas/phpdotenv.
-
-## 🚀 Setup Guide
-
-1.  **Clone Repository:** (If checking out)
-    ```bash
-    git clone [https://github.com/jeffreykwakye/sikapay.git](https://github.com/jeffreykwakye/sikapay.git)
-    cd sikapay
-    ```
-2.  **Environment:** Create a `.env` file in the root directory.
-    * *Note: See the `PROJECT_CONTEXT.md` for specific required environment variables.*
-3.  **Composer:** Install PHP dependencies.
-    ```bash
-    composer install
-    ```
-4.  **Virtual Host:** Ensure your web server points the document root to the `/public` directory (e.g., `sikapay.localhost`).
-5.  **Database:** Create the database defined in your `.env` file (e.g., `sikapay`).
-6.  **CLI Setup:** After PHP files are placed, run migrations and seed initial data.
-    ```bash
-    php cli/cli_runner.php db:migrate
-    php cli/cli_runner.php db:seed
-    ```
-7.  **Access:** Open your configured URL (e.g., `http://sikapay.localhost/`).
-
+> [!NOTE]
+> For the technology stack, setup guide, and high-level feature overview, please refer to the main [**README.md**](../README.md) file. This document focuses on the detailed architectural context and historical project log.
 
 ## Project Status: Core Infrastructure & RBAC Implemented (v1.2)
 ---
@@ -51,12 +25,6 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 | **Payroll Configuration** | Manage custom Allowances & Deductions. | **Complete** | Full CRUD UI for tenant admins to define and manage payroll elements. |
 
 ---
-
-### **Upcoming Features**
-
-* **Auto-Mark Read** on notification view
-* **Employee Management Module**
-* Tenant Admin Dashboard & Payroll Approval Flow
 
 ### **Testing Credentials**
 
@@ -128,7 +96,7 @@ The tenant creation process adheres to the **Single Responsibility Principle (SR
 | **Statutory Reports** | Generation of PAYE and SSNIT reports in PDF and Excel formats. | **Complete** | Allows tenants to generate statutory reports for compliance. |
 | **2025-11-03** | **Payroll Element Management** | Implemented and fixed the full feature for creating, updating, and deleting tenant-level allowances and deductions. This includes the backend models, controllers, routes, and the frontend UI with its client-side logic. | **Complete** |
 | **2025-11-08** | **Dashboard & Notifications UX** | Overhauled the tenant dashboard with dynamic KPI cards and graphs. Implemented a fully dynamic notification dropdown. Created a dedicated, role-aware Activity Log page. | **Complete** |
-| **2025-11-14** | **Payroll & Reporting Fixes** | Resolved payslip generation errors, improved data accuracy (gross pay, total deductions), and enhanced statutory reports with SSNIT and TIN numbers. | **Complete** |
+| **2025-11-15** | **Payroll Notifications & Auth View Fix** | Implemented `createNotificationForRole` in `NotificationService`, added `getUsersByRole` to `UserModel`, integrated notifications into `PayrollController::createPeriod` and `runPayroll`, and passed `Auth` instance to `payroll/index.php` view. | **Complete** |
 
 
 ## Next Focus Area
@@ -138,5 +106,3 @@ The tenant creation process adheres to the **Single Responsibility Principle (SR
 * **Immediate Tasks:**
     *   Create a self-service portal for employees.
     *   Integrate an email service for notifications.
-
----

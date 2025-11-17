@@ -143,4 +143,23 @@ class PayrollPeriodModel extends Model
             return null;
         }
     }
+
+    public function getPeriodById(int $periodId, int $tenantId): ?array
+    {
+        $sql = "SELECT id, period_name, start_date, end_date, payment_date, is_closed FROM {$this->table} 
+                WHERE id = :id AND tenant_id = :tenant_id";
+
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                ':id' => $periodId,
+                ':tenant_id' => $tenantId,
+            ]);
+            $result = $stmt->fetch(\PDO::FETCH_ASSOC);
+            return $result ?: null;
+        } catch (PDOException $e) {
+            Log::error("Failed to retrieve payroll period {$periodId} for tenant {$tenantId}. Error: " . $e->getMessage());
+            return null;
+        }
+    }
 }

@@ -3,6 +3,8 @@
  * @var string $title
  * @var array $employee A comprehensive array of employee data.
  * @var array $staffFiles An array of file records for the employee.
+ * @var array $assignedPayrollElements An array of payroll elements assigned to the employee.
+ * @var array $availablePayrollElements An array of all payroll elements available for the tenant.
  * @var callable $h Helper function for HTML escaping.
  * @var object $CsrfToken Class with a static method getToken().
  */
@@ -12,6 +14,12 @@ $e = $employee; // Shorthand
 
 // Determine the profile image URL, with a fallback to a default image.
 $profileImageUrl = !empty($e['profile_picture_url']) ? $h($e['profile_picture_url']) : '/assets/img/profile.jpg';
+
+// Prepare payroll element data
+$assignedElementIds = array_column($assignedPayrollElements, 'payroll_element_id');
+$unassignedElements = array_filter($availablePayrollElements, function($element) use ($assignedElementIds) {
+    return !in_array($element['id'], $assignedElementIds);
+});
 ?>
 
 <div class="page-header">
@@ -73,6 +81,11 @@ $profileImageUrl = !empty($e['profile_picture_url']) ? $h($e['profile_picture_ur
                     <li class="nav-item">
                         <a class="nav-link" id="pills-files-tab" data-bs-toggle="pill" href="#pills-files" role="tab" aria-controls="pills-files" aria-selected="false">Staff Files</a>
                     </li>
+                    <?php if ($this->auth->can('employee:assign_payroll_elements')): ?>
+                    <li class="nav-item">
+                        <a class="nav-link" id="pills-payroll-elements-tab" data-bs-toggle="pill" href="#pills-payroll-elements" role="tab" aria-controls="pills-payroll-elements" aria-selected="false">Payroll Elements</a>
+                    </li>
+                    <?php endif; ?>
                 </ul>
                 <div class="tab-content mt-2 mb-3" id="pills-tabContent">
                     <div class="tab-pane fade show active" id="pills-employment" role="tabpanel" aria-labelledby="pills-employment-tab">
@@ -84,7 +97,8 @@ $profileImageUrl = !empty($e['profile_picture_url']) ? $h($e['profile_picture_ur
                             <dt class="col-sm-4">Position</dt><dd class="col-sm-8"><?= $h($e['position_title'] ?? 'N/A') ?></dd>
                             <dt class="col-sm-4">Employment Type</dt><dd class="col-sm-8"><?= $h($e['employment_type'] ?? 'N/A') ?></dd>
                             <hr class="my-2">
-                            <dt class="col-sm-4">Monthly Salary</dt><dd class="col-sm-8">GHS <?= number_format($e['current_salary_ghs'], 2) ?></dd>
+                            <dt class="col-sm-4 fw-bold">Monthly Gross Salary</dt><dd class="col-sm-8 fw-bold">GHS <?= number_format($e['calculated_gross_salary'], 2) ?></dd>
+                            <dt class="col-sm-4 text-muted"><em>Basic Salary</em></dt><dd class="col-sm-8 text-muted"><em>GHS <?= number_format($e['current_salary_ghs'], 2) ?></em></dd>
                             <dt class="col-sm-4">Payment Method</dt><dd class="col-sm-8"><?= $h($e['payment_method'] ?? 'N/A') ?></dd>
                             <dt class="col-sm-4">Bank</dt><dd class="col-sm-8"><?= $h($e['bank_name'] ?? 'N/A') ?></dd>
                             <dt class="col-sm-4">Account No</dt><dd class="col-sm-8"><?= $h($e['bank_account_number'] ?? 'N/A') ?></dd>
@@ -148,6 +162,61 @@ $profileImageUrl = !empty($e['profile_picture_url']) ? $h($e['profile_picture_ur
                             </table>
                         </div>
                     </div>
+                    <!-- Payroll Elements Tab -->
+                    <?php if ($this->auth->can('employee:assign_payroll_elements')): ?>
+                    <div class="tab-pane fade" id="pills-payroll-elements" role="tabpanel" aria-labelledby="pills-payroll-elements-tab">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="mb-0">Manage Payroll Elements</h5>
+                            <div id="element-assignment-spinner" class="spinner-border text-primary" role="status" style="display: none;">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                        <p class="text-muted">Check or uncheck the box to assign or unassign an element to this employee.</p>
+                        <div class="table-responsive">
+                            <table class="table table-striped" data-user-id="<?= $e['user_id'] ?>" data-csrf-token="<?= $CsrfToken::getToken() ?>">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 10%;">Status</th>
+                                        <th>Name</th>
+                                        <th>Category</th>
+                                        <th>Default Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="payroll-elements-tbody">
+                                    <?php if (empty($availablePayrollElements)): ?>
+                                        <tr><td colspan="4" class="text-center text-muted">No payroll elements have been defined for this tenant.</td></tr>
+                                    <?php else: ?>
+                                        <?php foreach ($availablePayrollElements as $element):
+                                            $isChecked = in_array($element['id'], $assignedElementIds);
+                                        ?>
+                                            <tr>
+                                                <td>
+                                                    <div class="form-check form-switch">
+                                                        <input class="form-check-input payroll-element-toggle" type="checkbox" role="switch" 
+                                                               id="element-<?= $h($element['id']) ?>"
+                                                               data-element-id="<?= $h($element['id']) ?>"
+                                                               data-default-amount="<?= $h($element['default_amount']) ?>"
+                                                               <?= $isChecked ? 'checked' : '' ?>>
+                                                    </div>
+                                                </td>
+                                                <td><label class="form-check-label" for="element-<?= $h($element['id']) ?>"><?= $h($element['name']) ?></label></td>
+                                                <td><span class="badge bg-<?= $element['category'] === 'allowance' ? 'success' : 'danger' ?>"><?= $h(ucfirst($element['category'])) ?></span></td>
+                                                <td>
+                                                    <?php if ($element['amount_type'] === 'percentage'): ?>
+                                                        <?= number_format($element['default_amount'], 2) ?>%
+                                                    <?php else: ?>
+                                                        <?= number_format($element['default_amount'], 2) ?>
+                                                    <?php endif; ?>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                        <input type="hidden" id="effective_date_hidden" name="effective_date" value="<?= date('Y-m-d') ?>">
+                    </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -221,9 +290,7 @@ $profileImageUrl = !empty($e['profile_picture_url']) ? $h($e['profile_picture_ur
     </div>
 </div>
 
-<script src="/assets/js/employees/employee-profile.js"></script>
 
-</div>
 
 <!-- Generic Error Modal -->
 <div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
@@ -279,3 +346,5 @@ $profileImageUrl = !empty($e['profile_picture_url']) ? $h($e['profile_picture_ur
         </div>
     </div>
 </div>
+
+<script src="/assets/js/employees/employee-profile.js"></script>

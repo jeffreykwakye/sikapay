@@ -8,6 +8,7 @@ use Jeffrey\Sikapay\Controllers\Controller;
 use Jeffrey\Sikapay\Core\Log;
 use Jeffrey\Sikapay\Core\ErrorResponder;
 use Jeffrey\Sikapay\Services\PayrollService;
+use Jeffrey\Sikapay\Services\NotificationService;
 use Jeffrey\Sikapay\Models\PayrollPeriodModel;
 use \Throwable;
 
@@ -15,6 +16,7 @@ class PayrollController extends Controller
 {
     private PayrollService $payrollService;
     private PayrollPeriodModel $payrollPeriodModel;
+    protected NotificationService $notificationService;
 
     public function __construct()
     {
@@ -29,6 +31,7 @@ class PayrollController extends Controller
         try {
             $this->payrollService = new PayrollService();
             $this->payrollPeriodModel = new PayrollPeriodModel();
+            $this->notificationService = new NotificationService();
         } catch (Throwable $e) {
             Log::critical("PayrollController failed to initialize services/models: " . $e->getMessage());
             ErrorResponder::respond(500, "A critical system error occurred during payroll initialization.");
@@ -43,6 +46,7 @@ class PayrollController extends Controller
             $this->view('payroll/index', [
                 'title' => 'Payroll Management',
                 'currentPeriod' => $currentPeriod,
+                'Auth' => $this->auth // Pass the Auth instance to the view
             ]);
         } catch (Throwable $e) {
             Log::error("Failed to load payroll index for Tenant {$this->tenantId}: " . $e->getMessage());
@@ -78,16 +82,25 @@ class PayrollController extends Controller
         }
 
         try {
+            $periodName = $validator->get('period_name');
             $periodId = $this->payrollPeriodModel->createPeriod(
                 $this->tenantId,
-                $validator->get('period_name'),
+                $periodName,
                 $validator->get('start_date'),
                 $validator->get('end_date'),
                 $validator->get('payment_date', 'string', null)
             );
 
             if ($periodId) {
-                $_SESSION['flash_success'] = "Payroll period '{$validator->get('period_name')}' created successfully.";
+                $_SESSION['flash_success'] = "Payroll period '{$periodName}' created successfully.";
+                // Notify tenant admins about the new payroll period
+                $this->notificationService->createNotificationForRole(
+                    $this->tenantId,
+                    'tenant_admin',
+                    'info',
+                    'New Payroll Period Created',
+                    "A new payroll period '{$periodName}' has been created, running from {$validator->get('start_date')} to {$validator->get('end_date')}."
+                );
             } else {
                 $_SESSION['flash_error'] = "Failed to create payroll period.";
             }
@@ -146,6 +159,15 @@ class PayrollController extends Controller
             $this->payrollService->processPayrollRun($this->tenantId, $payrollPeriod, $employees);
 
             $_SESSION['flash_success'] = "Payroll for '{$payrollPeriod['period_name']}' successfully processed.";
+            // Notify tenant admins about the payroll run completion
+            $this->notificationService->createNotificationForRole(
+                $this->tenantId,
+                'tenant_admin',
+                'success',
+                'Payroll Run Completed',
+                "Payroll for period '{$payrollPeriod['period_name']}' has been successfully processed."
+            );
+
         } catch (Throwable $e) {
             Log::critical("Payroll run failed for Tenant {$this->tenantId}, Period {$payrollPeriodId}: " . $e->getMessage());
             $_SESSION['flash_error'] = "A critical error occurred during payroll processing: " . $e->getMessage();
@@ -153,6 +175,8 @@ class PayrollController extends Controller
 
         $this->redirect('/payroll');
     }
+
+
 
     public function downloadPayslip(int $payslipId): void
     {
