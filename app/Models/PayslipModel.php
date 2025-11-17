@@ -268,4 +268,34 @@ class PayslipModel extends Model
             return [];
         }
     }
+
+    /**
+     * Retrieves all payslips for a specific user across all payroll periods.
+     *
+     * @param int $userId The ID of the user.
+     * @param int $tenantId The ID of the tenant.
+     * @return array An array of payslip records.
+     */
+    public function getPayslipsByUserId(int $userId, int $tenantId): array
+    {
+        $sql = "SELECT 
+                    p.id, p.gross_pay, p.net_pay, p.payslip_path, p.generated_at,
+                    pp.period_name, pp.start_date, pp.end_date
+                FROM {$this->table} p
+                JOIN payroll_periods pp ON p.payroll_period_id = pp.id
+                WHERE p.user_id = :user_id AND p.tenant_id = :tenant_id
+                ORDER BY pp.start_date DESC, p.generated_at DESC";
+
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                ':user_id' => $userId,
+                ':tenant_id' => $tenantId,
+            ]);
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            Log::error("Failed to retrieve payslips for user {$userId} (tenant {$tenantId}). Error: " . $e->getMessage());
+            return [];
+        }
+    }
 }

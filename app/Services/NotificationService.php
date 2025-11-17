@@ -6,26 +6,27 @@ namespace Jeffrey\Sikapay\Services;
 use Jeffrey\Sikapay\Core\Log;
 use Jeffrey\Sikapay\Core\Auth;
 use Jeffrey\Sikapay\Models\NotificationModel;
-use Jeffrey\Sikapay\Models\UserModel; // Placeholder for future features
-use \Throwable; // Catch all runtime exceptions
+use Jeffrey\Sikapay\Models\UserModel;
+use Jeffrey\Sikapay\Services\EmailService; // ADDED
+use \Throwable;
 
 class NotificationService
 {
     private NotificationModel $notificationModel;
-    // private UserModel $userModel; // Keeping this line commented out until needed
+    private UserModel $userModel;
+    private EmailService $emailService; // ADDED
 
     public function __construct()
     {
         try {
             $this->notificationModel = new NotificationModel();
             $this->userModel = new UserModel();
+            $this->emailService = new EmailService(); // ADDED
         } catch (Throwable $e) {
-            // CRITICAL: Failed to instantiate a required Model (DB connection or class loading error)
-            Log::critical("NotificationService failed to instantiate its models.", [
+            Log::critical("NotificationService failed to instantiate its models/services.", [
                 'error' => $e->getMessage(),
                 'file' => $e->getFile()
             ]);
-            // Re-throw: If the model can't be created, the service is non-functional.
             throw $e;
         }
     }
@@ -61,17 +62,22 @@ class NotificationService
         }
         
         try {
-            // The Model handles internal PDOExceptions (logging them and returning 0 if set up).
+            // 1. Create in-app notification
             $this->notificationModel->createNotification($tenantId, $userId, $type, $title, $body);
+
+            // 2. Send email notification
+            $user = $this->userModel->find($userId);
+            if ($user && !empty($user['email'])) {
+                $emailBody = $body ?? $title; // Use body if available, otherwise title
+                $this->emailService->send($user['email'], $title, $emailBody);
+            }
+
         } catch (Throwable $e) {
-            // Catch unexpected errors (memory, unhandled exceptions)
-            // Failure here must NOT crash the user's primary operation.
-            Log::error("Failed to create notification for User {$userId}.", [
+            Log::error("Failed to create notification or send email for User {$userId}.", [
                 'tenant_id' => $tenantId,
                 'type' => $type,
                 'error' => $e->getMessage()
             ]);
-            // Return void, effectively swallowing the error but logging it.
         }
     }
     

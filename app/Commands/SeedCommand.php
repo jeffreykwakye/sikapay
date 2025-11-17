@@ -34,6 +34,7 @@ class SeedCommand
         $this->seedPermissions(); 
         $this->seedPlans(); // Depends on Features
         $this->seedRolePermissions(); // Depends on Roles and Permissions
+        $this->seedWithholdingTaxRates(); // NEW: Seed initial withholding tax rates
         
         // System Data Seeding (Idempotent - Uses INSERT IF NOT EXISTS)
         $this->seedInitialAdmin(); 
@@ -42,6 +43,25 @@ class SeedCommand
     }
     
     // --- seedRoles(), seedFeatures(), and seedPermissions() methods are unchanged and omitted for brevity ---
+    
+    private function seedWithholdingTaxRates(): void
+    {
+        echo " - Seeding/Updating Withholding Tax Rates...\n";
+        $rates = [
+            ['effective_date' => '2025-01-01', 'rate' => 0.0750, 'employment_type' => 'Contract', 'description' => 'Standard Withholding Tax Rate for Services (Resident)'],
+            ['effective_date' => '2025-01-01', 'rate' => 0.0500, 'employment_type' => 'Casual-Worker', 'description' => 'Withholding Tax Rate for Casual Workers'],
+        ];
+
+        $stmt = $this->db->prepare("
+            INSERT INTO withholding_tax_rates (effective_date, rate, employment_type, description) VALUES (:effective_date, :rate, :employment_type, :description)
+            ON DUPLICATE KEY UPDATE rate = VALUES(rate), description = VALUES(description)
+        ");
+        
+        foreach ($rates as $rate) {
+            $stmt->execute($rate);
+        }
+        echo " - Withholding Tax Rates ensured successfully.\n";
+    }
     
     private function seedRoles(): void
     {
@@ -90,8 +110,9 @@ class SeedCommand
     {
         echo " - Seeding/Updating Permissions...\n";
         $permissions = [
-            // --- SELF-SERVICE (7 Permissions) ---
+            // --- SELF-SERVICE (8 Permissions) --- // Note: Count increased by 1
             ['key_name' => 'self:view_dashboard', 'description' => 'Can access the main user dashboard.'],
+            ['key_name' => 'self:view_profile', 'description' => 'Can view own personal and employment profile data.'], // ADDED
             ['key_name' => 'self:view_payslip', 'description' => 'Can view own payslips.'],
             ['key_name' => 'self:manage_leave', 'description' => 'Can request and track own leave.'],
             ['key_name' => 'self:update_profile', 'description' => 'Can update own password only (no personal data modification).'], 
@@ -131,6 +152,7 @@ class SeedCommand
             ['key_name' => 'config:manage_departments', 'description' => 'Can create, edit, and delete company departments.'],
             ['key_name' => 'config:manage_positions', 'description' => 'Can create, edit, and delete company job titles/positions.'],
             ['key_name' => 'config:manage_payroll_elements', 'description' => 'Can create, edit, and delete custom payroll allowances and deductions.'],
+            ['key_name' => 'config:manage_payroll_settings', 'description' => 'Can manage tenant-wide payroll settings like withholding tax rate.'],
 
             // --- LEAVE MANAGEMENT (1 Permission) ---
             ['key_name' => 'leave:approve', 'description' => 'Can approve or reject employee leave/time-off requests.'],
@@ -269,6 +291,7 @@ class SeedCommand
                 $permissionMap['self:view_payslip'], $permissionMap['self:manage_leave'],
                 $permissionMap['self:view_docs'], $permissionMap['self:manage_loan'],
                 $permissionMap['self:view_notifications'],
+                $permissionMap['self:view_profile'], // ADDED
                 // EMPLOYEE (7)
                 $permissionMap['employee:create'], $permissionMap['employee:read_all'], 
                 $permissionMap['employee:update'], $permissionMap['employee:delete'],
@@ -288,6 +311,7 @@ class SeedCommand
                 $permissionMap['config:manage_departments'],
                 $permissionMap['config:manage_positions'],
                 $permissionMap['config:manage_payroll_elements'],
+                $permissionMap['config:manage_payroll_settings'],
                 $permissionMap['leave:approve'],
             ],
 
@@ -298,6 +322,7 @@ class SeedCommand
                 $permissionMap['self:view_payslip'], $permissionMap['self:manage_leave'],
                 $permissionMap['self:view_docs'], $permissionMap['self:manage_loan'],
                 $permissionMap['self:view_notifications'],
+                $permissionMap['self:view_profile'], // ADDED
                 // EMPLOYEE (6)
                 $permissionMap['employee:create'], $permissionMap['employee:read_all'], 
                 $permissionMap['employee:update'], $permissionMap['employee:manage_docs'],
@@ -322,6 +347,7 @@ class SeedCommand
                 $permissionMap['self:view_payslip'], $permissionMap['self:manage_leave'],
                 $permissionMap['self:view_docs'], $permissionMap['self:manage_loan'],
                 $permissionMap['self:view_notifications'],
+                $permissionMap['self:view_profile'], // ADDED
                 // EMPLOYEE (1)
                 $permissionMap['employee:read_all'], 
                 // PAYROLL (5)
@@ -332,15 +358,20 @@ class SeedCommand
                 $permissionMap['payroll:run_reports'],
                 // LOAN MANAGEMENT (1)
                 $permissionMap['loan:approve'],
-                // CONFIG (1)
+                // CONFIG (2)
                 $permissionMap['config:manage_payroll_elements'],
+                $permissionMap['config:manage_payroll_settings'],
             ],
 
             // Employee:
             $roleMap['employee'] => [
-                $permissionMap['self:view_dashboard'], $permissionMap['self:update_profile'], 
-                $permissionMap['self:view_payslip'], $permissionMap['self:manage_leave'],
-                $permissionMap['self:view_docs'], $permissionMap['self:manage_loan'],
+                $permissionMap['self:view_dashboard'], 
+                $permissionMap['self:view_profile'], // ADDED
+                $permissionMap['self:update_profile'], 
+                $permissionMap['self:view_payslip'], 
+                $permissionMap['self:manage_leave'],
+                $permissionMap['self:view_docs'], 
+                $permissionMap['self:manage_loan'],
                 $permissionMap['self:view_notifications'],
             ],
             
@@ -349,6 +380,7 @@ class SeedCommand
                 $permissionMap['self:view_dashboard'], $permissionMap['self:update_profile'], 
                 $permissionMap['self:view_payslip'], $permissionMap['self:view_docs'],
                 $permissionMap['self:view_notifications'],
+                $permissionMap['self:view_profile'], // ADDED
                 $permissionMap['employee:read_all'], 
                 $permissionMap['payroll:view_all'],
                 $permissionMap['payroll:run_reports'],

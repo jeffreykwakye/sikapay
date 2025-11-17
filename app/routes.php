@@ -323,6 +323,20 @@ return [
     ]],
 
     // =========================================================
+    // Employee Self-Service Portal Routes (Protected)
+    // =========================================================
+    ['GET', '/my-account', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'self:view_profile'],
+        'handler' => ['EmployeeController', 'myAccountIndex']
+    ]],
+    ['POST', '/my-account/create-employee-profile', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'self:view_profile'], // User must be able to view their profile to create it
+        'handler' => ['EmployeeController', 'storeMyEmployeeProfile']
+    ]],
+
+    // =========================================================
     // Configuration Routes: Department Management (Protected)
     // =========================================================
     // List/Index Departments
@@ -413,5 +427,19 @@ return [
         'auth' => 'AuthMiddleware',
         'permission' => ['PermissionMiddleware', 'config:manage_payroll_elements'],
         'handler' => ['AllowanceAndDeductionController', 'delete']
+    ]],
+
+    // =========================================================
+    // Configuration Routes: Payroll Settings (Protected)
+    // =========================================================
+    ['GET', '/payroll-settings', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'config:manage_payroll_settings'],
+        'handler' => ['PayrollSettingsController', 'index']
+    ]],
+    ['POST', '/payroll-settings', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'config:manage_payroll_settings'],
+        'handler' => ['PayrollSettingsController', 'save']
     ]],
 ];

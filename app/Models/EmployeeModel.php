@@ -109,14 +109,18 @@ class EmployeeModel extends Model
         $finalData = array_merge($defaults, $data);
         
         try {
+            Log::debug("EmployeeModel::createEmployeeRecord executing SQL for User ID: " . ($finalData['user_id'] ?? 'unknown'), ['sql' => $sql, 'bind_params' => $finalData]);
             $stmt = $this->db->prepare($sql);
-            // Note: Assuming all required keys including the new bank fields are in $data or defaults
-            return $stmt->execute($finalData);
+            $result = $stmt->execute($finalData);
+            Log::debug("EmployeeModel::createEmployeeRecord execution result for User ID: " . ($finalData['user_id'] ?? 'unknown') . ": " . ($result ? 'SUCCESS' : 'FAILURE'));
+            return $result;
         } catch (PDOException $e) {
             // Log failure in create operation
             Log::error("Employee CREATE failed for User " . ($data['user_id'] ?? 'unknown') . ". Error: " . $e->getMessage(), [
                 'data' => $data,
-                'user_id' => Auth::userId()
+                'user_id' => Auth::userId(),
+                'sql' => $sql,
+                'bind_params' => $finalData
             ]);
             throw $e;
         }
@@ -214,7 +218,7 @@ class EmployeeModel extends Model
      */
     public function getEmployeeCount(int $tenantId): int
     {
-        $sql = "SELECT COUNT(user_id) FROM employees WHERE tenant_id = :tenant_id AND termination_date IS NULL";
+        $sql = "SELECT COUNT(user_id) FROM employees WHERE tenant_id = :tenant_id AND (termination_date IS NULL OR termination_date = '0000-00-00')";
         
         try {
             $stmt = $this->db->prepare($sql);

@@ -97,12 +97,13 @@ The tenant creation process adheres to the **Single Responsibility Principle (SR
 | **2025-11-03** | **Payroll Element Management** | Implemented and fixed the full feature for creating, updating, and deleting tenant-level allowances and deductions. This includes the backend models, controllers, routes, and the frontend UI with its client-side logic. | **Complete** |
 | **2025-11-08** | **Dashboard & Notifications UX** | Overhauled the tenant dashboard with dynamic KPI cards and graphs. Implemented a fully dynamic notification dropdown. Created a dedicated, role-aware Activity Log page. | **Complete** |
 | **2025-11-15** | **Payroll Notifications & Auth View Fix** | Implemented `createNotificationForRole` in `NotificationService`, added `getUsersByRole` to `UserModel`, integrated notifications into `PayrollController::createPeriod` and `runPayroll`, and passed `Auth` instance to `payroll/index.php` view. | **Complete** |
-
-
-## Next Focus Area
-
-**User Experience and Feature Enhancement**
-* **Objective:** Enhance the user experience and add more value to the platform.
-* **Immediate Tasks:**
-    *   Create a self-service portal for employees.
-    *   Integrate an email service for notifications.
+ | **2025-11-17** | **Employee Self-Service Portal (Initial Setup)** | Created dedicated `/my-account` route, `myAccountIndex` controller method, and `my_account/index.php` view with basic tabbed layout. Updated sidebar link and permissions (`self:view_profile`). Fixed `Auth::user()` call and `Model` constructor tenant context check. | **Complete** |
+ | **2025-11-17** | **Self-Service, Email & Payroll Logic** | Fully implemented employee self-service portal (profile view, payslip access). Integrated PHPMailer for email notifications. Refactored `PayrollService` to handle different employment types (Contract, Intern, Casual Worker) with correct withholding tax and SSNIT logic. | **Complete** |
+ 
+ ## Next Focus Area
+ 
+ **Statutory Rates Management**
+ * **Objective:** Provide Super Admins with the tools to manage global statutory rates.
+ * **Immediate Tasks:**
+    *   Build a UI for Super Admins to manage Tax Bands, SSNIT Rates, and the new Withholding Tax Rates.
+    *   Ensure tenant-facing views of these rates remain read-only.

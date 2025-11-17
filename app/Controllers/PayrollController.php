@@ -9,6 +9,7 @@ use Jeffrey\Sikapay\Core\Log;
 use Jeffrey\Sikapay\Core\ErrorResponder;
 use Jeffrey\Sikapay\Services\PayrollService;
 use Jeffrey\Sikapay\Services\NotificationService;
+use Jeffrey\Sikapay\Services\EmailService; // ADDED
 use Jeffrey\Sikapay\Models\PayrollPeriodModel;
 use \Throwable;
 
@@ -17,21 +18,22 @@ class PayrollController extends Controller
     private PayrollService $payrollService;
     private PayrollPeriodModel $payrollPeriodModel;
     protected NotificationService $notificationService;
+    private EmailService $emailService; // ADDED
 
     public function __construct()
     {
         parent::__construct();
-        // Ensure only tenant admins can access payroll functions
         if ($this->auth->isSuperAdmin()) {
             ErrorResponder::respond(403, "Super Admins do not manage tenant payrolls directly.");
             return;
         }
-        $this->checkPermission('payroll:manage_rules'); // Assuming a permission for payroll management
+        $this->checkPermission('payroll:manage_rules');
 
         try {
             $this->payrollService = new PayrollService();
             $this->payrollPeriodModel = new PayrollPeriodModel();
             $this->notificationService = new NotificationService();
+            $this->emailService = new EmailService(); // ADDED
         } catch (Throwable $e) {
             Log::critical("PayrollController failed to initialize services/models: " . $e->getMessage());
             ErrorResponder::respond(500, "A critical system error occurred during payroll initialization.");
@@ -167,6 +169,17 @@ class PayrollController extends Controller
                 'Payroll Run Completed',
                 "Payroll for period '{$payrollPeriod['period_name']}' has been successfully processed."
             );
+
+            // Send email to the user who initiated the payroll run
+            $currentUserEmail = $this->auth->user()['email'] ?? null;
+            if ($currentUserEmail) {
+                $subject = "SikaPay: Payroll Run Completed for {$payrollPeriod['period_name']}";
+                $body = "Dear {$this->auth->user()['first_name']},<br><br>"
+                      . "The payroll for the period '{$payrollPeriod['period_name']}' has been successfully processed.<br>"
+                      . "You can view the payslip history and reports here: <a href=\"{$_ENV['APP_URL']}/payroll/payslips\">Payslip History</a><br><br>"
+                      . "Thank you,<br>SikaPay Team";
+                $this->emailService->send($currentUserEmail, $subject, $body);
+            }
 
         } catch (Throwable $e) {
             Log::critical("Payroll run failed for Tenant {$this->tenantId}, Period {$payrollPeriodId}: " . $e->getMessage());

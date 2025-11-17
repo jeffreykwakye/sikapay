@@ -84,6 +84,7 @@ class UserProfileModel extends Model
         }
         
         if (empty($setClauses)) {
+            Log::debug("UserProfileModel::updateProfile called with empty data for User ID: {$userId}. Returning true.");
             return true;
         }
         
@@ -93,13 +94,18 @@ class UserProfileModel extends Model
         $sql = "UPDATE {$this->table} SET " . implode(', ', $setClauses) . " WHERE user_id = :user_id";
         
         try {
+            Log::debug("UserProfileModel::updateProfile executing SQL for User ID: {$userId}", ['sql' => $sql, 'bind_params' => $bindParams]);
             $stmt = $this->db->prepare($sql);
-            return $stmt->execute($bindParams);
+            $result = $stmt->execute($bindParams);
+            Log::debug("UserProfileModel::updateProfile execution result for User ID: {$userId}: " . ($result ? 'SUCCESS' : 'FAILURE'));
+            return $result;
         } catch (PDOException $e) {
             // Log failure to update profile (PII integrity)
             Log::error("PROFILE UPDATE FAILED for target User {$userId}. Error: " . $e->getMessage(), [
                 'updated_keys' => array_keys($data),
-                'acting_user_id' => Auth::userId()
+                'acting_user_id' => Auth::userId(),
+                'sql' => $sql,
+                'bind_params' => $bindParams
             ]);
             // Re-throw the exception: Data integrity is paramount for PII.
             throw $e;
@@ -128,5 +134,26 @@ class UserProfileModel extends Model
             return false;
         }
     }
+
+    /**
+     * Checks if a user profile record exists for the given user ID.
+     *
+     * @param int $userId The ID of the user to check.
+     * @return bool True if a profile exists, false otherwise.
+     */
+    public function profileExists(int $userId): bool
+    {
+        $sql = "SELECT COUNT(user_id) FROM {$this->table} WHERE user_id = :user_id";
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindParam(':user_id', $userId, \PDO::PARAM_INT);
+            $stmt->execute();
+            return (int)$stmt->fetchColumn() > 0;
+        } catch (PDOException $e) {
+            Log::error("UserProfileModel::profileExists check failed for User ID: {$userId}. Error: " . $e->getMessage());
+            return false; // Fail safe
+        }
+    }
+
 
 }

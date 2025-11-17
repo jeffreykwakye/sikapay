@@ -11,6 +11,7 @@ use Jeffrey\Sikapay\Core\Log;
 use Jeffrey\Sikapay\Core\ErrorResponder; 
 use Jeffrey\Sikapay\Core\Validator;
 use Jeffrey\Sikapay\Security\CsrfToken; // Added
+use Jeffrey\Sikapay\Core\Auth; // ADDED THIS LINE
 // use Jeffrey\Sikapay\Core\Router; // <-- REMOVED as redundant based on base Controller::redirect() implementation
 use \Throwable;
 
@@ -27,6 +28,7 @@ use Jeffrey\Sikapay\Models\CustomPayrollElementModel;
 use Jeffrey\Sikapay\Models\EmployeePayrollDetailsModel;
 use Jeffrey\Sikapay\Models\PermissionModel;
 use Jeffrey\Sikapay\Models\UserPermissionModel;
+use Jeffrey\Sikapay\Models\PayslipModel;
 
 
 class EmployeeController extends Controller
@@ -39,6 +41,7 @@ class EmployeeController extends Controller
     private RoleModel $roleModel;
     private PermissionModel $permissionModel;
     private UserPermissionModel $userPermissionModel;
+    private PayslipModel $payslipModel;
     
     // Permission Constants 
     public const PERM_EDIT_PERSONAL = 'employee:update';
@@ -62,6 +65,7 @@ class EmployeeController extends Controller
             $this->roleModel = new RoleModel();
             $this->permissionModel = new PermissionModel();
             $this->userPermissionModel = new UserPermissionModel();
+            $this->payslipModel = new PayslipModel();
             
         } catch (Throwable $e) {
             Log::critical("EmployeeController failed to initialize core models: " . $e->getMessage());
@@ -257,6 +261,12 @@ class EmployeeController extends Controller
             'date_of_birth' => 'required|date', 
             'emergency_contact_name' => 'required|min:3',
             'emergency_contact_phone' => 'required|min:8',
+            'ssnit_number' => 'optional|max:50',
+            'tin_number' => 'optional|max:50',
+            'bank_name' => 'optional|max:100',
+            'bank_branch' => 'optional|max:100',
+            'bank_account_name' => 'optional|max:100',
+            'bank_account_number' => 'optional|max:50',
         ]);
 
         if ($validator->fails()) {
@@ -1010,6 +1020,63 @@ class EmployeeController extends Controller
     }
 
     /**
+     * Display the employee self-service portal for the currently logged-in user.
+     */
+    public function myAccountIndex(): void
+    {
+        try {
+            // The permission 'self:view_profile' is checked by the middleware.
+            // Get the currently authenticated user's ID
+            $currentUserId = Auth::userId(); // Corrected: Use static method
+
+            // Fetch the employee profile for the current user
+            $employee = $this->employeeModel->getEmployeeProfile($currentUserId);
+
+            if (!$employee) {
+                // If no employee profile exists, show a form to create one for the current user
+                Log::info("Authenticated user {$currentUserId} does not have an employee profile. Redirecting to create form.");
+                
+                // Fetch user data to pre-populate the form
+                $userModel = new UserModel();
+                $currentUser = $userModel->find($currentUserId);
+
+                if (!$currentUser) {
+                    Log::critical("Authenticated user {$currentUserId} not found in users table.");
+                    ErrorResponder::respond(500, "Critical error: Your user account could not be retrieved.");
+                    return;
+                }
+
+                $departments = $this->departmentModel->all();
+                $positions = $this->positionModel->all();
+
+                $this->view('employee/my_account/create_employee_profile', [
+                    'title' => 'Create My Employee Profile',
+                    'currentUser' => $currentUser, // Pass user data to pre-populate
+                    'departments' => $departments,
+                    'positions' => $positions,
+                ]);
+                return; // Important: stop execution after rendering the form
+            }
+
+            // If employee profile exists, render the self-service portal view
+            $payslips = $this->payslipModel->getPayslipsByUserId($currentUserId, $this->tenantId);
+            $assignedPayrollElements = $this->employeePayrollDetailsModel->getDetailsForEmployee($currentUserId, $this->tenantId);
+
+            $this->view('employee/my_account/index', [
+                'title' => 'My Account',
+                'employee' => $employee,
+                'payslips' => $payslips,
+                'assignedPayrollElements' => $assignedPayrollElements,
+            ]);
+
+        } catch (Throwable $e) {
+            // Also correct this log message to use Auth::userId()
+            Log::error("Failed to load My Account page for User " . Auth::userId() . ": " . $e->getMessage());
+            ErrorResponder::respond(500, "Could not load your account details due to a system error.");
+        }
+    }
+
+    /**
      * DELETE the employee record (Soft Delete/Deactivate).
      */
     public function delete(int $userId): void
@@ -1249,5 +1316,188 @@ class EmployeeController extends Controller
             Log::error("Failed to unassign payroll element {$payrollElementId} from User {$userId} for Tenant {$this->tenantId}: " . $e->getMessage());
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => 'An error occurred while unassigning the payroll element.']);
+        }
+    }
+
+    /**
+     * Handles the creation of an employee profile for the currently logged-in user (e.g., a tenant admin).
+     * This method is called from the /my-account/create-employee-profile route.
+     */
+    public function storeMyEmployeeProfile(): void
+    {
+        // Ensure the user is authenticated and has permission to view their own profile
+        // The middleware already handles 'self:view_profile'
+        $currentUserId = Auth::userId();
+        $tenantId = Auth::tenantId();
+
+        Log::debug("storeMyEmployeeProfile called for User ID: {$currentUserId}, Tenant ID: {$tenantId}");
+        Log::debug("POST Data: ", $_POST);
+
+        // 1. Validation and Sanitization
+        $validator = new Validator($_POST);
+        $validator->validate([
+            'user_id' => 'required|int|equals:' . $currentUserId, // Ensure form submission is for the logged-in user
+            'date_of_birth' => 'required|date',
+            'gender' => 'required|min:1',
+            'marital_status' => 'required|min:1',
+            'nationality' => 'required|min:2',
+            'home_address' => 'optional|max:500',
+            'employee_id' => 'required|min:3',
+            'hire_date' => 'required|date',
+            'employment_type' => 'required|min:1',
+            'current_position_id' => 'required|int',
+            'monthly_base_salary' => 'required|numeric',
+            'payment_method' => 'required|min:1',
+            'bank_name' => 'optional|max:100',
+            'bank_branch' => 'optional|max:100',
+            'bank_account_name' => 'optional|max:100',
+            'bank_account_number' => 'optional|max:50',
+            'ssnit_number' => 'optional|max:50',
+            'tin_number' => 'optional|max:50',
+            'id_card_type' => 'optional|min:1',
+            'id_card_number' => 'optional|max:100',
+            'emergency_contact_name' => 'required|min:3',
+            'emergency_contact_phone' => 'required|min:8',
+        ]);
+
+        if ($validator->fails()) {
+            $errors = implode('<br>', $validator->errors());
+            Log::error("Validation failed in storeMyEmployeeProfile: {$errors}", ['post_data' => $_POST]);
+            $_SESSION['flash_error'] = "Profile creation failed due to invalid input: <br>{$errors}";
+            $_SESSION['flash_input'] = $validator->all();
+            $this->redirect('/my-account'); // Redirect back to my-account, which will show the form again
+            return;
+        }
+
+        Log::debug("Validation passed in storeMyEmployeeProfile.");
+
+        // --- START Uniqueness Checks ---
+        $ssnit = $validator->get('ssnit_number', 'string', null);
+        $tin = $validator->get('tin_number', 'string', null);
+        $customErrors = [];
+
+        // Check SSNIT uniqueness (only if provided)
+        if (!empty($ssnit) && $this->employeeModel->isComplianceNumberInUse($ssnit, 'ssnit_number')) {
+            $customErrors[] = "The **SSNIT number** '{$ssnit}' is already registered to another user.";
+        }
+
+        // Check TIN uniqueness (only if provided)
+        if (!empty($tin) && $this->employeeModel->isComplianceNumberInUse($tin, 'tin_number')) {
+            $customErrors[] = "The **TIN number** '{$tin}' is already registered to another user.";
+        }
+
+        // Check Employee ID uniqueness within the current tenant
+        $employeeId = $validator->get('employee_id');
+        if ($this->employeeModel->isEmployeeIdInUse($employeeId)) {
+            $customErrors[] = "The **Employee ID** '{$employeeId}' is already assigned within this tenant.";
+        }
+
+        if (!empty($customErrors)) {
+            $errors = implode('<br>', $customErrors);
+            Log::error("Uniqueness checks failed in storeMyEmployeeProfile: {$errors}", ['post_data' => $_POST]);
+            $_SESSION['flash_error'] = "Profile creation failed due to duplicate data: <br>{$errors}";
+            $_SESSION['flash_input'] = $validator->all();
+            $this->redirect('/my-account');
+            return;
+        }
+        Log::debug("Uniqueness checks passed in storeMyEmployeeProfile.");
+
+        // 2. Start Transaction
+        $db = $this->employeeModel->getDB();
+        try {
+            $db->beginTransaction();
+            Log::debug("Transaction started in storeMyEmployeeProfile.");
+
+            $userProfileModel = new UserProfileModel();
+            $auditModel = new AuditModel();
+            $userModel = new UserModel();
+
+            // Fetch user's first and last name for audit log
+            $currentUser = $userModel->find($currentUserId);
+            $userFirstName = $currentUser['first_name'] ?? 'Unknown';
+            $userLastName = $currentUser['last_name'] ?? 'User';
+
+            // 3. Prepare Profile Data
+            $profileData = [
+                'user_id' => $currentUserId, // Required for createProfile
+                'date_of_birth' => $validator->get('date_of_birth'),
+                'gender' => $validator->get('gender'),
+                'marital_status' => $validator->get('marital_status'),
+                'nationality' => $validator->get('nationality'),
+                'home_address' => $validator->get('home_address', 'string', null),
+                'ssnit_number' => $ssnit,
+                'tin_number' => $tin,
+                'id_card_type' => $validator->get('id_card_type', 'string', null),
+                'id_card_number' => $validator->get('id_card_number', 'string', null),
+                'emergency_contact_name' => $validator->get('emergency_contact_name'),
+                'emergency_contact_phone' => $validator->get('emergency_contact_phone'),
+            ];
+
+            // 3.1. Check if user profile exists and either update or create
+            if ($userProfileModel->profileExists($currentUserId)) {
+                Log::debug("User profile exists for User ID: {$currentUserId}. Attempting to update profile.");
+                if (!$userProfileModel->updateProfile($currentUserId, $profileData)) {
+                    throw new \Exception("Failed to update user profile.");
+                }
+                Log::debug("User profile updated successfully for User ID: {$currentUserId}.");
+            } else {
+                Log::debug("User profile does NOT exist for User ID: {$currentUserId}. Attempting to create profile.");
+                if (!$userProfileModel->createProfile($profileData)) {
+                    throw new \Exception("Failed to create user profile.");
+                }
+                Log::debug("User profile created successfully for User ID: {$currentUserId}.");
+            }
+
+            // 4. Create Employee Record (employees)
+            // This is a new record for an existing user.
+            $employeeData = [
+                'user_id' => $currentUserId,
+                'tenant_id' => $tenantId,
+                'employee_id' => $employeeId,
+                'current_position_id' => $validator->get('current_position_id', 'int'),
+                'hire_date' => $validator->get('hire_date'),
+                'employment_type' => $validator->get('employment_type'),
+                'current_salary_ghs' => $validator->get('monthly_base_salary', 'float'),
+                'payment_method' => $validator->get('payment_method'),
+                'bank_name' => $validator->get('bank_name', 'string', null),
+                'bank_branch' => $validator->get('bank_branch', 'string', null),
+                'bank_account_name' => $validator->get('bank_account_name', 'string', null),
+                'bank_account_number' => $validator->get('bank_account_number', 'string', null),
+                'is_payroll_eligible' => 1, // Default to eligible
+            ];
+            Log::debug("Attempting to create employee record for User ID: {$currentUserId}", ['employee_data' => $employeeData]);
+            if (!$this->employeeModel->createEmployeeRecord($employeeData)) {
+                throw new \Exception("Failed to create employee record.");
+            }
+            Log::debug("Employee record created successfully for User ID: {$currentUserId}.");
+
+            // 5. Audit Logging
+            $auditModel->log(
+                $tenantId,
+                'Employee Profile Created for User: ' . $userFirstName . ' ' . $userLastName,
+                ['user_id' => $currentUserId, 'employee_id' => $employeeId]
+            );
+            Log::debug("Audit log created for employee profile creation.");
+
+            // 6. Commit Transaction
+            $db->commit();
+            Log::debug("Transaction committed successfully in storeMyEmployeeProfile.");
+
+            // 7. Success Handling
+            $_SESSION['flash_success'] = "Your employee profile has been created successfully!";
+            $this->redirect('/my-account'); // Redirect to the now-populated my-account page
+
+        } catch (Throwable $e) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            Log::critical("Employee Profile Creation Transaction Failed for User {$currentUserId}: " . $e->getMessage(), [
+                'user_id' => $currentUserId,
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString() // Add full trace for better debugging
+            ]);
+
+            $_SESSION['flash_error'] = "Error creating your employee profile: A critical system error occurred. Please try again.";
+            $this->redirect('/my-account');
         }
     }}

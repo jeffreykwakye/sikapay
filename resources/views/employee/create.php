@@ -149,6 +149,8 @@ if (!isset($h)) {
                                 <option value="Part-Time" <?= $selectedEmpType === 'Part-Time' ? 'selected' : '' ?>>Part-Time</option>
                                 <option value="Contract" <?= $selectedEmpType === 'Contract' ? 'selected' : '' ?>>Contract</option>
                                 <option value="Intern" <?= $selectedEmpType === 'Intern' ? 'selected' : '' ?>>Intern</option>
+                                <option value="National-Service" <?= $selectedEmpType === 'National-Service' ? 'selected' : '' ?>>National Service Personnel</option>
+                                <option value="Casual-Worker" <?= $selectedEmpType === 'Casual-Worker' ? 'selected' : '' ?>>Casual Worker</option>
                             </select>
                         </div>
                         <div class="col-md-4 mb-3">

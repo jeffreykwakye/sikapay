@@ -58,6 +58,8 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 | **In-App Notifications**| Full System Pipeline | **Complete** | Real-time alerts, a dynamic navbar dropdown with recent notifications, and a dedicated page for all notifications. |
 | **Employee Profile** | View, Profile Picture Upload, Staff File Upload, Staff File Deletion | **Complete** | Modern, two-column layout with tabbed navigation. |
 | **Payroll & Reporting Fixes** | Payslip generation, data accuracy (gross pay, total deductions), and addition of SSNIT/TIN numbers to reports. | **Complete** | Resolved payroll run errors and enhanced statutory reports with critical employee identifiers. |
+| **Employee Self-Service** | View Personal/Employment Info, View/Download Payslips, Create own profile if non-existent. | **Core Complete** | Dedicated portal for employees to access their data and manage basic information. |
+| **Advanced Payroll Logic** | Conditional tax/SSNIT logic for different employment types (Contract, Intern, National-Service, Casual-Worker). | **Complete** | Implemented withholding tax for contractors/casuals and exemptions for interns/NSS. |
 
 ---
 
@@ -78,14 +80,12 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 
 
 
-**User Experience and Feature Enhancement**
+**Statutory Rates Management**
 
-* **Objective:** Enhance the user experience and add more value to the platform.
+* **Objective:** Provide Super Admins with the tools to manage global statutory rates.
 
 * **Immediate Tasks:**
-
-    *   Create a self-service portal for employees.
-
-    *   Integrate an email service for notifications.
+    *   Build a UI for Super Admins to manage Tax Bands, SSNIT Rates, and the new Withholding Tax Rates.
+    *   Ensure tenant-facing views of these rates remain read-only.
 
 

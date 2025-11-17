@@ -41,7 +41,8 @@ abstract class Model
         $this->currentTenantId = Auth::tenantId();
 
         // 3. Security Check (Non-admin must have a Tenant ID)
-        if (!$this->isSuperAdmin && $this->currentTenantId === 0) {
+        // This check should be bypassed for models explicitly marked as noTenantScope
+        if (!$this->noTenantScope && !$this->isSuperAdmin && $this->currentTenantId === 0) {
             // Log security violation and halt
             Log::critical("SECURITY VIOLATION: Non-admin user (ID: " . Auth::userId() . ") accessing Model '{$table}' without a Tenant ID.", [
                 'user_id' => Auth::userId(), 

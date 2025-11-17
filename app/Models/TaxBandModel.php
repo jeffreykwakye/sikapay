@@ -55,4 +55,22 @@ class TaxBandModel extends Model
             return [];
         }
     }
+
+    /**
+     * Retrieves all unique tax years available in the tax_bands table.
+     *
+     * @return array An array of unique tax years, ordered descending.
+     */
+    public function getAvailableTaxYears(): array
+    {
+        $sql = "SELECT DISTINCT tax_year FROM {$this->table} ORDER BY tax_year DESC";
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute();
+            return $stmt->fetchAll(\PDO::FETCH_COLUMN) ?: [];
+        } catch (PDOException $e) {
+            Log::error("Failed to retrieve available tax years. Error: " . $e->getMessage());
+            return [];
+        }
+    }
 }

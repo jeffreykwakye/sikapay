@@ -41,4 +41,50 @@ class PayrollSettingsModel extends Model
             return $default;
         }
     }
+
+    /**
+     * Retrieves all payroll settings for a tenant as a key-value array.
+     *
+     * @param int $tenantId
+     * @return array
+     */
+    public function getSettingsByTenant(int $tenantId): array
+    {
+        $sql = "SELECT setting_key, setting_value FROM {$this->table} WHERE tenant_id = :tenant_id";
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([':tenant_id' => $tenantId]);
+            return $stmt->fetchAll(\PDO::FETCH_KEY_PAIR) ?: [];
+        } catch (PDOException $e) {
+            Log::error("Failed to retrieve all payroll settings for tenant {$tenantId}. Error: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Saves a payroll setting for a tenant (inserts or updates).
+     *
+     * @param int $tenantId
+     * @param string $key
+     * @param string $value
+     * @return bool
+     */
+    public function saveSetting(int $tenantId, string $key, string $value): bool
+    {
+        $sql = "INSERT INTO {$this->table} (tenant_id, setting_key, setting_value)
+                VALUES (:tenant_id, :setting_key, :setting_value)
+                ON DUPLICATE KEY UPDATE setting_value = :setting_value";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            return $stmt->execute([
+                ':tenant_id' => $tenantId,
+                ':setting_key' => $key,
+                ':setting_value' => $value,
+            ]);
+        } catch (PDOException $e) {
+            Log::error("Failed to save payroll setting ('{$key}') for tenant {$tenantId}. Error: " . $e->getMessage());
+            return false;
+        }
+    }
 }

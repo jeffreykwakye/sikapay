@@ -24,7 +24,7 @@ class SsnitRateModel extends Model
      */
     public function getCurrentSsnitRate(): ?array
     {
-        $sql = "SELECT employee_rate, employer_rate, max_contribution_cap FROM {$this->table} 
+        $sql = "SELECT effective_date, employee_rate, employer_rate, max_contribution_cap FROM {$this->table} 
                 WHERE effective_date <= CURDATE()
                 ORDER BY effective_date DESC
                 LIMIT 1";

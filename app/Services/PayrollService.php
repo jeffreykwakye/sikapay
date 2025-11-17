@@ -22,6 +22,7 @@ use Jeffrey\Sikapay\Models\GraPayeAdviceModel;
 use Jeffrey\Sikapay\Models\BankAdviceModel;
 use Jeffrey\Sikapay\Helpers\PayslipPdfGenerator;
 use Jeffrey\Sikapay\Models\AuditModel;
+use Jeffrey\Sikapay\Models\WithholdingTaxRateModel;
 use \PDO;
 use \Exception;
 
@@ -43,6 +44,7 @@ class PayrollService
     private GraPayeAdviceModel $graPayeAdviceModel;
     private BankAdviceModel $bankAdviceModel;
     private AuditModel $auditModel;
+    private WithholdingTaxRateModel $withholdingTaxRateModel;
 
     public function __construct()
     {
@@ -62,6 +64,7 @@ class PayrollService
         $this->graPayeAdviceModel = new GraPayeAdviceModel();
         $this->bankAdviceModel = new BankAdviceModel();
         $this->auditModel = new AuditModel();
+        $this->withholdingTaxRateModel = new WithholdingTaxRateModel();
     }
 
     /**
@@ -143,31 +146,87 @@ class PayrollService
                     'amount' => $elementValue,
                 ];
             }
-            // TODO: Implement specific logic for overtime and bonuses if they are distinct element types
-            // For now, they are treated as general allowances if configured as such.
         }
 
-        // 2. Calculate Gross Pay (Basic Salary + Total Allowances + Overtime + Bonuses)
-        // For now, assuming overtime and bonuses are part of totalAllowances if configured as such.
-        // If they are separate payroll elements, they need to be processed distinctly.
-        $totalOvertime = 0.0; // Placeholder for now
-        $totalBonuses = 0.0;  // Placeholder for now
-
+        $totalOvertime = 0.0;
+        $totalBonuses = 0.0;
         $grossPay = $basicSalary + $totalAllowances + $totalOvertime + $totalBonuses;
 
-        // 3. Calculate SSNIT Contribution (5.5% of basic salary for employee, 13% for employer)
-        // SSNIT is calculated on basic salary + SSNIT-chargeable allowances
-        $ssnitBase = $basicSalary + $totalSsnitChargeableAllowances;
-        $employeeSsnit = $ssnitBase * $ssnitRate['employee_rate'];
-        $employerSsnit = $ssnitBase * $ssnitRate['employer_rate'];
+        // NEW: Conditional logic based on employment type
+        if ($employee['employment_type'] === 'Intern' || $employee['employment_type'] === 'National-Service') {
+            // --- Logic for Interns and National Service ---
+            $employeeSsnit = 0.0;
+            $employerSsnit = 0.0;
+            $monthlyPaye = 0.0;
+            $totalTaxableIncome = 0.0; // No taxable income
 
-        // 4. Calculate Taxable Income (Gross Pay - Employee SSNIT - Non-taxable allowances/deductions)
-        // For now, all deductions are applied after tax calculation for simplicity, except employee SSNIT.
-        // If there are non-taxable deductions that reduce taxable income, they need to be factored here.
-        $totalTaxableIncome = $grossPay - $employeeSsnit - ($totalAllowances - $totalTaxableAllowances); // Gross - Employee SSNIT - Non-taxable allowances
+            Log::debug("Intern/NSS Payroll Calculation", [
+                'employee_id' => $employeeUserId,
+                'gross_pay' => $grossPay,
+                'taxable_income' => $totalTaxableIncome,
+                'paye_amount' => $monthlyPaye,
+                'ssnit_amount' => $employeeSsnit
+            ]);
 
-        // 5. Calculate PAYE (directly use monthly taxable income with monthly bands)
-        $monthlyPaye = $this->calculatePaye($totalTaxableIncome, $taxBands, false);
+        } else if ($employee['employment_type'] === 'Contract') {
+            // --- Logic for Contract Employees ---
+            $employeeSsnit = 0.0;
+            $employerSsnit = 0.0;
+            
+            // For contractors, taxable income is their full gross pay.
+            $totalTaxableIncome = $grossPay;
+
+            // Fetch withholding tax rate from the new model.
+            $whtRateData = $this->withholdingTaxRateModel->getCurrentEffectiveRate($employee['employment_type'], $payrollPeriod['start_date']);
+            $withholdingTaxRate = (float)($whtRateData['rate'] ?? 0.075); // Default to 7.5% if not found
+
+            // Tax is a flat withholding rate.
+            $monthlyPaye = $totalTaxableIncome * $withholdingTaxRate;
+
+            Log::debug("Contractor Payroll Calculation", [
+                'employee_id' => $employeeUserId,
+                'gross_pay' => $grossPay,
+                'taxable_income' => $totalTaxableIncome,
+                'wht_rate' => $withholdingTaxRate,
+                'paye_amount' => $monthlyPaye
+            ]);
+
+        } else if ($employee['employment_type'] === 'Casual-Worker') {
+            // --- Logic for Casual Workers ---
+            $employeeSsnit = 0.0;
+            $employerSsnit = 0.0;
+            
+            // For casual workers, taxable income is their full gross pay.
+            $totalTaxableIncome = $grossPay;
+
+            // Fetch withholding tax rate for casual workers.
+            $whtRateData = $this->withholdingTaxRateModel->getCurrentEffectiveRate($employee['employment_type'], $payrollPeriod['start_date']);
+            $withholdingTaxRate = (float)($whtRateData['rate'] ?? 0.050); // Default to 5% for casual workers
+
+            // Tax is a flat withholding rate.
+            $monthlyPaye = $totalTaxableIncome * $withholdingTaxRate;
+
+            Log::debug("Casual Worker Payroll Calculation", [
+                'employee_id' => $employeeUserId,
+                'gross_pay' => $grossPay,
+                'taxable_income' => $totalTaxableIncome,
+                'wht_rate' => $withholdingTaxRate,
+                'paye_amount' => $monthlyPaye
+            ]);
+
+        } else {
+            // --- Existing Logic for Permanent/Other Employees ---
+            // 3. Calculate SSNIT Contribution
+            $ssnitBase = $basicSalary + $totalSsnitChargeableAllowances;
+            $employeeSsnit = $ssnitBase * $ssnitRate['employee_rate'];
+            $employerSsnit = $ssnitBase * $ssnitRate['employer_rate'];
+
+            // 4. Calculate Taxable Income
+            $totalTaxableIncome = $grossPay - $employeeSsnit - ($totalAllowances - $totalTaxableAllowances);
+
+            // 5. Calculate PAYE (Progressive)
+            $monthlyPaye = $this->calculatePaye($totalTaxableIncome, $taxBands, false);
+        }
 
         // 6. Calculate Total Deductions (Custom + Statutory)
         $totalStatutoryDeductions = $employeeSsnit + $monthlyPaye;

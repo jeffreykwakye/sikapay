@@ -147,6 +147,7 @@
                             <?php endif; ?>
                             <?php if ($auth->hasPermission('config:manage_payroll_elements')): ?>
                             <li><a href="/payroll-elements"><span class="sub-item">Payroll Elements</span></a></li>
+                            <li><a href="/payroll-settings"><span class="sub-item">Payroll Settings</span></a></li>
                             <?php endif; ?>
                         </ul>
                     </div>
@@ -243,7 +244,7 @@
                 </li>
                 <?php endif; ?>
 
-                <?php if ($auth->hasPermission('self:update_profile')): ?>
+                <?php if ($auth->hasPermission('self:view_profile')): ?>
                 <li class="nav-item">
                     <a href="/my-account">
                         <i class="fas fa-user-circle"></i>
