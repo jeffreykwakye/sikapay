@@ -257,7 +257,7 @@
                         <div class="quick-actions-items">
                             <?php if (isset($isSuperAdmin) && $isSuperAdmin):?>
                             <div class="row m-0">
-                                <?php if ($auth->hasPermission('tenant:manage')): ?>
+                                <?php if ($auth->hasPermission('super:view_tenants')): ?>
                                 <a class="col-6 col-md-4 p-0" href="/tenants">
                                     <div class="quick-actions-item">
                                         <div class="avatar-item bg-success rounded-circle">
@@ -267,8 +267,8 @@
                                     </div>
                                 </a>
                                 <?php endif; ?>
-                                <?php if ($auth->hasPermission('plan:manage')): ?>
-                                <a class="col-6 col-md-4 p-0" href="/plans">
+                                <?php if ($auth->hasPermission('super:manage_plans')): ?>
+                                <a class="col-6 col-md-4 p-0" href="/super/plans">
                                     <div class="quick-actions-item">
                                         <div class="avatar-item bg-danger rounded-circle">
                                             <i class="fas fa-file-invoice"></i>
@@ -277,8 +277,8 @@
                                     </div>
                                 </a>
                                 <?php endif; ?>
-                                <?php if ($auth->hasPermission('system:view_reports')): ?>
-                                <a class="col-6 col-md-4 p-0" href="/reports">
+                                <?php if ($auth->hasPermission('super:view_reports')): ?>
+                                <a class="col-6 col-md-4 p-0" href="/super/reports">
                                     <div class="quick-actions-item">
                                         <div class="avatar-item bg-info rounded-circle">
                                             <i class="fas fa-chart-bar"></i>
@@ -287,8 +287,8 @@
                                     </div>
                                 </a>
                                 <?php endif; ?>
-                                <?php if ($auth->hasPermission('user:manage_all')): ?>
-                                <a class="col-6 col-md-4 p-0" href="/users">
+                                <?php if ($auth->hasPermission('super:manage_users')): ?>
+                                <a class="col-6 col-md-4 p-0" href="/super/users">
                                     <div class="quick-actions-item">
                                         <div class="avatar-item bg-primary rounded-circle">
                                             <i class="fas fa-user-friends"></i>
@@ -297,8 +297,8 @@
                                     </div>
                                 </a>
                                 <?php endif; ?>
-                                <?php if ($auth->hasPermission('audit:view_all')): ?>
-                                <a class="col-6 col-md-4 p-0" href="/audit-logs">
+                                <?php if ($auth->hasPermission('super:view_audit_logs')): ?>
+                                <a class="col-6 col-md-4 p-0" href="/super/audit-logs">
                                     <div class="quick-actions-item">
                                         <div class="avatar-item bg-secondary rounded-circle">
                                             <i class="far fa-eye"></i>
@@ -307,8 +307,8 @@
                                     </div>
                                 </a>
                                 <?php endif; ?>
-                                <?php if ($auth->hasPermission('system:manage_settings')): ?>
-                                <a class="col-6 col-md-4 p-0" href="/settings">
+                                <?php if ($auth->hasPermission('super:manage_settings')): ?>
+                                <a class="col-6 col-md-4 p-0" href="/super/settings">
                                     <div class="quick-actions-item">
                                         <div class="avatar-item bg-warning rounded-circle">
                                             <i class="fas fa-cogs"></i>

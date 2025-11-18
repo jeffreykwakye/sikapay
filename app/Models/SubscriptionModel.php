@@ -143,4 +143,151 @@ class SubscriptionModel extends Model
             return null;
         }
     }
+
+    /**
+     * Counts the total number of active subscriptions in the system.
+     * @return int
+     */
+    public function countActiveSubscriptions(): int
+    {
+        $sql = "SELECT COUNT(tenant_id) FROM {$this->table} WHERE status = 'active'";
+        try {
+            $stmt = $this->db->query($sql);
+            return (int)$stmt->fetchColumn();
+        } catch (PDOException $e) {
+            Log::error("Failed to count active subscriptions. Error: " . $e->getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Retrieves all subscriptions with tenant and plan names.
+     * @return array
+     */
+    public function getAllSubscriptionsWithTenantAndPlan(): array
+    {
+        $sql = "SELECT 
+                    s.status, s.start_date, s.end_date,
+                    t.id as tenant_id, t.name as tenant_name,
+                    p.name as plan_name
+                FROM {$this->table} s
+                JOIN tenants t ON s.tenant_id = t.id
+                JOIN plans p ON s.current_plan_id = p.id
+                ORDER BY t.name ASC";
+        
+        try {
+            $stmt = $this->db->query($sql);
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            Log::error("Failed to retrieve all subscriptions with tenant and plan data. Error: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Retrieves all active subscriptions that have passed their end_date.
+     * Includes tenant and plan names for notification purposes.
+     * @return array
+     */
+    public function getExpiredActiveSubscriptions(): array
+    {
+        $sql = "SELECT 
+                    s.tenant_id, s.current_plan_id, s.status, s.start_date, s.end_date,
+                    t.name as tenant_name,
+                    p.name as plan_name
+                FROM {$this->table} s
+                JOIN tenants t ON s.tenant_id = t.id
+                JOIN plans p ON s.current_plan_id = p.id
+                WHERE s.status = 'active' AND s.end_date < CURDATE()";
+        
+        try {
+            $stmt = $this->db->query($sql);
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            Log::error("Failed to retrieve expired active subscriptions. Error: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Updates the status of a subscription for a given tenant.
+     * @param int $tenantId
+     * @param string $status
+     * @return bool
+     */
+    public function updateSubscriptionStatus(int $tenantId, string $status): bool
+    {
+        $sql = "UPDATE {$this->table} SET status = :status WHERE tenant_id = :tenant_id";
+        try {
+            $stmt = $this->db->prepare($sql);
+            return $stmt->execute([
+                ':status' => $status,
+                ':tenant_id' => $tenantId,
+            ]);
+        } catch (PDOException $e) {
+            Log::error("Failed to update subscription status for tenant ID {$tenantId} to {$status}. Error: " . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * Calculates the Monthly Recurring Revenue (MRR) from all active subscriptions.
+     * @return float
+     */
+    public function calculateMRR(): float
+    {
+        $sql = "SELECT SUM(p.price_ghs) 
+                FROM {$this->table} s
+                JOIN plans p ON s.current_plan_id = p.id
+                WHERE s.status = 'active'";
+        try {
+            $stmt = $this->db->query($sql);
+            return (float)$stmt->fetchColumn();
+        } catch (PDOException $e) {
+            Log::error("Failed to calculate MRR. Error: " . $e->getMessage());
+            return 0.0;
+        }
+    }
+
+    /**
+     * Retrieves the monthly revenue trend for the last X months.
+     * For simplicity, this sums the price_ghs of subscriptions that were active
+     * at any point during the month, or started in that month.
+     * A more robust solution would track actual payments.
+     * @param int $months The number of months to retrieve data for.
+     * @return array
+     */
+    public function getRevenueTrend(int $months = 12): array
+    {
+        $data = [];
+        for ($i = $months - 1; $i >= 0; $i--) {
+            $month = date('Y-m', strtotime("-{$i} months"));
+            $monthStart = date('Y-m-01', strtotime("-{$i} months"));
+            $monthEnd = date('Y-m-t', strtotime("-{$i} months"));
+
+            $sql = "SELECT SUM(p.price_ghs) 
+                    FROM {$this->table} s
+                    JOIN plans p ON s.current_plan_id = p.id
+                    WHERE s.status = 'active' 
+                    AND s.start_date <= :month_end 
+                    AND (s.end_date IS NULL OR s.end_date >= :month_start)";
+            
+            try {
+                $stmt = $this->db->prepare($sql);
+                $stmt->execute([
+                    ':month_start' => $monthStart,
+                    ':month_end' => $monthEnd
+                ]);
+                $revenue = (float)$stmt->fetchColumn();
+                $data[] = [
+                    'month' => date('M Y', strtotime($monthStart)),
+                    'revenue' => $revenue
+                ];
+            } catch (PDOException $e) {
+                Log::error("Failed to get revenue trend for month {$month}. Error: " . $e->getMessage());
+                $data[] = ['month' => date('M Y', strtotime($monthStart)), 'revenue' => 0.0];
+            }
+        }
+        return $data;
+    }
 }

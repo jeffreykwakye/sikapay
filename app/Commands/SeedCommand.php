@@ -162,6 +162,11 @@ class SeedCommand
             ['key_name' => 'super:view_tenants', 'description' => 'Can view a list of all client tenants.'],
             ['key_name' => 'super:create_tenant', 'description' => 'Can provision new client tenants.'],
             ['key_name' => 'super:impersonate', 'description' => 'Can temporarily log in as any tenant user.'],
+            ['key_name' => 'super:manage_plans', 'description' => 'Can create, edit, and delete subscription plans.'],
+            ['key_name' => 'super:view_reports', 'description' => 'Can view system-wide reports.'],
+            ['key_name' => 'super:manage_users', 'description' => 'Can manage all users across all tenants.'],
+            ['key_name' => 'super:view_audit_logs', 'description' => 'Can view system-wide audit logs.'],
+            ['key_name' => 'super:manage_settings', 'description' => 'Can manage system-wide settings.'],
         ];
 
         $stmt = $this->db->prepare("INSERT IGNORE INTO permissions (key_name, description) VALUES (:key_name, :description)");

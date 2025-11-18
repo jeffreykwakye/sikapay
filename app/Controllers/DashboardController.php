@@ -41,18 +41,23 @@ class DashboardController extends Controller
     public function index(): void
     {
         try {
-            $isSuperAdmin = $this->auth->isSuperAdmin();
+            // If the user is a super admin, redirect them to the dedicated super admin dashboard.
+            if ($this->auth->isSuperAdmin()) {
+                $this->redirect('/super/dashboard');
+                return;
+            }
+
             $tenantId = $this->tenantId;
 
-            // Base data structure
+            // Base data structure for tenant users
             $data = [
-                'isSuperAdmin' => $isSuperAdmin,
+                'isSuperAdmin' => false,
                 'userRole' => $this->auth->getRoleName(),
-                'title' => $isSuperAdmin ? 'Super Admin Dashboard' : $this->tenantName . ' Dashboard', 
-                'welcomeMessage' => 'Welcome back, ' . ($this->userName['first_name'] ?? 'Admin ').'',
+                'title' => $this->tenantName . ' Dashboard', 
+                'welcomeMessage' => 'Welcome back, ' . ($this->userName['first_name'] ?? 'User').'',
             ];
 
-            if (!$isSuperAdmin && $tenantId) {
+            if ($tenantId) {
                 // Initialize all keys to safe defaults
                 $data += [
                     'activeEmployees' => 0,

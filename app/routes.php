@@ -26,23 +26,124 @@ return [
         'handler' => ['DashboardController', 'index']
     ]],
 
+    // =========================================================
+    // Super Admin Routes
+    // =========================================================
+    ['GET', '/super/dashboard', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'super_admin'], // Simple role check
+        'handler' => ['SuperAdminController', 'index']
+    ]],
+    ['GET', '/super/plans', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'super_admin'],
+        'handler' => ['SuperAdminController', 'plans']
+    ]],
+    ['GET', '/super/subscriptions', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'super_admin'],
+        'handler' => ['SuperAdminController', 'subscriptions']
+    ]],
+
+    // Plan Management Routes (Super Admin Only)
+    ['GET', '/super/plans/create', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'super:manage_plans'],
+        'handler' => ['PlanController', 'create']
+    ]],
+    ['POST', '/super/plans', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'super:manage_plans'],
+        'handler' => ['PlanController', 'store']
+    ]],
+    ['GET', '/super/plans/{id:\d+}/edit', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'super:manage_plans'],
+        'handler' => ['PlanController', 'edit']
+    ]],
+    ['POST', '/super/plans/{id:\d+}', [ // Using POST for update for simplicity
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'super:manage_plans'],
+        'handler' => ['PlanController', 'update']
+    ]],
+    ['POST', '/super/plans/{id:\d+}/delete', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'super:manage_plans'],
+        'handler' => ['PlanController', 'delete']
+    ]],
+
     // Tenant Management Routes (Super Admin Only)
     ['GET', '/tenants', [
         'auth' => 'AuthMiddleware', 
-        'permission' => ['PermissionMiddleware', 'tenant:read_all'],
-        'handler' => ['TenantController', 'index']
+        'permission' => ['PermissionMiddleware', 'super:view_tenants'],
+        'handler' => ['SuperAdminController', 'tenantsIndex']
     ]],
-
     ['GET', '/tenants/create', [
         'auth' => 'AuthMiddleware', 
-        'permission' => ['PermissionMiddleware', 'tenant:create'],
-        'handler' => ['TenantController', 'create']
+        'permission' => ['PermissionMiddleware', 'super:create_tenant'],
+        'handler' => ['SuperAdminController', 'tenantsCreate']
     ]],
-
     ['POST', '/tenants', [
         'auth' => 'AuthMiddleware', 
-        'permission' => ['PermissionMiddleware', 'tenant:create'],
-        'handler' => ['TenantController', 'store']
+        'permission' => ['PermissionMiddleware', 'super:create_tenant'],
+        'handler' => ['SuperAdminController', 'tenantsStore']
+    ]],
+
+    // Statutory Rates Management Routes (Super Admin Only)
+    ['GET', '/super/statutory-rates', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'super:manage_statutory_rates'],
+        'handler' => ['StatutoryRateController', 'index']
+    ]],
+    ['GET', '/super/statutory-rates/ssnit/create', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'super:manage_statutory_rates'],
+        'handler' => ['StatutoryRateController', 'createSsnitRate']
+    ]],
+    ['POST', '/super/statutory-rates/ssnit', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'super:manage_statutory_rates'],
+        'handler' => ['StatutoryRateController', 'storeSsnitRate']
+    ]],
+    ['GET', '/super/statutory-rates/ssnit/{id:\d+}/edit', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'super:manage_statutory_rates'],
+        'handler' => ['StatutoryRateController', 'editSsnitRate']
+    ]],
+    ['POST', '/super/statutory-rates/ssnit/{id:\d+}', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'super:manage_statutory_rates'],
+        'handler' => ['StatutoryRateController', 'updateSsnitRate']
+    ]],
+    ['POST', '/super/statutory-rates/ssnit/{id:\d+}/delete', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'super:manage_statutory_rates'],
+        'handler' => ['StatutoryRateController', 'deleteSsnitRate']
+    ]],
+    ['GET', '/super/statutory-rates/wht/create', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'super:manage_statutory_rates'],
+        'handler' => ['StatutoryRateController', 'createWithholdingTaxRate']
+    ]],
+    ['POST', '/super/statutory-rates/wht', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'super:manage_statutory_rates'],
+        'handler' => ['StatutoryRateController', 'storeWithholdingTaxRate']
+    ]],
+    ['GET', '/super/statutory-rates/wht/{id:\d+}/edit', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'super:manage_statutory_rates'],
+        'handler' => ['StatutoryRateController', 'editWithholdingTaxRate']
+    ]],
+    ['POST', '/super/statutory-rates/wht/{id:\d+}', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'super:manage_statutory_rates'],
+        'handler' => ['StatutoryRateController', 'updateWithholdingTaxRate']
+    ]],
+    ['POST', '/super/statutory-rates/wht/{id:\d+}/delete', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'super:manage_statutory_rates'],
+        'handler' => ['StatutoryRateController', 'deleteWithholdingTaxRate']
     ]],
 
     // Notification Routes 

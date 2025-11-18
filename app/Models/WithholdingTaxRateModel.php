@@ -9,9 +9,78 @@ use \PDOException;
 
 class WithholdingTaxRateModel extends Model
 {
+    protected bool $noTenantScope = true; // Withholding Tax rates are system-wide
+
     public function __construct()
     {
         parent::__construct('withholding_tax_rates');
+    }
+
+    /**
+     * Creates a new Withholding Tax rate record.
+     * @param array $data
+     * @return int The ID of the newly created rate, or 0 on failure.
+     */
+    public function create(array $data): int
+    {
+        $sql = "INSERT INTO withholding_tax_rates (rate, employment_type, description, effective_date) 
+                VALUES (:rate, :employment_type, :description, :effective_date)";
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                ':rate' => $data['rate'],
+                ':employment_type' => $data['employment_type'],
+                ':description' => $data['description'],
+                ':effective_date' => $data['effective_date'],
+            ]);
+            return (int)$this->db->lastInsertId();
+        } catch (PDOException $e) {
+            Log::error("Failed to create Withholding Tax rate: " . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * Updates an existing Withholding Tax rate record.
+     * @param int $id
+     * @param array $data
+     * @return bool
+     */
+    public function update(int $id, array $data): bool
+    {
+        $sql = "UPDATE withholding_tax_rates SET rate = :rate, employment_type = :employment_type, 
+                description = :description, effective_date = :effective_date 
+                WHERE id = :id";
+        try {
+            $stmt = $this->db->prepare($sql);
+            return $stmt->execute([
+                ':rate' => $data['rate'],
+                ':employment_type' => $data['employment_type'],
+                ':description' => $data['description'],
+                ':effective_date' => $data['effective_date'],
+                ':id' => $id,
+            ]);
+        } catch (PDOException $e) {
+            Log::error("Failed to update Withholding Tax rate ID {$id}: " . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * Deletes a Withholding Tax rate record.
+     * @param int $id
+     * @return bool
+     */
+    public function delete(int $id): bool
+    {
+        $sql = "DELETE FROM withholding_tax_rates WHERE id = :id";
+        try {
+            $stmt = $this->db->prepare($sql);
+            return $stmt->execute([':id' => $id]);
+        } catch (PDOException $e) {
+            Log::error("Failed to delete Withholding Tax rate ID {$id}: " . $e->getMessage());
+            throw $e;
+        }
     }
 
     /**

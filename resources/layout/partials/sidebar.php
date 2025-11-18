@@ -35,7 +35,7 @@
                 
                 <?php if ($auth->hasPermission('self:view_dashboard')): ?>
                 <li class="nav-item">
-                    <a href="/">
+                    <a href="/dashboard">
                         <i class="fas fa-home"></i>
                         <p>Dashboard</p>
                     </a>
@@ -60,8 +60,8 @@
                     </a>
                     <div class="collapse" id="plans_subscription">
                         <ul class="nav nav-collapse">
-                            <li><a href="/plans"><span class="sub-item">Plans</span></a></li>
-                            <li><a href="/subscriptions"><span class="sub-item">Subscriptions</span></a></li>
+                            <li><a href="/super/plans"><span class="sub-item">Plans</span></a></li>
+                            <li><a href="/super/subscriptions"><span class="sub-item">Subscriptions</span></a></li>
                         </ul>
                     </div>
                 </li>

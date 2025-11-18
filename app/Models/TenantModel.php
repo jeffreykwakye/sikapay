@@ -76,4 +76,37 @@ class TenantModel extends Model
             throw $e;
         }
     }
+
+    /**
+     * Counts the total number of tenants in the system.
+     * @return int
+     */
+    public function countAllTenants(): int
+    {
+        // We do not apply tenant scope here. This is a system-wide query.
+        $sql = "SELECT COUNT(id) FROM {$this->table}";
+        try {
+            $stmt = $this->db->query($sql);
+            return (int)$stmt->fetchColumn();
+        } catch (PDOException $e) {
+            Log::error("Failed to count all tenants. Error: " . $e->getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Counts the number of new tenants created in the last 30 days.
+     * @return int
+     */
+    public function countNewTenantsLast30Days(): int
+    {
+        $sql = "SELECT COUNT(id) FROM {$this->table} WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)";
+        try {
+            $stmt = $this->db->query($sql);
+            return (int)$stmt->fetchColumn();
+        } catch (PDOException $e) {
+            Log::error("Failed to count new tenants in last 30 days. Error: " . $e->getMessage());
+            return 0;
+        }
+    }
 }

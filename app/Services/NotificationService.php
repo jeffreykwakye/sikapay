@@ -81,7 +81,50 @@ class NotificationService
         }
     }
     
+    /**
+     * Notifies the Tenant Admin(s) of a specific tenant.
+     * @param int $tenantId The ID of the tenant.
+     * @param string $type The type of notification.
+     * @param string $title The notification title.
+     * @param string $message The notification message.
+     */
+    public function notifyTenantAdmin(int $tenantId, string $type, string $title, string $message): void
+    {
+        try {
+            $tenantAdmins = $this->userModel->getUsersByRole($tenantId, 'tenant_admin');
+            foreach ($tenantAdmins as $admin) {
+                $this->notifyUser($tenantId, (int)$admin['id'], $type, $title, $message);
+            }
+        } catch (Throwable $e) {
+            Log::error("Failed to notify Tenant Admin for Tenant {$tenantId}.", [
+                'error' => $e->getMessage(),
+                'type' => $type
+            ]);
+        }
+    }
 
+    /**
+     * Notifies all Super Admins in the system.
+     * @param string $type The type of notification.
+     * @param string $title The notification title.
+     * @param string $message The notification message.
+     */
+    public function notifySuperAdmin(string $type, string $title, string $message): void
+    {
+        try {
+            // Super Admins are not tenant-scoped, so pass tenantId 1 (System Tenant)
+            $superAdmins = $this->userModel->getUsersByRole(1, 'super_admin'); 
+            foreach ($superAdmins as $admin) {
+                // Pass tenantId 1 for system-level notifications
+                $this->notifyUser(1, (int)$admin['id'], $type, $title, $message); 
+            }
+        } catch (Throwable $e) {
+            Log::error("Failed to notify Super Admin.", [
+                'error' => $e->getMessage(),
+                'type' => $type
+            ]);
+        }
+    }
 
     /**
      * Retrieves all notifications for the current user.
