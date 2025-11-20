@@ -40,10 +40,13 @@ The system defines three primary user roles, each with a distinct set of permiss
 
 *   **Objective:** To manage the entire SikaPay platform and its client tenants.
 *   **Key Capabilities:**
+    *   View an administrative dashboard with key platform metrics (e.g., total tenants, total revenue, active subscriptions).
+    *   Full CRUD (Create, Read, Update, Delete) for managing subscription plans.
+    *   Full CRUD for managing global statutory rates, including SSNIT Tiers, PAYE Tax Bands, and Withholding Tax.
+    *   Automated subscription lifecycle management, including checking for expired subscriptions and sending notifications.
     *   Create, view, update, and deactivate tenant accounts.
     *   Provision new tenants, which includes creating the tenant entity, the initial Tenant Admin user, and a trial subscription.
     *   View system-wide activity logs.
-    *   Manage subscription plans.
 
 ### 2.2. Tenant Admin
 

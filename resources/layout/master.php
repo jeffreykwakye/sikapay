@@ -4,7 +4,7 @@
         <meta http-equiv="X-UA-Compatible" content="IE=edge" />
         <title><?= $h($title ?? 'SikaPay Platform') ?></title>
         <meta content="width=device-width, initial-scale=1.0, shrink-to-fit=no" name="viewport" />
-        <link rel="icon" href="/assets/img/kaiadmin/favicon.ico" type="image/x-icon" />
+        <link rel="icon" href="/assets/images/tenant_logos/1/Icon Fill.svg" type="image/svg+xml" />
         <!-- Fonts and icons -->
         <script src="/assets/js/plugin/webfont/webfont.min.js"></script>
         <script src="/assets/js/fontloader-config.js"></script>

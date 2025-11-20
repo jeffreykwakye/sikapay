@@ -15,9 +15,7 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 | **Authentication** | Super Admin Login, Tenant User Login, Logout **(Auth Service is now Singleton)** | Complete | Centralized, secure session management. |
 | **Security/RBAC** | **Role-Based Access Control (RBAC)** | **Core Complete** | **Implemented central `Auth::can()` gate, Permission Middleware, and protected initial routes.** |
 | **Multi-Tenancy** | Request/Tenant Routing, Database Scoping | Core Complete | Base Model enforces `WHERE tenant_id = X` on most tables. |
-| **Super Admin** | **Tenant Management (CRUD-C)** | **Complete** | Full transactional creation of Tenant, Admin User, Subscription, and Audit Log. |
-| **System Tables** | Plans, Roles | Complete | Scoping bypass implemented for system-wide read access. |
-| **Subscriptions** | Initial Trial Provisioning | Complete | Dedicated `subscriptions` and `subscription_history` tables populated transactionally. |
+| **Super Admin Features** | **Dashboard Overhaul, Subscription & Plan Management (CRUD), Automated Subscription Lifecycle, Statutory Rates Management (CRUD)** | **Complete** | Full suite of tools for Super Admins to manage the entire platform, including revenue metrics, plan creation, subscription lifecycle, and global statutory rates. |
 | **Audit/Compliance** | Audit Logging & Activity Page | **Complete** | Logs critical actions and provides a dedicated, role-aware page for viewing system and tenant-level activity. |
 | **Notifications (NEW)** | **E2E In-App System** | **Complete** | Includes service, model, controller, dynamic navbar dropdown, and a dedicated page for all notifications. |
 | **Dashboard (NEW)** | **Tenant Dashboard Overhaul** | **Complete** | Features dynamic KPI cards for key metrics, a payroll summary graph, and lists for recent hires and anniversaries. |
@@ -109,3 +107,10 @@ The tenant creation process adheres to the **Single Responsibility Principle (SR
     *   Enhance the Employee Self-Service portal with more features (e.g., leave requests, document uploads).
     *   Build out more detailed reporting options for Tenant Admins.
     *   Refine the UI/UX of tenant-facing pages for better usability.
+
+**Super Admin - Impersonate Tenant Admin**
+*   **Objective:** Allow Super Admins to temporarily assume the identity of a Tenant Admin to assist with tenant-specific operations (e.g., user management, payroll runs).
+*   **Future Tasks:**
+    *   Implement secure session switching and restoration mechanisms in the `Auth` module.
+    *   Develop UI integration for initiating and exiting impersonation on the tenant details page.
+    *   Ensure robust audit logging of all impersonation activities for security and compliance.
