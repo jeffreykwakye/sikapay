@@ -17,10 +17,13 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 | **Multi-Tenancy** | Request/Tenant Routing, Database Scoping | Core Complete | Base Model enforces `WHERE tenant_id = X` on most tables. |
 | **Super Admin Features** | **Dashboard Overhaul, Subscription & Plan Management (CRUD), Automated Subscription Lifecycle, Statutory Rates Management (CRUD)** | **Complete** | Full suite of tools for Super Admins to manage the entire platform, including revenue metrics, plan creation, subscription lifecycle, and global statutory rates. |
 | **Audit/Compliance** | Audit Logging & Activity Page | **Complete** | Logs critical actions and provides a dedicated, role-aware page for viewing system and tenant-level activity. |
-| **Notifications (NEW)** | **E2E In-App System** | **Complete** | Includes service, model, controller, dynamic navbar dropdown, and a dedicated page for all notifications. |
+| **In-App Notifications (NEW)** | **E2E In-App System** | **Complete** | Includes service, model, controller, dynamic navbar dropdown, and a dedicated page for all notifications. |
 | **Dashboard (NEW)** | **Tenant Dashboard Overhaul** | **Complete** | Features dynamic KPI cards for key metrics, a payroll summary graph, and lists for recent hires and anniversaries. |
 | **Employee Profile** | View, Profile Picture Upload, Staff File Upload, Staff File Deletion | **Complete** | Modern, two-column layout with tabbed navigation. |
 | **Payroll Configuration** | Manage custom Allowances & Deductions. | **Complete** | Full CRUD UI for tenant admins to define and manage payroll elements. |
+| **Employee Management** | CRUD for Employees, Departments, and Positions; Active/Inactive Staff Views | **Complete** | Full employee lifecycle management, including personal, statutory, and bank information, with categorized staff views. |
+| **Subscriptions** | Initial Trial Provisioning; Tenant Subscription Details & History | **Complete** | Dedicated tables populated transactionally, with a tenant-facing view for current plan, features, and history. |
+| **Support Messaging** | Tenant-to-Super Admin Support Tickets with Replies; Super Admin Interface | **Complete** | Tenants can submit/reply to tickets; Super Admins can view/respond to all tickets, with notification system and open ticket count badge. |
 
 ---
 
@@ -98,19 +101,6 @@ The tenant creation process adheres to the **Single Responsibility Principle (SR
  | **2025-11-17** | **Employee Self-Service Portal (Initial Setup)** | Created dedicated `/my-account` route, `myAccountIndex` controller method, and `my_account/index.php` view with basic tabbed layout. Updated sidebar link and permissions (`self:view_profile`). Fixed `Auth::user()` call and `Model` constructor tenant context check. | **Complete** |
 | **Advanced Payroll Logic** | Conditional tax/SSNIT logic for different employment types (Contract, Intern, Casual Worker) with correct withholding tax and SSNIT logic. | **Complete** |
 | **2025-11-18** | **Super Admin Features** | **Dashboard Overhaul, Subscription & Plan Management (CRUD), Automated Subscription Lifecycle, Statutory Rates Management (CRUD)** | **Complete** | Full suite of tools for Super Admins to manage the entire platform, including revenue metrics, plan creation, subscription lifecycle, and global statutory rates. |
- 
- ## Next Focus Area
- 
- **Tenant-Facing Feature Enhancements**
- * **Objective:** Improve the experience for tenant users (Admins, HR, Accountants, Employees).
- * **Immediate Tasks:**
-    *   Enhance the Employee Self-Service portal with more features (e.g., leave requests, document uploads).
-    *   Build out more detailed reporting options for Tenant Admins.
-    *   Refine the UI/UX of tenant-facing pages for better usability.
-
-**Super Admin - Impersonate Tenant Admin**
-*   **Objective:** Allow Super Admins to temporarily assume the identity of a Tenant Admin to assist with tenant-specific operations (e.g., user management, payroll runs).
-*   **Future Tasks:**
-    *   Implement secure session switching and restoration mechanisms in the `Auth` module.
-    *   Develop UI integration for initiating and exiting impersonation on the tenant details page.
-    *   Ensure robust audit logging of all impersonation activities for security and compliance.
+| **2025-11-20** | **Employee Management: Active/Inactive Staff Views** | Implemented dedicated views and filtering for active and inactive employees. | **Complete** |
+| **2025-11-20** | **Tenant Subscription Management** | Implemented tenant-facing page for viewing current subscription plan, features, and history. | **Complete** |
+| **2025-11-20** | **Tenant Support Messaging System** | Implemented tenant-to-Super Admin support ticket system with replies, Super Admin interface for viewing/responding, notification system, and open ticket count badge. | **Complete** |

@@ -47,13 +47,13 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 | **Security/RBAC** | **Role-Based Access Control (RBAC)** | **Core Complete** | **Central `Auth::can()` gate, Permission Middleware, and protected initial routes.** |
 | **Multi-Tenancy** | Data Scoping & Isolation | Core Complete | Base Model enforces `WHERE tenant_id = X`. |
 | **Tenant Provisioning** | **Full Creation Workflow (CRUD-C)** | **Complete** | **Transactional creation** of Tenant, Admin User, Subscription, and Audit Log records. |
-| **Employee Management** | CRUD for Employees, Departments, and Positions | **Complete** | Full employee lifecycle management, including personal, statutory, and bank information. |
+| **Employee Management** | CRUD for Employees, Departments, and Positions; Active/Inactive Staff Views | **Complete** | Full employee lifecycle management, including personal, statutory, and bank information, with categorized staff views. |
 | **Payroll Core** | Database schema for tax bands, SSNIT rates, payroll settings, periods, payslips, and employee payroll details; Core calculation logic, service, controller, and view implemented. Payslip generation and viewing functionality included. | **Complete** | Foundation laid for the core payroll engine. |
 | **Payroll Configuration** | Manage custom Allowances & Deductions (tenant-level). | **Complete** | Full CRUD for defining payroll elements (name, type, taxable, etc.) and assigning them to employees. |
 | **Statutory Reports** | Generation of PAYE and SSNIT reports in PDF and Excel formats. | **Complete** | Allows tenants to generate statutory reports for compliance. |
 | **Company Profile** | Tenant Profile Management | **Complete** | Allows tenants to manage their own company profile, including logo upload. |
 | **Dashboard** | **Tenant Dashboard Overhaul** | **Complete** | Features dynamic KPI cards for key metrics (employees, departments, subscription), a payroll summary graph, and lists for recent hires and anniversaries. |
-| **Subscriptions** | Initial Trial Provisioning | Complete | Dedicated tables populated transactionally. |
+| **Subscriptions** | Initial Trial Provisioning; Tenant Subscription Details & History | **Complete** | Dedicated tables populated transactionally, with a tenant-facing view for current plan, features, and history. |
 | **Audit/Compliance** | Audit Logging & Activity Page | **Complete** | Logs critical actions and provides a dedicated, role-aware page for viewing system and tenant-level activity. |
 | **In-App Notifications**| Full System Pipeline | **Complete** | Real-time alerts, a dynamic navbar dropdown with recent notifications, and a dedicated page for all notifications. |
 | **Employee Profile** | View, Profile Picture Upload, Staff File Upload, Staff File Deletion | **Complete** | Modern, two-column layout with tabbed navigation. |
@@ -61,6 +61,7 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 | **Employee Self-Service** | View Personal/Employment Info, View/Download Payslips, Create own profile if non-existent. | **Core Complete** | Dedicated portal for employees to access their data and manage basic information. |
 | **Advanced Payroll Logic** | Conditional tax/SSNIT logic for different employment types (Contract, Intern, National-Service, Casual-Worker). | **Complete** | Implemented withholding tax for contractors/casuals and exemptions for interns/NSS. |
 | **Super Admin Features** | **Dashboard Overhaul, Subscription & Plan Management (CRUD), Automated Subscription Lifecycle, Statutory Rates Management (CRUD)** | **Complete** | Full suite of tools for Super Admins to manage the entire platform, including revenue metrics, plan creation, subscription lifecycle, and global statutory rates. |
+| **Support Messaging** | Tenant-to-Super Admin Support Tickets with Replies; Super Admin Interface | **Complete** | Tenants can submit/reply to tickets; Super Admins can view/respond to all tickets, with notification system and open ticket count badge. |
 
 ---
 
@@ -85,47 +86,15 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 
 
 
-**Tenant-Facing Feature Enhancements**
-
-
-
-
-
-
-
-* **Objective:** Improve the experience for tenant users (Admins, HR, Accountants, Employees).
-
-
-
-
-
-
-
-* **Immediate Tasks:**
-
-
-
-    *   Enhance the Employee Self-Service portal with more features (e.g., leave requests, document uploads).
-
-
-
-    *   Build out more detailed reporting options for Tenant Admins.
-
-
-
-    *   Refine the UI/UX of tenant-facing pages for better usability.
-
-
-
-
-
-
-
 **Super Admin - Impersonate Tenant Admin**
 
 
 
-*   **Objective:** Allow Super Admins to temporarily assume the identity of a Tenant Admin to assist with tenant-specific operations (e.g., user management, payroll runs).
+
+
+
+
+*   **Objective:** Allow Super Admins to temporarily assume the identity of a Tenant Admin for a specific tenant to assist with tenant-specific operations (e.g., user management, payroll runs).
 
 
 
