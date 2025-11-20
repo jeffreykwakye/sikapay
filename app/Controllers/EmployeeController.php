@@ -102,6 +102,42 @@ class EmployeeController extends Controller
     }
 
     /**
+     * Display the list of active employees for the current tenant.
+     */
+    public function activeStaff(): void
+    {
+        try {
+            $employees = $this->employeeModel->getActiveEmployees();
+            
+            $this->view('employee/active', [
+                'title' => 'Active Employees',
+                'employees' => $employees,
+            ]);
+        } catch (Throwable $e) {
+            Log::error("Failed to load active employee directory for Tenant {$this->tenantId}: " . $e->getMessage());
+            ErrorResponder::respond(500, "Could not load the active employee directory due to a system error.");
+        }
+    }
+
+    /**
+     * Display the list of inactive employees for the current tenant.
+     */
+    public function inactiveStaff(): void
+    {
+        try {
+            $employees = $this->employeeModel->getInactiveEmployees();
+            
+            $this->view('employee/inactive', [
+                'title' => 'Inactive Employees',
+                'employees' => $employees,
+            ]);
+        } catch (Throwable $e) {
+            Log::error("Failed to load inactive employee directory for Tenant {$this->tenantId}: " . $e->getMessage());
+            ErrorResponder::respond(500, "Could not load the inactive employee directory due to a system error.");
+        }
+    }
+
+    /**
      * Display the form to create a new employee.
      */
     public function create(): void

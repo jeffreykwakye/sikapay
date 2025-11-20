@@ -44,32 +44,22 @@ return [
         'permission' => ['PermissionMiddleware', 'super_admin'],
         'handler' => ['SuperAdminController', 'subscriptions']
     ]],
+    ['GET', '/super/reports', [ // NEW
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'super:view_reports'], // Assuming a permission for viewing reports
+        'handler' => ['SuperAdminController', 'reports']
+    ]],
 
     // Plan Management Routes (Super Admin Only)
-    ['GET', '/super/plans/create', [
+    ['GET', '/super/plans/{id:\d+}', [
         'auth' => 'AuthMiddleware',
         'permission' => ['PermissionMiddleware', 'super:manage_plans'],
-        'handler' => ['PlanController', 'create']
-    ]],
-    ['POST', '/super/plans', [
-        'auth' => 'AuthMiddleware',
-        'permission' => ['PermissionMiddleware', 'super:manage_plans'],
-        'handler' => ['PlanController', 'store']
-    ]],
-    ['GET', '/super/plans/{id:\d+}/edit', [
-        'auth' => 'AuthMiddleware',
-        'permission' => ['PermissionMiddleware', 'super:manage_plans'],
-        'handler' => ['PlanController', 'edit']
+        'handler' => ['PlanController', 'show']
     ]],
     ['POST', '/super/plans/{id:\d+}', [ // Using POST for update for simplicity
         'auth' => 'AuthMiddleware',
         'permission' => ['PermissionMiddleware', 'super:manage_plans'],
         'handler' => ['PlanController', 'update']
-    ]],
-    ['POST', '/super/plans/{id:\d+}/delete', [
-        'auth' => 'AuthMiddleware',
-        'permission' => ['PermissionMiddleware', 'super:manage_plans'],
-        'handler' => ['PlanController', 'delete']
     ]],
 
     // Tenant Management Routes (Super Admin Only)
@@ -88,27 +78,72 @@ return [
         'permission' => ['PermissionMiddleware', 'super:create_tenant'],
         'handler' => ['SuperAdminController', 'tenantsStore']
     ]],
+    ['GET', '/tenants/{id:\d+}', [ // NEW
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'super:view_tenants'],
+        'handler' => ['SuperAdminController', 'tenantsShow']
+    ]],
+    ['POST', '/tenants/{id:\d+}/subscription/cancel', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'super:manage_subscriptions'],
+        'handler' => ['SuperAdminController', 'cancelTenantSubscription']
+    ]],
+    ['POST', '/tenants/{id:\d+}/subscription/renew', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'super:manage_subscriptions'],
+        'handler' => ['SuperAdminController', 'renewTenantSubscription']
+    ]],
+    ['POST', '/tenants/{id:\d+}/subscription/upgrade', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'super:manage_subscriptions'],
+        'handler' => ['SuperAdminController', 'upgradeTenantSubscription']
+    ]],
+    ['POST', '/tenants/{id:\d+}/subscription/downgrade', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'super:manage_subscriptions'],
+        'handler' => ['SuperAdminController', 'downgradeTenantSubscription']
+    ]],
 
     // Statutory Rates Management Routes (Super Admin Only)
-    ['GET', '/super/statutory-rates', [
+    ['GET', '/super/statutory-rates/paye', [
         'auth' => 'AuthMiddleware',
         'permission' => ['PermissionMiddleware', 'super:manage_statutory_rates'],
-        'handler' => ['StatutoryRateController', 'index']
+        'handler' => ['StatutoryRateController', 'payeTaxBandsIndex']
     ]],
-    ['GET', '/super/statutory-rates/ssnit/create', [
+    ['POST', '/super/statutory-rates/paye', [ // NEW Store Tax Band
         'auth' => 'AuthMiddleware',
         'permission' => ['PermissionMiddleware', 'super:manage_statutory_rates'],
-        'handler' => ['StatutoryRateController', 'createSsnitRate']
+        'handler' => ['StatutoryRateController', 'storeTaxBand']
+    ]],
+    ['POST', '/super/statutory-rates/paye/{id:\d+}', [ // NEW Update Tax Band
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'super:manage_statutory_rates'],
+        'handler' => ['StatutoryRateController', 'updateTaxBand']
+    ]],
+    ['POST', '/super/statutory-rates/paye/{id:\d+}/delete', [ // NEW Delete Tax Band
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'super:manage_statutory_rates'],
+        'handler' => ['StatutoryRateController', 'deleteTaxBand']
+    ]],
+    ['GET', '/api/statutory-rates/paye/{id:\d+}', [ // NEW API Get Tax Band Details
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'super:manage_statutory_rates'],
+        'handler' => ['StatutoryRateController', 'getTaxBandDetails']
+    ]],
+    ['GET', '/super/statutory-rates/ssnit', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'super:manage_statutory_rates'],
+        'handler' => ['StatutoryRateController', 'ssnitRatesIndex']
+    ]],
+    ['GET', '/super/statutory-rates/wht', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'super:manage_statutory_rates'],
+        'handler' => ['StatutoryRateController', 'withholdingTaxRatesIndex']
     ]],
     ['POST', '/super/statutory-rates/ssnit', [
         'auth' => 'AuthMiddleware',
         'permission' => ['PermissionMiddleware', 'super:manage_statutory_rates'],
         'handler' => ['StatutoryRateController', 'storeSsnitRate']
-    ]],
-    ['GET', '/super/statutory-rates/ssnit/{id:\d+}/edit', [
-        'auth' => 'AuthMiddleware',
-        'permission' => ['PermissionMiddleware', 'super:manage_statutory_rates'],
-        'handler' => ['StatutoryRateController', 'editSsnitRate']
     ]],
     ['POST', '/super/statutory-rates/ssnit/{id:\d+}', [
         'auth' => 'AuthMiddleware',
@@ -120,20 +155,16 @@ return [
         'permission' => ['PermissionMiddleware', 'super:manage_statutory_rates'],
         'handler' => ['StatutoryRateController', 'deleteSsnitRate']
     ]],
-    ['GET', '/super/statutory-rates/wht/create', [
+    // API Route for fetching SSNIT rate details (for modals)
+    ['GET', '/api/statutory-rates/ssnit/{id:\d+}', [
         'auth' => 'AuthMiddleware',
         'permission' => ['PermissionMiddleware', 'super:manage_statutory_rates'],
-        'handler' => ['StatutoryRateController', 'createWithholdingTaxRate']
+        'handler' => ['StatutoryRateController', 'getSsnitRateDetails']
     ]],
     ['POST', '/super/statutory-rates/wht', [
         'auth' => 'AuthMiddleware',
         'permission' => ['PermissionMiddleware', 'super:manage_statutory_rates'],
         'handler' => ['StatutoryRateController', 'storeWithholdingTaxRate']
-    ]],
-    ['GET', '/super/statutory-rates/wht/{id:\d+}/edit', [
-        'auth' => 'AuthMiddleware',
-        'permission' => ['PermissionMiddleware', 'super:manage_statutory_rates'],
-        'handler' => ['StatutoryRateController', 'editWithholdingTaxRate']
     ]],
     ['POST', '/super/statutory-rates/wht/{id:\d+}', [
         'auth' => 'AuthMiddleware',
@@ -144,6 +175,12 @@ return [
         'auth' => 'AuthMiddleware',
         'permission' => ['PermissionMiddleware', 'super:manage_statutory_rates'],
         'handler' => ['StatutoryRateController', 'deleteWithholdingTaxRate']
+    ]],
+    // API Route for fetching WHT rate details (for modals)
+    ['GET', '/api/statutory-rates/wht/{id:\d+}', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'super:manage_statutory_rates'],
+        'handler' => ['StatutoryRateController', 'getWithholdingTaxRateDetails']
     ]],
 
     // Notification Routes 
@@ -174,6 +211,20 @@ return [
         'auth' => 'AuthMiddleware',
         'permission' => ['PermissionMiddleware', 'employee:read_all'],
         'handler' => ['EmployeeController', 'index']
+    ]],
+
+    // Active Staff
+    ['GET', '/active-staff', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'employee:read_all'],
+        'handler' => ['EmployeeController', 'activeStaff']
+    ]],
+
+    // Inactive Staff
+    ['GET', '/inactive-staff', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'employee:read_all'],
+        'handler' => ['EmployeeController', 'inactiveStaff']
     ]],
 
     // Quick Create Form

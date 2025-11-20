@@ -87,6 +87,76 @@ class EmployeeModel extends Model
         }
     }
     
+    /**
+     * Retrieves all active employees for the current tenant.
+     */
+    public function getActiveEmployees(): array
+    {
+        $rawWhereClause = $this->getTenantScope(); 
+        $whereClause = str_replace('tenant_id', 'e.tenant_id', $rawWhereClause);
+        
+        $sql = "SELECT 
+                    e.user_id, e.employee_id, e.hire_date, e.employment_type,
+                    e.current_salary_ghs, e.bank_name, e.bank_account_number, e.bank_branch, e.bank_account_name,
+                    u.first_name, u.last_name, u.email, u.is_active,
+                    p.title AS position_title,
+                    d.name AS department_name
+                FROM employees e
+                JOIN users u ON e.user_id = u.id
+                LEFT JOIN positions p ON e.current_position_id = p.id
+                LEFT JOIN departments d ON p.department_id = d.id
+                {$whereClause} AND u.is_active = 1
+                ORDER BY u.last_name, u.first_name";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute();
+            
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            Log::error("Employee READ failed (getActiveEmployees) for Tenant " . Auth::tenantId() . ". Error: " . $e->getMessage(), [
+                'sql' => $sql,
+                'user_id' => Auth::userId()
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Retrieves all inactive employees for the current tenant.
+     */
+    public function getInactiveEmployees(): array
+    {
+        $rawWhereClause = $this->getTenantScope(); 
+        $whereClause = str_replace('tenant_id', 'e.tenant_id', $rawWhereClause);
+        
+        $sql = "SELECT 
+                    e.user_id, e.employee_id, e.hire_date, e.employment_type,
+                    e.current_salary_ghs, e.bank_name, e.bank_account_number, e.bank_branch, e.bank_account_name,
+                    u.first_name, u.last_name, u.email, u.is_active,
+                    p.title AS position_title,
+                    d.name AS department_name
+                FROM employees e
+                JOIN users u ON e.user_id = u.id
+                LEFT JOIN positions p ON e.current_position_id = p.id
+                LEFT JOIN departments d ON p.department_id = d.id
+                {$whereClause} AND u.is_active = 0
+                ORDER BY u.last_name, u.first_name";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute();
+            
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            Log::error("Employee READ failed (getInactiveEmployees) for Tenant " . Auth::tenantId() . ". Error: " . $e->getMessage(), [
+                'sql' => $sql,
+                'user_id' => Auth::userId()
+            ]);
+            throw $e;
+        }
+    }
+    
     
     /**
      * Creates a new employee record using the user_id as the primary key.
