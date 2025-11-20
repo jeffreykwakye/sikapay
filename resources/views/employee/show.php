@@ -13,7 +13,7 @@ $this->title = $title;
 $e = $employee; // Shorthand
 
 // Determine the profile image URL, with a fallback to a default image.
-$profileImageUrl = !empty($e['profile_picture_url']) ? $h($e['profile_picture_url']) : '/assets/img/profile.jpg';
+$profileImageUrl = !empty($e['profile_picture_url']) ? $h($e['profile_picture_url']) : '/assets/images/profiles/placeholder.jpg';
 
 // Prepare payroll element data
 $assignedElementIds = array_column($assignedPayrollElements, 'payroll_element_id');
