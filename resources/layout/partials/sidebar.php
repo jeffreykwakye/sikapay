@@ -247,7 +247,7 @@
                 </li>
                 <?php endif; ?>
 
-                <?php if ($auth->hasPermission('self:view_profile')): ?>
+                <?php if ($auth->hasPermission('self:view_profile') && !$isSuperAdmin): ?>
                 <li class="nav-item">
                     <a href="/my-account">
                         <i class="fas fa-user-circle"></i>
