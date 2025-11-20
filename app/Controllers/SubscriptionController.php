@@ -9,17 +9,59 @@ use Jeffrey\Sikapay\Core\ErrorResponder;
 use Jeffrey\Sikapay\Models\SubscriptionModel;
 use Jeffrey\Sikapay\Services\NotificationService;
 use Jeffrey\Sikapay\Config\AppConfig;
+use Jeffrey\Sikapay\Models\PlanModel;
 
 class SubscriptionController extends Controller
 {
     protected SubscriptionModel $subscriptionModel;
     protected NotificationService $notificationService;
+    protected PlanModel $planModel;
 
     public function __construct()
     {
         parent::__construct();
         $this->subscriptionModel = new SubscriptionModel();
         $this->notificationService = new NotificationService();
+        $this->planModel = new PlanModel();
+    }
+
+    public function index(): void
+    {
+        $this->checkPermission('tenant:manage_subscription');
+
+        try {
+            $tenantId = $this->tenantId;
+
+            $subscription = $this->subscriptionModel->getCurrentSubscription($tenantId);
+            if (!$subscription) {
+                // This case should ideally not happen for a logged-in tenant admin,
+                // but it's good practice to handle it.
+                $this->view('subscription/index', [
+                    'title' => 'My Subscription',
+                    'subscription' => null,
+                    'plan' => null,
+                    'features' => [],
+                    'history' => [],
+                ]);
+                return;
+            }
+
+            $plan = $this->planModel->find($subscription['current_plan_id']);
+            $features = $this->planModel->getPlanFeatures($subscription['current_plan_id']);
+            $history = $this->subscriptionModel->getHistoryForTenant($tenantId);
+
+            $this->view('subscription/index', [
+                'title' => 'My Subscription',
+                'subscription' => $subscription,
+                'plan' => $plan,
+                'features' => $features,
+                'history' => $history,
+            ]);
+
+        } catch (\Throwable $e) {
+            Log::error('Failed to load subscription page for tenant ' . $this->tenantId . ': ' . $e->getMessage());
+            ErrorResponder::respond(500, 'Could not load subscription details.');
+        }
     }
 
     /**

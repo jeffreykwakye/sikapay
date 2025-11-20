@@ -594,4 +594,13 @@ return [
         'permission' => ['PermissionMiddleware', 'config:manage_payroll_settings'],
         'handler' => ['PayrollSettingsController', 'save']
     ]],
+
+    // =========================================================
+    // Tenant Subscription
+    // =========================================================
+    ['GET', '/subscription', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'tenant:manage_subscription'],
+        'handler' => ['SubscriptionController', 'index']
+    ]],
 ];

@@ -45,8 +45,8 @@ abstract class Controller
         $this->auth = Auth::getInstance();
         $this->view = new View();
         
-        $this->userId = $this->auth->userId();
-        $this->tenantId = $this->auth->tenantId();
+        $this->userId = Auth::userId();
+        $this->tenantId = Auth::tenantId();
 
         // Call global security header methods early
         $this->setSecurityHeaders();
