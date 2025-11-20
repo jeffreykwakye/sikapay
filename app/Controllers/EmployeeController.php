@@ -907,15 +907,45 @@ class EmployeeController extends Controller
             $userModel = new UserModel();
             $auditModel = new AuditModel();
             
+            $newRoleId = $validator->get('role_id', 'int');
+            $employee = $userModel->find($userId); // Get current user details, including current role_id
+
+            if (!$employee) {
+                throw new \Exception("User with ID {$userId} not found.");
+            }
+
+            $currentRole = $this->roleModel->find($employee['role_id']);
+            $newRole = $this->roleModel->find($newRoleId);
+
+            if (!$newRole) {
+                throw new \Exception("New role with ID {$newRoleId} not found.");
+            }
+            
+            // Feature Gating: Check if changing to a limited role exceeds the plan
+            $rolesWithLimits = ['hr_manager', 'accountant', 'tenant_admin', 'auditor'];
+            if (in_array($newRole['name'], $rolesWithLimits) && $newRole['name'] !== $currentRole['name']) {
+                $subscriptionService = new SubscriptionService(); // Lazy load here
+                if (!$subscriptionService->canAddRoleUser($this->tenantId, $newRole['name'])) {
+                    $planName = $subscriptionService->getCurrentPlanName($this->tenantId);
+                    $limit = $subscriptionService->getFeatureLimit($this->tenantId, $newRole['name'] . '_seats');
+                    http_response_code(403);
+                    echo json_encode([
+                        'success' => false, 
+                        'message' => "Role change to {$newRole['name']} failed. Your current {$planName} Plan allows a maximum of {$limit} {$newRole['name']}s. Please upgrade your subscription."
+                    ]);
+                    exit;
+                }
+            }
+
             // --- Update User Record (users) ---
             $userData = [
-                'role_id' => $validator->get('role_id', 'int'),
+                'role_id' => $newRoleId,
                 'is_active' => $validator->get('is_active', 'int'), 
             ];
             
             $userModel->updateUser($userId, $userData);
             
-            $auditModel->log($this->tenantId, 'Employee role updated for user with ID: ' . $userId, ['user_id' => $userId, 'new_role_id' => $userData['role_id']]);
+            $auditModel->log($this->tenantId, 'Employee role updated for user with ID: ' . $userId, ['user_id' => $userId, 'old_role_id' => $employee['role_id'], 'new_role_id' => $newRoleId]);
 
             $db->commit();
             
@@ -1436,7 +1466,25 @@ class EmployeeController extends Controller
             $this->redirect('/my-account');
             return;
         }
-        Log::debug("Uniqueness checks passed in storeMyEmployeeProfile.");
+        // --- END Uniqueness Checks ---
+
+        // 2.1. FEATURE GATING: Check Employee Limit
+        try {
+            $subscriptionService = new SubscriptionService(); 
+            $limit = $subscriptionService->getFeatureLimit($tenantId, 'employee_limit');
+            $currentCount = $this->employeeModel->getEmployeeCount($tenantId); 
+            
+            if ($currentCount >= $limit) {
+                $planName = $subscriptionService->getCurrentPlanName($tenantId);
+                throw new \Exception("Employee profile creation failed. Your current {$planName} Plan allows a maximum of {$limit} employees. Please upgrade your subscription.");
+            }
+        } catch (Throwable $e) {
+            Log::error("Employee Limit Check Failed for Tenant {$tenantId} during profile creation: " . $e->getMessage());
+            $_SESSION['flash_error'] = "Limit Check Error: " . $e->getMessage();
+            $_SESSION['flash_input'] = $validator->all();
+            $this->redirect('/my-account');
+            return;
+        }
 
         // 2. Start Transaction
         $db = $this->employeeModel->getDB();

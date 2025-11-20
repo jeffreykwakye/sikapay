@@ -6,6 +6,7 @@ namespace Jeffrey\Sikapay\Services;
 use Jeffrey\Sikapay\Core\Database;
 use Jeffrey\Sikapay\Core\Log; // Import Log
 use Jeffrey\Sikapay\Core\Auth; // For logging context
+use Jeffrey\Sikapay\Models\UserModel; // NEW
 use \Throwable; // Catch all runtime exceptions
 
 class SubscriptionService
@@ -146,5 +147,38 @@ class SubscriptionService
             // FAIL SAFE: Return a safe, non-crashing default.
             return 'Subscription Error';
         }
+    }
+
+    /**
+     * Checks if a new user with a specific role can be added without exceeding the plan's limit.
+     * @param int $tenantId The ID of the tenant.
+     * @param string $roleName The name of the role (e.g., 'hr_manager', 'accountant').
+     * @return bool True if a user can be added, false otherwise.
+     */
+    public function canAddRoleUser(int $tenantId, string $roleName): bool
+    {
+        $roleFeatureMap = [
+            'hr_manager' => 'hr_manager_seats',
+            'accountant' => 'accountant_seats',
+            'tenant_admin' => 'tenant_admin_seats',
+            'auditor' => 'auditor_seats',
+            'employee' => 'employee_limit', // Although this is already checked in EmployeeController, useful here for completeness
+        ];
+
+        // If the role is not mapped, it implies no specific limit, so allow by default.
+        if (!isset($roleFeatureMap[$roleName])) {
+            return true;
+        }
+
+        $featureKey = $roleFeatureMap[$roleName];
+        $limit = $this->getFeatureLimit($tenantId, $featureKey);
+        
+        // Lazy load UserModel to count current users in this role
+        $userModel = new \Jeffrey\Sikapay\Models\UserModel();
+        $currentCount = $userModel->countUsersByRole($tenantId, $roleName);
+
+        // For seat limits, a limit of 0 means 0 seats allowed.
+        // The check 'currentCount < limit' will correctly handle this.
+        return $currentCount < $limit;
     }
 }

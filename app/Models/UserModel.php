@@ -147,6 +147,34 @@ class UserModel extends Model
     }
 
     /**
+     * Counts all active users belonging to a specific role within a given tenant.
+     * @param int $tenantId The ID of the tenant.
+     * @param string $roleName The name of the role.
+     * @return int The count of users in that role.
+     */
+    public function countUsersByRole(int $tenantId, string $roleName): int
+    {
+        $sql = "SELECT COUNT(u.id) 
+                FROM users u
+                JOIN roles r ON u.role_id = r.id
+                WHERE u.tenant_id = :tenant_id AND r.name = :role_name AND u.is_active = TRUE";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                ':tenant_id' => $tenantId,
+                ':role_name' => $roleName
+            ]);
+            return (int)$stmt->fetchColumn();
+        } catch (PDOException $e) {
+            Log::error("Failed to count users for role '{$roleName}' in Tenant {$tenantId}. Error: " . $e->getMessage(), [
+                'acting_user_id' => Auth::userId()
+            ]);
+            return 0;
+        }
+    }
+
+    /**
      * Retrieves the tenant administrator user for a given tenant ID.
      * @param int $tenantId The ID of the tenant.
      * @return array|null The tenant admin user record, or null if not found.

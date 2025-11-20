@@ -254,6 +254,15 @@ class SuperAdminController extends Controller
                 throw new \Exception("Tenant record creation failed unexpectedly.");
             }
 
+            // --- FEATURE GATING: Check Tenant Admin Seats ---
+            $subscriptionService = new \Jeffrey\Sikapay\Services\SubscriptionService();
+            if (!$subscriptionService->canAddRoleUser($tenantId, 'tenant_admin')) {
+                $planName = $subscriptionService->getCurrentPlanName($tenantId);
+                $limit = $subscriptionService->getFeatureLimit($tenantId, 'tenant_admin_seats');
+                throw new \Exception("Tenant Admin creation failed. The selected {$planName} Plan allows a maximum of {$limit} Tenant Admin seats. Please choose a different plan or upgrade.");
+            }
+            // --- END FEATURE GATING ---
+
             // C. Execute Creation (Model 2: User) - Must throw on failure
             // Note: createUser is assumed to sanitize $userData again internally, but it's already validated/sanitized here.
             $adminUserId = $this->userModel->createUser($tenantId, $userData);
@@ -448,6 +457,19 @@ class SuperAdminController extends Controller
 
     private function createDefaultUser(int $tenantId, string $roleName, string $firstName, string $lastName, string $email): void
     {
+        $subscriptionService = new \Jeffrey\Sikapay\Services\SubscriptionService(); // Lazy load
+        
+        // --- FEATURE GATING: Check Role Seats ---
+        if (!$subscriptionService->canAddRoleUser($tenantId, $roleName)) {
+            $planName = $subscriptionService->getCurrentPlanName($tenantId);
+            $limit = $subscriptionService->getFeatureLimit($tenantId, $roleName . '_seats');
+            Log::warning("Default user creation skipped for role '{$roleName}'. Tenant {$tenantId} (Plan: {$planName}) has reached its limit of {$limit} {$roleName} seats.");
+            // Optionally throw an exception here if default user creation is strictly mandatory for the plan
+            // throw new \Exception("Default user creation failed for role '{$roleName}'. Plan limit exceeded.");
+            return; // Skip creating this default user if limit is reached
+        }
+        // --- END FEATURE GATING ---
+
         $roleId = $this->roleModel->findIdByName($roleName);
         if ($roleId === null) {
             throw new \Exception("System error: '{$roleName}' role not found in the database. Aborting.");
