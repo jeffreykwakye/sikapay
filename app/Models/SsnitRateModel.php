@@ -24,14 +24,14 @@ class SsnitRateModel extends Model
      */
     public function create(array $data): int
     {
-        $sql = "INSERT INTO ssnit_rates (employee_rate, employer_rate, max_contribution_limit, effective_date) 
-                VALUES (:employee_rate, :employer_rate, :max_contribution_limit, :effective_date)";
+        $sql = "INSERT INTO ssnit_rates (employee_rate, employer_rate, max_contribution_cap, effective_date) 
+                VALUES (:employee_rate, :employer_rate, :max_contribution_cap, :effective_date)";
         try {
             $stmt = $this->db->prepare($sql);
             $stmt->execute([
                 ':employee_rate' => $data['employee_rate'],
                 ':employer_rate' => $data['employer_rate'],
-                ':max_contribution_limit' => $data['max_contribution_limit'],
+                ':max_contribution_cap' => $data['max_contribution_cap'],
                 ':effective_date' => $data['effective_date'],
             ]);
             return (int)$this->db->lastInsertId();
@@ -50,14 +50,14 @@ class SsnitRateModel extends Model
     public function update(int $id, array $data): bool
     {
         $sql = "UPDATE ssnit_rates SET employee_rate = :employee_rate, employer_rate = :employer_rate, 
-                max_contribution_limit = :max_contribution_limit, effective_date = :effective_date 
+                max_contribution_cap = :max_contribution_cap, effective_date = :effective_date 
                 WHERE id = :id";
         try {
             $stmt = $this->db->prepare($sql);
             return $stmt->execute([
                 ':employee_rate' => $data['employee_rate'],
                 ':employer_rate' => $data['employer_rate'],
-                ':max_contribution_limit' => $data['max_contribution_limit'],
+                ':max_contribution_cap' => $data['max_contribution_cap'],
                 ':effective_date' => $data['effective_date'],
                 ':id' => $id,
             ]);
@@ -91,7 +91,7 @@ class SsnitRateModel extends Model
      */
     public function getCurrentSsnitRate(): ?array
     {
-        $sql = "SELECT effective_date, employee_rate, employer_rate, max_contribution_limit FROM {$this->table} 
+        $sql = "SELECT effective_date, employee_rate, employer_rate, max_contribution_cap FROM {$this->table} 
                 WHERE effective_date <= CURDATE()
                 ORDER BY effective_date DESC
                 LIMIT 1";

@@ -406,9 +406,14 @@
                     href="#"
                     aria-expanded="false">
                     <div class="avatar-sm">
+                        <?php 
+                            $profileImageSrc = !empty($userProfileImageUrl) 
+                                ? $h($userProfileImageUrl) 
+                                : '/assets/images/profiles/placeholder.jpg';
+                        ?>
                         <img
-                            src="/assets/img/profile.jpg"
-                            alt="..."
+                            src="<?= $profileImageSrc ?>"
+                            alt="User Profile"
                             class="avatar-img rounded-circle"
                         />
                     </div>
@@ -425,7 +430,7 @@
                             <div class="user-box">
                                 <div class="avatar-lg">
                                     <img
-                                        src="/assets/img/profile.jpg"
+                                        src="<?= $profileImageSrc ?>"
                                         alt="image profile"
                                         class="avatar-img rounded" />
                                 </div>

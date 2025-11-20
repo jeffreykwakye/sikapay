@@ -12,6 +12,7 @@ use Jeffrey\Sikapay\Models\TenantModel;
 use Jeffrey\Sikapay\Models\UserModel;
 use Jeffrey\Sikapay\Models\TenantProfileModel;
 use Jeffrey\Sikapay\Models\SubscriptionModel;
+use Jeffrey\Sikapay\Models\UserProfileModel; // NEW
 use Jeffrey\Sikapay\Helpers\ViewHelper;
 use Jeffrey\Sikapay\Security\CsrfToken;
 
@@ -28,12 +29,14 @@ abstract class Controller
     protected UserModel $userModel; 
     protected TenantProfileModel $tenantProfileModel;
     protected SubscriptionModel $subscriptionModel;
+    protected UserProfileModel $userProfileModel; // NEW PROPERTY
     
 
     protected ?string $tenantName = null;
     protected ?string $tenantLogo = null;
     protected ?string $subscriptionPlan = null;
     protected array $userName = ['first_name' => null, 'last_name' => null];
+    protected ?string $userProfileImageUrl = null; // NEW PROPERTY
 
     
     public function __construct()
@@ -60,10 +63,13 @@ abstract class Controller
             $this->tenantModel = new TenantModel();
             $this->tenantProfileModel = new TenantProfileModel();
             $this->subscriptionModel = new SubscriptionModel();
+            $this->userProfileModel = new UserProfileModel(); // NEW INSTANTIATION
 
             // Fetch contextual data
             try {
                 $this->userName = $this->userModel->getNameById($this->userId);
+                $userProfile = $this->userProfileModel->findByUserId($this->userId); // NEW FETCH
+                $this->userProfileImageUrl = $userProfile['profile_picture_url'] ?? null; // NEW ASSIGNMENT
 
                 if ($this->tenantId > 0) {
                     $this->tenantName = $this->tenantModel->getNameById($this->tenantId);
@@ -128,6 +134,7 @@ abstract class Controller
             'subscriptionPlan' => $this->subscriptionPlan,
             'userFirstName' => $this->userName['first_name'] ?? 'User',
             'userLastName' => $this->userName['last_name'] ?? '',
+            'userProfileImageUrl' => $this->userProfileImageUrl, // NEW DATA
 
             'isSuperAdmin' => $this->auth->isSuperAdmin(),
             

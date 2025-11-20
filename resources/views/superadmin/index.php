@@ -124,6 +124,102 @@
     </div>
 </div>
 
+<!-- NEW TABLES ROW -->
+<div class="row">
+    <!-- New Tenants Table -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">New Tenants (Last 30 Days)</h4>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped mt-3">
+                        <thead>
+                            <tr>
+                                <th scope="col">Tenant Name</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Created At</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (!empty($tables['new_tenants'])): ?>
+                                <?php foreach ($tables['new_tenants'] as $tenant): ?>
+                                    <tr>
+                                        <td><a href="/tenants/<?= $h($tenant['id']) ?>"><?= $h($tenant['name']) ?></a></td>
+                                        <td>
+                                            <?php
+                                            $status = $tenant['subscription_status'] ?? 'unknown';
+                                            $statusClass = 'secondary';
+                                            if ($status === 'active' || $status === 'trial') $statusClass = 'success';
+                                            ?>
+                                            <span class="badge bg-<?= $statusClass ?>"><?= $h(ucfirst($status)) ?></span>
+                                        </td>
+                                        <td><?= $h(date('M j, Y', strtotime($tenant['created_at']))) ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <tr>
+                                    <td colspan="3" class="text-center">No new tenants in the last 30 days.</td>
+                                </tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- At-Risk Subscriptions Table -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">At-Risk Subscriptions</h4>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped mt-3">
+                        <thead>
+                            <tr>
+                                <th scope="col">Tenant Name</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">End Date / Days Left</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (!empty($tables['at_risk_subscriptions'])): ?>
+                                <?php foreach ($tables['at_risk_subscriptions'] as $sub): ?>
+                                    <tr>
+                                        <td><a href="/tenants/<?= $h($sub['tenant_id']) ?>"><?= $h($sub['tenant_name']) ?></a></td>
+                                        <td>
+                                            <?php
+                                            $status = $sub['status'] ?? 'unknown';
+                                            $statusClass = ($status === 'past_due') ? 'danger' : 'warning';
+                                            ?>
+                                            <span class="badge bg-<?= $statusClass ?>"><?= $h(ucfirst(str_replace('_', ' ', $status))) ?></span>
+                                        </td>
+                                        <td>
+                                            <?php if ($status === 'past_due'): ?>
+                                                Ended on <?= $h(date('M j, Y', strtotime($sub['end_date']))) ?>
+                                            <?php else: ?>
+                                                <?= $h($sub['days_left']) ?> days left
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <tr>
+                                    <td colspan="3" class="text-center">No at-risk subscriptions found.</td>
+                                </tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Data container for the dashboard charts -->
 <div id="superadmin-chart-data" data-charts='<?= json_encode([
     'revenueTrend' => [

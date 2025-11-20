@@ -8,6 +8,7 @@ use Jeffrey\Sikapay\Core\Log;
 use Jeffrey\Sikapay\Core\ErrorResponder;
 use Jeffrey\Sikapay\Core\Validator;
 use Jeffrey\Sikapay\Models\AuditModel;
+use Jeffrey\Sikapay\Controllers\SubscriptionController; // NEW
 use \Throwable;
 
 class LoginController extends Controller
@@ -101,6 +102,18 @@ class LoginController extends Controller
             if ($this->auth->login($email, $password)) {
                 // Log the successful login
                 $this->auditModel->log($this->auth->tenantId(), 'User logged in');
+
+                // --- NEW: Trigger system-wide subscription check ---
+                // This runs in the background after the user is authenticated but before redirection.
+                // It's a good compromise between a cron job and per-user checks.
+                try {
+                    $subscriptionController = new SubscriptionController();
+                    $subscriptionController->checkAllSubscriptions();
+                } catch (Throwable $e) {
+                    // Log the failure but don't block the user's login
+                    Log::error("Post-login subscription check failed: " . $e->getMessage());
+                }
+                // --- End of subscription check ---
 
                 // Success: Redirect to the intended page or dashboard
                 $redirectTo = $_SESSION['redirect_back_to'] ?? '/dashboard';

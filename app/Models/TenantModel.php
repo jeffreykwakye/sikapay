@@ -78,13 +78,13 @@ class TenantModel extends Model
     }
 
     /**
-     * Counts the total number of tenants in the system.
+     * Counts the total number of tenants in the system, excluding the system tenant (ID 1).
      * @return int
      */
     public function countAllTenants(): int
     {
         // We do not apply tenant scope here. This is a system-wide query.
-        $sql = "SELECT COUNT(id) FROM {$this->table}";
+        $sql = "SELECT COUNT(id) FROM {$this->table} WHERE id != 1";
         try {
             $stmt = $this->db->query($sql);
             return (int)$stmt->fetchColumn();
@@ -107,6 +107,28 @@ class TenantModel extends Model
         } catch (PDOException $e) {
             Log::error("Failed to count new tenants in last 30 days. Error: " . $e->getMessage());
             return 0;
+        }
+    }
+
+    /**
+     * Retrieves all tenants created within the last X days.
+     * @param int $days The number of days to look back.
+     * @return array
+     */
+    public function getNewTenants(int $days = 30): array
+    {
+        $sql = "SELECT id, name, subdomain, subscription_status, created_at 
+                FROM {$this->table} 
+                WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL :days DAY)
+                ORDER BY created_at DESC";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([':days' => $days]);
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            Log::error("Failed to retrieve new tenants. Error: " . $e->getMessage());
+            return [];
         }
     }
 }

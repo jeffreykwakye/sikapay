@@ -9,11 +9,13 @@ use Jeffrey\Sikapay\Core\ErrorResponder;
 use Jeffrey\Sikapay\Core\Validator;
 use Jeffrey\Sikapay\Models\SsnitRateModel;
 use Jeffrey\Sikapay\Models\WithholdingTaxRateModel;
+use Jeffrey\Sikapay\Models\TaxBandModel; // NEW
 
 class StatutoryRateController extends Controller
 {
     private SsnitRateModel $ssnitRateModel;
     private WithholdingTaxRateModel $withholdingTaxRateModel;
+    private TaxBandModel $taxBandModel; // NEW
 
     public function __construct()
     {
@@ -23,50 +25,163 @@ class StatutoryRateController extends Controller
 
         $this->ssnitRateModel = new SsnitRateModel();
         $this->withholdingTaxRateModel = new WithholdingTaxRateModel();
+        $this->taxBandModel = new TaxBandModel(); // NEW
+    }
+
+
+
+    /**
+     * Display a list of PAYE Tax Bands for Super Admin to manage.
+     */
+    public function payeTaxBandsIndex(): void
+    {
+        try {
+            $currentYear = (int)date('Y');
+            $selectedYear = (int)($_GET['year'] ?? $currentYear);
+
+            $annualTaxBands = $this->taxBandModel->getTaxBandsForYear($selectedYear, true);
+            $monthlyTaxBands = $this->taxBandModel->getTaxBandsForYear($selectedYear, false);
+            $availableTaxYears = $this->taxBandModel->getAvailableTaxYears();
+
+            $this->view('superadmin/statutory-rates/paye-tax-bands', [
+                'title' => 'Manage PAYE Tax Bands',
+                'annualTaxBands' => $annualTaxBands,
+                'monthlyTaxBands' => $monthlyTaxBands,
+                'selectedYear' => $selectedYear,
+                'availableTaxYears' => $availableTaxYears,
+                'success' => $_SESSION['flash_success'] ?? null,
+                'error' => $_SESSION['flash_error'] ?? null,
+            ]);
+            unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+        } catch (\Throwable $e) {
+            Log::error('Failed to load PAYE Tax Bands page: ' . $e->getMessage());
+            ErrorResponder::respond(500, 'Could not load PAYE Tax Bands.');
+        }
     }
 
     /**
-     * Display a list of all statutory rates.
+     * Display a list of SSNIT Rates for Super Admin to manage.
      */
-    public function index(): void
+    public function ssnitRatesIndex(): void
     {
         try {
             $ssnitRates = $this->ssnitRateModel->all();
+
+            $this->view('superadmin/statutory-rates/ssnit-rates', [
+                'title' => 'Manage SSNIT Rates',
+                'ssnitRates' => $ssnitRates,
+                'success' => $_SESSION['flash_success'] ?? null,
+                'error' => $_SESSION['flash_error'] ?? null,
+            ]);
+            unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+        } catch (\Throwable $e) {
+            Log::error('Failed to load SSNIT Rates page: ' . $e->getMessage());
+            ErrorResponder::respond(500, 'Could not load SSNIT Rates.');
+        }
+    }
+
+    /**
+     * Display a list of Withholding Tax Rates for Super Admin to manage.
+     */
+    public function withholdingTaxRatesIndex(): void
+    {
+        try {
             $withholdingTaxRates = $this->withholdingTaxRateModel->all();
 
-            $this->view('superadmin/statutory-rates/index', [
-                'title' => 'Manage Statutory Rates',
-                'ssnitRates' => $ssnitRates,
+            $this->view('superadmin/statutory-rates/withholding-tax-rates', [
+                'title' => 'Manage Withholding Tax Rates',
                 'withholdingTaxRates' => $withholdingTaxRates,
                 'success' => $_SESSION['flash_success'] ?? null,
                 'error' => $_SESSION['flash_error'] ?? null,
             ]);
             unset($_SESSION['flash_success'], $_SESSION['flash_error']);
         } catch (\Throwable $e) {
-            Log::error('Failed to load statutory rates page: ' . $e->getMessage());
-            ErrorResponder::respond(500, 'Could not load statutory rates.');
+            Log::error('Failed to load Withholding Tax Rates page: ' . $e->getMessage());
+            ErrorResponder::respond(500, 'Could not load Withholding Tax Rates.');
+        }
+    }
+
+    /**
+     * Store a newly created Tax Band.
+     */
+    public function storeTaxBand(): void
+    {
+        $validator = new Validator($_POST);
+        $validator->validate([
+            'tax_year' => 'required|int|min:1900',
+            'band_start' => 'required|numeric|min:0',
+            'band_end' => 'optional|numeric|min:0',
+            'rate' => 'required|numeric|min:0|max:1',
+            'is_annual' => 'required|bool',
+        ]);
+
+        if ($validator->fails()) {
+            $_SESSION['flash_error'] = 'Tax Band creation failed: ' . implode('<br>', $validator->errors());
+            $_SESSION['flash_input'] = $validator->all();
+            $this->redirect('/super/statutory-rates/paye');
+            return;
+        }
+
+        try {
+            $data = [
+                'tax_year' => $validator->get('tax_year', 'int'),
+                'band_start' => $validator->get('band_start', 'float'),
+                'band_end' => $validator->get('band_end', 'float', null),
+                'rate' => $validator->get('rate', 'float'),
+                'is_annual' => $validator->get('is_annual', 'bool'),
+            ];
+            $this->taxBandModel->create($data);
+            $_SESSION['flash_success'] = 'Tax Band created successfully.';
+            $this->redirect('/super/statutory-rates/paye');
+        } catch (\Throwable $e) {
+            Log::error('Failed to store new Tax Band: ' . $e->getMessage());
+            $_SESSION['flash_error'] = 'Error creating Tax Band: ' . $e->getMessage();
+            $_SESSION['flash_input'] = $validator->all();
+            $this->redirect('/super/statutory-rates/paye');
+        }
+    }
+
+    /**
+     * Update the specified Tax Band.
+     */
+    public function updateTaxBand(int $id): void
+    {
+        $validator = new Validator($_POST);
+        $validator->validate([
+            'tax_year' => 'required|int|min:1900',
+            'band_start' => 'required|numeric|min:0',
+            'band_end' => 'optional|numeric|min:0',
+            'rate' => 'required|numeric|min:0|max:1',
+            'is_annual' => 'required|bool',
+        ]);
+
+        if ($validator->fails()) {
+            $_SESSION['flash_error'] = 'Tax Band update failed: ' . implode('<br>', $validator->errors());
+            $_SESSION['flash_input'] = $validator->all();
+            $this->redirect('/super/statutory-rates/paye');
+            return;
+        }
+
+        try {
+            $data = [
+                'tax_year' => $validator->get('tax_year', 'int'),
+                'band_start' => $validator->get('band_start', 'float'),
+                'band_end' => $validator->get('band_end', 'float', null),
+                'rate' => $validator->get('rate', 'float'),
+                'is_annual' => $validator->get('is_annual', 'bool'),
+            ];
+            $this->taxBandModel->update($id, $data);
+            $_SESSION['flash_success'] = 'Tax Band updated successfully.';
+            $this->redirect('/super/statutory-rates/paye');
+        } catch (\Throwable $e) {
+            Log::error('Failed to update Tax Band ID ' . $id . ': ' . $e->getMessage());
+            $_SESSION['flash_error'] = 'Error updating Tax Band: ' . $e->getMessage();
+            $_SESSION['flash_input'] = $validator->all();
+            $this->redirect('/super/statutory-rates/paye');
         }
     }
 
     // --- SSNIT Rate Management ---
-
-    /**
-     * Show the form for creating a new SSNIT rate.
-     */
-    public function createSsnitRate(): void
-    {
-        try {
-            $this->view('superadmin/statutory-rates/create_ssnit', [
-                'title' => 'Create New SSNIT Rate',
-                'error' => $_SESSION['flash_error'] ?? null,
-                'input' => $_SESSION['flash_input'] ?? [],
-            ]);
-            unset($_SESSION['flash_error'], $_SESSION['flash_input']);
-        } catch (\Throwable $e) {
-            Log::error('Failed to load create SSNIT rate form: ' . $e->getMessage());
-            ErrorResponder::respond(500, 'Could not load the SSNIT rate creation form.');
-        }
-    }
 
     /**
      * Store a newly created SSNIT rate.
@@ -84,7 +199,7 @@ class StatutoryRateController extends Controller
         if ($validator->fails()) {
             $_SESSION['flash_error'] = 'SSNIT rate creation failed: ' . implode('<br>', $validator->errors());
             $_SESSION['flash_input'] = $validator->all();
-            $this->redirect('/super/statutory-rates/ssnit/create');
+            $this->redirect('/super/statutory-rates'); // Redirect back to index page
             return;
         }
 
@@ -97,37 +212,12 @@ class StatutoryRateController extends Controller
             ];
             $this->ssnitRateModel->create($data);
             $_SESSION['flash_success'] = 'SSNIT Rate created successfully.';
-            $this->redirect('/super/statutory-rates');
+            $this->redirect('/super/statutory-rates/ssnit');
         } catch (\Throwable $e) {
             Log::error('Failed to store new SSNIT rate: ' . $e->getMessage());
             $_SESSION['flash_error'] = 'Error creating SSNIT rate: ' . $e->getMessage();
             $_SESSION['flash_input'] = $validator->all();
-            $this->redirect('/super/statutory-rates/ssnit/create');
-        }
-    }
-
-    /**
-     * Show the form for editing an SSNIT rate.
-     */
-    public function editSsnitRate(int $id): void
-    {
-        try {
-            $rate = $this->ssnitRateModel->find($id);
-            if (!$rate) {
-                ErrorResponder::respond(404, 'SSNIT Rate not found.');
-                return;
-            }
-
-            $this->view('superadmin/statutory-rates/edit_ssnit', [
-                'title' => 'Edit SSNIT Rate',
-                'rate' => $rate,
-                'error' => $_SESSION['flash_error'] ?? null,
-                'input' => $_SESSION['flash_input'] ?? [],
-            ]);
-            unset($_SESSION['flash_error'], $_SESSION['flash_input']);
-        } catch (\Throwable $e) {
-            Log::error('Failed to load edit SSNIT rate form for ID ' . $id . ': ' . $e->getMessage());
-            ErrorResponder::respond(500, 'Could not load the SSNIT rate edit form.');
+            $this->redirect('/super/statutory-rates'); // Redirect back to index page
         }
     }
 
@@ -147,7 +237,7 @@ class StatutoryRateController extends Controller
         if ($validator->fails()) {
             $_SESSION['flash_error'] = 'SSNIT rate update failed: ' . implode('<br>', $validator->errors());
             $_SESSION['flash_input'] = $validator->all();
-            $this->redirect('/super/statutory-rates/ssnit/' . $id . '/edit');
+            $this->redirect('/super/statutory-rates'); // Redirect back to index page
             return;
         }
 
@@ -160,12 +250,12 @@ class StatutoryRateController extends Controller
             ];
             $this->ssnitRateModel->update($id, $data);
             $_SESSION['flash_success'] = 'SSNIT Rate updated successfully.';
-            $this->redirect('/super/statutory-rates');
+            $this->redirect('/super/statutory-rates/ssnit');
         } catch (\Throwable $e) {
             Log::error('Failed to update SSNIT rate ID ' . $id . ': ' . $e->getMessage());
             $_SESSION['flash_error'] = 'Error updating SSNIT rate: ' . $e->getMessage();
             $_SESSION['flash_input'] = $validator->all();
-            $this->redirect('/super/statutory-rates/ssnit/' . $id . '/edit');
+            $this->redirect('/super/statutory-rates'); // Redirect back to index page
         }
     }
 
@@ -177,7 +267,7 @@ class StatutoryRateController extends Controller
         try {
             $this->ssnitRateModel->delete($id);
             $_SESSION['flash_success'] = 'SSNIT Rate deleted successfully.';
-            $this->redirect('/super/statutory-rates');
+            $this->redirect('/super/statutory-rates/ssnit');
         } catch (\Throwable $e) {
             Log::error('Failed to delete SSNIT rate ID ' . $id . ': ' . $e->getMessage());
             $_SESSION['flash_error'] = 'Error deleting SSNIT rate: ' . $e->getMessage();
@@ -186,24 +276,6 @@ class StatutoryRateController extends Controller
     }
 
     // --- Withholding Tax Rate Management ---
-
-    /**
-     * Show the form for creating a new Withholding Tax rate.
-     */
-    public function createWithholdingTaxRate(): void
-    {
-        try {
-            $this->view('superadmin/statutory-rates/create_wht', [
-                'title' => 'Create New Withholding Tax Rate',
-                'error' => $_SESSION['flash_error'] ?? null,
-                'input' => $_SESSION['flash_input'] ?? [],
-            ]);
-            unset($_SESSION['flash_error'], $_SESSION['flash_input']);
-        } catch (\Throwable $e) {
-            Log::error('Failed to load create Withholding Tax rate form: ' . $e->getMessage());
-            ErrorResponder::respond(500, 'Could not load the Withholding Tax rate creation form.');
-        }
-    }
 
     /**
      * Store a newly created Withholding Tax rate.
@@ -221,7 +293,7 @@ class StatutoryRateController extends Controller
         if ($validator->fails()) {
             $_SESSION['flash_error'] = 'Withholding Tax rate creation failed: ' . implode('<br>', $validator->errors());
             $_SESSION['flash_input'] = $validator->all();
-            $this->redirect('/super/statutory-rates/wht/create');
+            $this->redirect('/super/statutory-rates'); // Redirect back to index page
             return;
         }
 
@@ -234,37 +306,12 @@ class StatutoryRateController extends Controller
             ];
             $this->withholdingTaxRateModel->create($data);
             $_SESSION['flash_success'] = 'Withholding Tax Rate created successfully.';
-            $this->redirect('/super/statutory-rates');
+            $this->redirect('/super/statutory-rates/wht');
         } catch (\Throwable $e) {
             Log::error('Failed to store new Withholding Tax rate: ' . $e->getMessage());
             $_SESSION['flash_error'] = 'Error creating Withholding Tax rate: ' . $e->getMessage();
             $_SESSION['flash_input'] = $validator->all();
-            $this->redirect('/super/statutory-rates/wht/create');
-        }
-    }
-
-    /**
-     * Show the form for editing a Withholding Tax rate.
-     */
-    public function editWithholdingTaxRate(int $id): void
-    {
-        try {
-            $rate = $this->withholdingTaxRateModel->find($id);
-            if (!$rate) {
-                ErrorResponder::respond(404, 'Withholding Tax Rate not found.');
-                return;
-            }
-
-            $this->view('superadmin/statutory-rates/edit_wht', [
-                'title' => 'Edit Withholding Tax Rate',
-                'rate' => $rate,
-                'error' => $_SESSION['flash_error'] ?? null,
-                'input' => $_SESSION['flash_input'] ?? [],
-            ]);
-            unset($_SESSION['flash_error'], $_SESSION['flash_input']);
-        } catch (\Throwable $e) {
-            Log::error('Failed to load edit Withholding Tax rate form for ID ' . $id . ': ' . $e->getMessage());
-            ErrorResponder::respond(500, 'Could not load the Withholding Tax rate edit form.');
+            $this->redirect('/super/statutory-rates'); // Redirect back to index page
         }
     }
 
@@ -284,7 +331,7 @@ class StatutoryRateController extends Controller
         if ($validator->fails()) {
             $_SESSION['flash_error'] = 'Withholding Tax rate update failed: ' . implode('<br>', $validator->errors());
             $_SESSION['flash_input'] = $validator->all();
-            $this->redirect('/super/statutory-rates/wht/' . $id . '/edit');
+            $this->redirect('/super/statutory-rates'); // Redirect back to index page
             return;
         }
 
@@ -297,12 +344,12 @@ class StatutoryRateController extends Controller
             ];
             $this->withholdingTaxRateModel->update($id, $data);
             $_SESSION['flash_success'] = 'Withholding Tax Rate updated successfully.';
-            $this->redirect('/super/statutory-rates');
+            $this->redirect('/super/statutory-rates/wht');
         } catch (\Throwable $e) {
             Log::error('Failed to update Withholding Tax rate ID ' . $id . ': ' . $e->getMessage());
             $_SESSION['flash_error'] = 'Error updating Withholding Tax rate: ' . $e->getMessage();
             $_SESSION['flash_input'] = $validator->all();
-            $this->redirect('/super/statutory-rates/wht/' . $id . '/edit');
+            $this->redirect('/super/statutory-rates'); // Redirect back to index page
         }
     }
 
@@ -314,11 +361,96 @@ class StatutoryRateController extends Controller
         try {
             $this->withholdingTaxRateModel->delete($id);
             $_SESSION['flash_success'] = 'Withholding Tax Rate deleted successfully.';
-            $this->redirect('/super/statutory-rates');
+            $this->redirect('/super/statutory-rates/wht');
         } catch (\Throwable $e) {
             Log::error('Failed to delete Withholding Tax rate ID ' . $id . ': ' . $e->getMessage());
             $_SESSION['flash_error'] = 'Error deleting Withholding Tax rate: ' . $e->getMessage();
             $this->redirect('/super/statutory-rates');
+        }
+    }
+
+    /**
+     * API endpoint to get SSNIT rate details for editing.
+     * @param int $id
+     */
+    public function getSsnitRateDetails(int $id): void
+    {
+        try {
+            $rate = $this->ssnitRateModel->find($id);
+            if (!$rate) {
+                header('Content-Type: application/json');
+                echo json_encode(['error' => 'SSNIT Rate not found'], JSON_PRETTY_PRINT);
+                return;
+            }
+
+            header('Content-Type: application/json');
+            echo json_encode($rate, JSON_PRETTY_PRINT);
+        } catch (\Throwable $e) {
+            Log::error('Failed to get SSNIT rate details for API ID ' . $id . ': ' . $e->getMessage());
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'Could not retrieve SSNIT rate details.'], JSON_PRETTY_PRINT);
+        }
+    }
+
+    /**
+     * API endpoint to get Withholding Tax rate details for editing.
+     * @param int $id
+     */
+    public function getWithholdingTaxRateDetails(int $id): void
+    {
+        try {
+            $rate = $this->withholdingTaxRateModel->find($id);
+            if (!$rate) {
+                header('Content-Type: application/json');
+                echo json_encode(['error' => 'Withholding Tax Rate not found'], JSON_PRETTY_PRINT);
+                return;
+            }
+
+            header('Content-Type: application/json');
+            echo json_encode($rate, JSON_PRETTY_PRINT);
+        } catch (\Throwable $e) {
+            Log::error('Failed to get Withholding Tax rate details for API ID ' . $id . ': ' . $e->getMessage());
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'Could not retrieve Withholding Tax rate details.'], JSON_PRETTY_PRINT);
+        }
+    }
+
+    /**
+     * Delete a Tax Band.
+     */
+    public function deleteTaxBand(int $id): void
+    {
+        try {
+            $this->taxBandModel->delete($id);
+            $_SESSION['flash_success'] = 'Tax Band deleted successfully.';
+            $this->redirect('/super/statutory-rates/paye');
+        } catch (\Throwable $e) {
+            Log::error('Failed to delete Tax Band ID ' . $id . ': ' . $e->getMessage());
+            $_SESSION['flash_error'] = 'Error deleting Tax Band: ' . $e->getMessage();
+            $this->redirect('/super/statutory-rates/paye');
+        }
+    }
+
+    /**
+     * API endpoint to get Tax Band details for editing.
+     * @param int $id
+     */
+    public function getTaxBandDetails(int $id): void
+    {
+        try {
+            $rate = $this->taxBandModel->find($id);
+            if (!$rate) {
+                header('Content-Type: application/json');
+                echo json_encode(['error' => 'Tax Band not found'], JSON_PRETTY_PRINT);
+                return;
+            }
+
+            header('Content-Type: application/json');
+            echo json_encode($rate, JSON_PRETTY_PRINT);
+        } catch (\Throwable $e) {
+            Log::error('Failed to get Tax Band details for API ID ' . $id . ': ' . $e->getMessage());
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'Could not retrieve Tax Band details.'], JSON_PRETTY_PRINT);
         }
     }
 }

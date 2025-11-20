@@ -43,6 +43,7 @@
                                 <th>Subdomain</th>
                                 <th>Status</th>
                                 <th>Flow</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tfoot>
@@ -52,6 +53,7 @@
                                 <th>Subdomain</th>
                                 <th>Status</th>
                                 <th>Flow</th>
+                                <th>Actions</th>
                             </tr>
                         </tfoot>
                         <tbody>
@@ -62,6 +64,9 @@
                                 <td><?php echo $h($tenant['subdomain']); ?></td>
                                 <td><?php echo $h($tenant['subscription_status']); ?></td>
                                 <td><?php echo $h($tenant['payroll_approval_flow']); ?></td>
+                                <td>
+                                    <a href="/tenants/<?php echo $h((string)$tenant['id']); ?>" class="btn btn-info btn-sm">View</a>
+                                </td>
                             </tr>
                         <?php endforeach; ?>              
                         </tbody>

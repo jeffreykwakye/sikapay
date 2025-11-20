@@ -135,25 +135,80 @@ class UserProfileModel extends Model
         }
     }
 
-    /**
-     * Checks if a user profile record exists for the given user ID.
-     *
-     * @param int $userId The ID of the user to check.
-     * @return bool True if a profile exists, false otherwise.
-     */
-    public function profileExists(int $userId): bool
-    {
-        $sql = "SELECT COUNT(user_id) FROM {$this->table} WHERE user_id = :user_id";
-        try {
-            $stmt = $this->db->prepare($sql);
-            $stmt->bindParam(':user_id', $userId, \PDO::PARAM_INT);
-            $stmt->execute();
-            return (int)$stmt->fetchColumn() > 0;
-        } catch (PDOException $e) {
-            Log::error("UserProfileModel::profileExists check failed for User ID: {$userId}. Error: " . $e->getMessage());
-            return false; // Fail safe
+        /**
+
+         * Checks if a user profile record exists for the given user ID.
+
+         *
+
+         * @param int $userId The ID of the user to check.
+
+         * @return bool True if a profile exists, false otherwise.
+
+         */
+
+        public function profileExists(int $userId): bool
+
+        {
+
+            $sql = "SELECT COUNT(user_id) FROM {$this->table} WHERE user_id = :user_id";
+
+            try {
+
+                $stmt = $this->db->prepare($sql);
+
+                $stmt->bindParam(':user_id', $userId, \PDO::PARAM_INT);
+
+                $stmt->execute();
+
+                return (int)$stmt->fetchColumn() > 0;
+
+            } catch (PDOException $e) {
+
+                Log::error("UserProfileModel::profileExists check failed for User ID: {$userId}. Error: " . $e->getMessage());
+
+                return false; // Fail safe
+
+            }
+
         }
+
+    
+
+        /**
+
+         * Retrieves a user profile record by user ID.
+
+         * @param int $userId The ID of the user.
+
+         * @return array|null The user profile record, or null if not found.
+
+         */
+
+        public function findByUserId(int $userId): ?array
+
+        {
+
+            $sql = "SELECT * FROM {$this->table} WHERE user_id = :user_id";
+
+            try {
+
+                $stmt = $this->db->prepare($sql);
+
+                $stmt->execute([':user_id' => $userId]);
+
+                $result = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+                return $result ?: null;
+
+            } catch (PDOException $e) {
+
+                Log::error("Failed to retrieve user profile for User ID {$userId}. Error: " . $e->getMessage());
+
+                return null;
+
+            }
+
+        }
+
     }
-
-
-}

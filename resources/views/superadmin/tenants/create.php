@@ -63,7 +63,7 @@ $title = $h('Create New Tenant');
 
                                     <div class="form-group">
                                         <label for="tenant_name">Company Name:</label>
-                                        <input type="text" class="form-control" id="tenant_name" placeholder="Enter Company's Name" 
+                                        <input type="text" class="form-control" id="tenant_name" name="tenant_name" placeholder="Enter Company's Name" 
                                             value="<?= $h($data['input']['tenant_name'] ?? '') ?>" required/>
                                         <small id="tenant_name_help" class="form-text text-muted">
                                             Please provide your company/business's legal name.
@@ -72,7 +72,7 @@ $title = $h('Create New Tenant');
 
                                     <div class="form-group">
                                         <label for="subdomain">Subdomain:</label>
-                                        <input type="text" class="form-control" id="subdomain" placeholder="Enter Subdomain" 
+                                        <input type="text" class="form-control" id="subdomain" name="subdomain" placeholder="Enter Subdomain" 
                                             value="<?= $h($data['input']['subdomain'] ?? '') ?>" required/>
                                         <small id="subdomain_help" class="form-text text-muted">
                                             Please set the subdomain.
@@ -81,7 +81,7 @@ $title = $h('Create New Tenant');
 
                                     <div class="form-group">
                                         <label for="payroll_flow">Payroll Flow:</label>
-                                        <select class="form-select" id="payroll_flow">
+                                        <select class="form-select" id="payroll_flow" name="payroll_flow">
                                             <option value="ACCOUNTANT_FINAL">Accountant Final</option>
                                             <option value="ADMIN_FINAL">Admin Final</option>
                                         </select>
@@ -94,7 +94,7 @@ $title = $h('Create New Tenant');
 
                                     <div class="form-group">
                                         <label for="plan_id">Select Plan:</label>
-                                        <select class="form-select" id="plan_id">
+                                        <select class="form-select" id="plan_id" name="plan_id">
                                             <option value="">-- Select a Plan --</option>
                                             <?php foreach ($data['plans'] as $plan): ?>
                                                 <option value="<?= $h((string)$plan['id']) ?>"
@@ -121,7 +121,7 @@ $title = $h('Create New Tenant');
 
                                     <div class="form-group">
                                         <label for="admin_fname">First Name:</label>
-                                        <input type="text" class="form-control" id="admin_fname" placeholder="Enter first name" 
+                                        <input type="text" class="form-control" id="admin_fname" name="admin_fname" placeholder="Enter first name" 
                                             value="<?= $h($data['input']['admin_fname'] ?? '') ?>" required/>
                                         <small id="admin_fname_help" class="form-text text-muted">
                                             Please enter the first name of the administrator.
@@ -130,7 +130,7 @@ $title = $h('Create New Tenant');
 
                                     <div class="form-group">
                                         <label for="admin_lname">Last Name:</label>
-                                        <input type="text" class="form-control" id="admin_lname" placeholder="Enter last name" 
+                                        <input type="text" class="form-control" id="admin_lname" name="admin_lname" placeholder="Enter last name" 
                                             value="<?= $h($data['input']['admin_lname'] ?? '') ?>" required/>
                                         <small id="admin_lname_help" class="form-text text-muted">
                                             Please enter the last name of the administrator.
@@ -139,7 +139,7 @@ $title = $h('Create New Tenant');
 
                                     <div class="form-group">
                                         <label for="admin_email">Email:</label>
-                                        <input type="text" class="form-control" id="admin_email" placeholder="Enter email" 
+                                        <input type="text" class="form-control" id="admin_email" name="admin_email" placeholder="Enter email" 
                                             value="<?= $h($data['input']['admin_email'] ?? '') ?>" required/>
                                         <small id="admin_email_help" class="form-text text-muted">
                                             Please enter the email of the administrator.
@@ -148,7 +148,7 @@ $title = $h('Create New Tenant');
 
                                     <div class="form-group">
                                         <label for="admin_password">Password:</label>
-                                        <input type="text" class="form-control" id="admin_password" placeholder="Enter password" 
+                                        <input type="text" class="form-control" id="admin_password" name="admin_password" placeholder="Enter password" 
                                             value="<?= $h($data['input']['admin_password'] ?? '') ?>" required/>
                                         <small id="admin_password_help" class="form-text text-muted">
                                             Please enter the password of the administrator.

@@ -37,7 +37,7 @@ class TaxBandModel extends Model
             return [];
         }
 
-        $sql = "SELECT band_start, band_end, rate FROM {$this->table} 
+        $sql = "SELECT id, tax_year, band_start, band_end, rate, is_annual FROM {$this->table} 
                 WHERE tax_year = :tax_year AND is_annual = :is_annual
                 ORDER BY band_start ASC";
 

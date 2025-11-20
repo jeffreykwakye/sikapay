@@ -237,4 +237,25 @@ class DepartmentModel extends Model
             return [];
         }
     }
+
+    /**
+     * Counts all departments for a specific tenant ID.
+     *
+     * @param int $tenantId The ID of the tenant.
+     * @return int The count of departments.
+     */
+    public function countAllByTenantId(int $tenantId): int
+    {
+        $sql = "SELECT COUNT(id) FROM {$this->table} WHERE tenant_id = :tenant_id";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([':tenant_id' => $tenantId]);
+            return (int)$stmt->fetchColumn();
+        } catch (PDOException $e) {
+            Log::error("DB Count Error in DepartmentModel::countAllByTenantId for tenant {$tenantId}. Error: " . $e->getMessage());
+            return 0; 
+        }
+    }
+
 }

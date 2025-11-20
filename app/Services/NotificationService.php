@@ -219,4 +219,24 @@ class NotificationService
             return false;
         }
     }
+
+    /**
+     * Checks if a notification of a specific type has been sent to a tenant recently.
+     * @param int $tenantId The ID of the tenant.
+     * @param string $type The type of notification.
+     * @param int $days The number of days to check back.
+     * @return bool True if a recent notification exists, false otherwise.
+     */
+    public function hasRecentNotification(int $tenantId, string $type, int $days): bool
+    {
+        try {
+            return $this->notificationModel->hasRecentNotification($tenantId, $type, $days);
+        } catch (Throwable $e) {
+            Log::error("Failed to check for recent notifications for Tenant {$tenantId}.", [
+                'error' => $e->getMessage(),
+                'type' => $type
+            ]);
+            return false;
+        }
+    }
 }

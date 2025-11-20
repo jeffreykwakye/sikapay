@@ -85,8 +85,9 @@
                     </a>
                     <div class="collapse" id="statutoryRates">
                         <ul class="nav nav-collapse">
-                            <li><a href="/paye-rates"><span class="sub-item">PAYE Rates</span></a></li>
-                            <li><a href="/ssnit-rates"><span class="sub-item">SSNIT Rates</span></a></li>
+                            <li><a href="/super/statutory-rates/paye"><span class="sub-item">PAYE Tax Bands</span></a></li>
+                            <li><a href="/super/statutory-rates/ssnit"><span class="sub-item">SSNIT Rates</span></a></li>
+                            <li><a href="/super/statutory-rates/wht"><span class="sub-item">Withholding Tax Rates</span></a></li>
                         </ul>
                     </div>
                 </li>

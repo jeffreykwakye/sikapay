@@ -1,19 +1,11 @@
-<?php
-/**
- * @var string $title
- * @var array $plans
- * @var callable $h
- */
-?>
-
 <div class="page-header">
     <h3 class="fw-bold mb-3"><?= $h($title) ?></h3>
     <ul class="breadcrumbs mb-3">
-        <li class="nav-home"><a href="/dashboard"><i class="icon-home"></i></a></li>
+        <li class="nav-home"><a href="/super/dashboard"><i class="icon-home"></i></a></li>
         <li class="separator"><i class="icon-arrow-right"></i></li>
         <li class="nav-item"><a href="/super/dashboard">Super Admin</a></li>
         <li class="separator"><i class="icon-arrow-right"></i></li>
-        <li class="nav-item"><a href="/super/plans">Plans</a></li>
+        <li class="nav-item"><a href="#">Subscription Plans</a></li>
     </ul>
 </div>
 
@@ -21,16 +13,17 @@
     <div class="col-md-12">
         <div class="card">
             <div class="card-header">
-                <h4 class="card-title">Subscription Plans</h4>
+                <h4 class="card-title">Available Plans</h4>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-striped table-hover">
+                    <table id="plans_table" class="display table table-striped table-hover">
                         <thead>
                             <tr>
                                 <th>ID</th>
                                 <th>Name</th>
-                                <th>Price (GHS)</th>
+                                <th>Price (GHS/month)</th>
+                                <th>Status</th>
                                 <th>Created At</th>
                                 <th>Actions</th>
                             </tr>
@@ -38,17 +31,24 @@
                         <tbody>
                             <?php if (empty($plans)): ?>
                                 <tr>
-                                    <td colspan="5" class="text-center">No subscription plans found.</td>
+                                    <td colspan="6" class="text-center">No subscription plans found.</td>
                                 </tr>
                             <?php else: ?>
                                 <?php foreach ($plans as $plan): ?>
                                     <tr>
                                         <td><?= $h($plan['id']) ?></td>
                                         <td><?= $h($plan['name']) ?></td>
-                                        <td><?= $h(number_format((float)$plan['price_ghs'], 2)) ?></td>
-                                        <td><?= $h(date('M j, Y, g:i a', strtotime($plan['created_at']))) ?></td>
+                                        <td><?= $h(number_format($plan['price_ghs'], 2)) ?></td>
                                         <td>
-                                            <a href="#" class="btn btn-sm btn-info">Edit</a>
+                                            <?php if ($plan['is_active']): ?>
+                                                <span class="badge bg-success">Active</span>
+                                            <?php else: ?>
+                                                <span class="badge bg-danger">Inactive</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td><?= $h(date('M j, Y', strtotime($plan['created_at']))) ?></td>
+                                        <td>
+                                            <a href="/super/plans/<?= $h($plan['id']) ?>" class="btn btn-primary btn-sm">View</a>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>

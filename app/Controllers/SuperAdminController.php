@@ -13,6 +13,12 @@ use Jeffrey\Sikapay\Models\UserModel;
 use Jeffrey\Sikapay\Models\RoleModel;
 use Jeffrey\Sikapay\Models\AuditModel;
 use Jeffrey\Sikapay\Models\EmployeeModel;
+use Jeffrey\Sikapay\Models\FeatureModel; // NEW
+use Jeffrey\Sikapay\Models\DepartmentModel; // NEW
+use Jeffrey\Sikapay\Models\PositionModel; // NEW
+use Jeffrey\Sikapay\Models\PayrollPeriodModel; // NEW
+use Jeffrey\Sikapay\Models\PayslipModel; // NEW
+
 use Jeffrey\Sikapay\Services\NotificationService;
 use Jeffrey\Sikapay\Core\Validator;
 
@@ -26,6 +32,11 @@ class SuperAdminController extends Controller
     protected AuditModel $auditModel;
     protected EmployeeModel $employeeModel;
     protected NotificationService $notificationService;
+    protected FeatureModel $featureModel; // NEW
+    protected DepartmentModel $departmentModel; // NEW
+    protected PositionModel $positionModel; // NEW
+    protected PayrollPeriodModel $payrollPeriodModel; // NEW
+    protected PayslipModel $payslipModel; // NEW
 
     public function __construct()
     {
@@ -41,6 +52,11 @@ class SuperAdminController extends Controller
             $this->auditModel = new AuditModel();
             $this->employeeModel = new EmployeeModel();
             $this->notificationService = new NotificationService();
+            $this->featureModel = new FeatureModel(); // NEW
+            $this->departmentModel = new DepartmentModel(); // NEW
+            $this->positionModel = new PositionModel(); // NEW
+            $this->payrollPeriodModel = new PayrollPeriodModel(); // NEW
+            $this->payslipModel = new PayslipModel(); // NEW
         } catch (\Throwable $e) {
             Log::critical('SuperAdminController failed to initialize models/services: ' . $e->getMessage());
             ErrorResponder::respond(500, 'A critical system error occurred during Super Admin initialization.');
@@ -65,10 +81,16 @@ class SuperAdminController extends Controller
                 'plan_distribution' => $this->planModel->getPlanDistribution(),
             ];
 
+            $tables = [
+                'new_tenants' => $this->tenantModel->getNewTenants(30),
+                'at_risk_subscriptions' => $this->subscriptionModel->getAtRiskSubscriptions(7),
+            ];
+
             $this->view('superadmin/index', [
                 'title' => 'Super Admin Dashboard',
                 'stats' => $stats,
                 'charts' => $charts,
+                'tables' => $tables,
             ]);
         } catch (\Throwable $e) {
             Log::critical('Super Admin Dashboard failed to load: ' . $e->getMessage());
@@ -83,9 +105,11 @@ class SuperAdminController extends Controller
     {
         try {
             $plans = $this->planModel->all();
+            $allFeatures = $this->featureModel->all(); // NEW
             $this->view('superadmin/plans/index', [
                 'title' => 'Manage Subscription Plans',
                 'plans' => $plans,
+                'allFeatures' => $allFeatures, // NEW
             ]);
         } catch (\Throwable $e) {
             Log::error('Failed to load subscription plans page: ' . $e->getMessage());
@@ -209,7 +233,7 @@ class SuperAdminController extends Controller
                 'name' => $validator->get('tenant_name'),
                 'subdomain' => strtolower($validator->get('subdomain')), // Ensure subdomain is lowercase
                 // Apply defaults/sanitization for optional fields
-                'subscription_status' => $validator->get('subscription_status') === 'active' ? 'active' : 'trial',
+                'subscription_status' => 'active', // Default to active when plan is selected
                 'payroll_approval_flow' => $validator->get('payroll_flow') ?? 'ACCOUNTANT_FINAL',
                 'plan_id' => $validator->get('plan_id', 'int'),
             ];
@@ -237,16 +261,36 @@ class SuperAdminController extends Controller
                 throw new \Exception("Admin user creation failed unexpectedly.");
             }
 
+            // Create User Profile record for the admin user with sensible defaults
+            $userProfileModel = new \Jeffrey\Sikapay\Models\UserProfileModel();
+            if (!$userProfileModel->createProfile([
+                'user_id' => $adminUserId,
+                'date_of_birth' => '2000-01-01', // Sensible default
+                'nationality' => 'Ghanaian',
+                'marital_status' => 'Single',
+                'gender' => 'Other',
+                'home_address' => 'N/A',
+                'ssnit_number' => null,
+                'tin_number' => null,
+                'id_card_type' => 'Other',
+                'id_card_number' => null,
+                'emergency_contact_name' => 'Tenant Admin Emergency Contact', // Generic default
+                'emergency_contact_phone' => 'N/A', // Default
+            ])) {
+                throw new \Exception("Admin user profile creation failed unexpectedly.");
+            }
+
             // Create employee record for the admin user
+            $hireDate = date('Y-m-d');
             $this->employeeModel->createEmployeeRecord([
                 'user_id' => $adminUserId,
                 'tenant_id' => $tenantId,
                 'employee_id' => 'EMP-' . $adminUserId,
-                'hire_date' => date('Y-m-d'),
-                'current_position_id' => null,
-                'employment_type' => 'Full-time',
-                'current_salary_ghs' => 0.00,
-                'payment_method' => 'Bank Transfer',
+                'hire_date' => $hireDate,
+                'current_position_id' => null, // No default position set
+                'employment_type' => 'Full-Time', // Default
+                'current_salary_ghs' => 0.00, // Default to 0.00
+                'payment_method' => 'Bank Transfer', // Default
                 'bank_name' => null,
                 'bank_account_number' => null,
                 'bank_branch' => null,
@@ -254,9 +298,28 @@ class SuperAdminController extends Controller
                 'is_payroll_eligible' => 1,
             ]);
 
-            // Create HR Manager and Accountant users
-            $this->createDefaultUser($tenantId, 'hr_manager', 'HR', 'Manager', 'hr@' . $tenantData['subdomain'] . '.com');
-            $this->createDefaultUser($tenantId, 'accountant', 'Accountant', 'User', 'accountant@' . $tenantData['subdomain'] . '.com');
+            // Log employment history (Hired)
+            $employmentHistoryModel = new \Jeffrey\Sikapay\Models\EmploymentHistoryModel();
+            if (!$employmentHistoryModel->create([
+                'user_id' => $adminUserId,
+                'tenant_id' => $tenantId,
+                'effective_date' => $hireDate,
+                'record_type' => 'Hired',
+                'old_salary' => null,
+                'new_salary' => 0.00, // Matching default current_salary_ghs
+                'notes' => 'Initial hiring record for Tenant Admin during tenant provisioning.',
+            ])) {
+                Log::error("Failed to create employment history for new Tenant Admin {$adminUserId}.");
+            }
+
+            // Fetch the plan details to check if default users should be created
+            $selectedPlan = $this->planModel->find($tenantData['plan_id']);
+
+            // Create HR Manager and Accountant users ONLY for Professional and Enterprise plans
+            if ($selectedPlan && in_array($selectedPlan['name'], ['Professional', 'Enterprise'])) {
+                $this->createDefaultUser($tenantId, 'hr_manager', 'HR', 'Manager', 'hr@' . $tenantData['subdomain'] . '.com');
+                $this->createDefaultUser($tenantId, 'accountant', 'Accountant', 'User', 'accountant@' . $tenantData['subdomain'] . '.com');
+            }
 
 
             // D. Execute Creation (Model 3: Subscription) - Must throw on failure
@@ -332,6 +395,57 @@ class SuperAdminController extends Controller
         }
     }
 
+    /**
+     * Display details of a specific tenant.
+     * @param int $id The ID of the tenant.
+     */
+    public function tenantsShow(int $id): void
+    {
+        try {
+            $tenant = $this->tenantModel->find($id);
+            if (!$tenant) {
+                ErrorResponder::respond(404, 'Tenant not found.');
+                return;
+            }
+
+            $subscription = $this->subscriptionModel->getCurrentSubscription($id);
+            $adminUser = $this->userModel->findTenantAdminUser($id);
+            $subscriptionHistory = $this->subscriptionModel->getHistoryForTenant($id);
+
+            // Fetch additional metrics for the tenant
+            $totalEmployees = $this->employeeModel->getEmployeeCount($id);
+            $totalDepartments = $this->departmentModel->countAllByTenantId($id);
+            $totalPositions = $this->positionModel->countAllByTenantId($id);
+            
+            $lastPayrollPeriod = $this->payrollPeriodModel->getLatestClosedPeriod($id);
+            $lastPayrollRunDate = $lastPayrollPeriod['end_date'] ?? 'N/A';
+            $lastPayrollGrossPay = 0.0;
+            if ($lastPayrollPeriod) {
+                $payrollAggregates = $this->payslipModel->getAggregatedPayslipData((int)$lastPayrollPeriod['id'], $id);
+                $lastPayrollGrossPay = $payrollAggregates['total_gross_pay'] ?? 0.0;
+            }
+
+            $availablePlans = $this->planModel->all(); // Fetch all plans for upgrade/downgrade modals
+
+            $this->view('superadmin/tenants/show', [
+                'title' => 'Tenant Details: ' . $tenant['name'],
+                'tenant' => $tenant,
+                'subscription' => $subscription,
+                'adminUser' => $adminUser,
+                'subscriptionHistory' => $subscriptionHistory,
+                'totalEmployees' => $totalEmployees,
+                'totalDepartments' => $totalDepartments,
+                'totalPositions' => $totalPositions,
+                'lastPayrollRunDate' => $lastPayrollRunDate,
+                'lastPayrollGrossPay' => $lastPayrollGrossPay,
+                'availablePlans' => $availablePlans, // NEW: Pass available plans
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Failed to load tenant details for ID ' . $id . ': ' . $e->getMessage());
+            ErrorResponder::respond(500, 'Could not load tenant details.');
+        }
+    }
+
     private function createDefaultUser(int $tenantId, string $roleName, string $firstName, string $lastName, string $email): void
     {
         $roleId = $this->roleModel->findIdByName($roleName);
@@ -351,13 +465,33 @@ class SuperAdminController extends Controller
             throw new \Exception("Failed to create default user with role '{$roleName}'.");
         }
 
+        // Create User Profile record for the default user with sensible defaults
+        $userProfileModel = new \Jeffrey\Sikapay\Models\UserProfileModel();
+        if (!$userProfileModel->createProfile([
+            'user_id' => $userId,
+            'date_of_birth' => '2000-01-01', // Sensible default
+            'nationality' => 'Ghanaian',
+            'marital_status' => 'Single',
+            'gender' => 'Other',
+            'home_address' => 'N/A',
+            'ssnit_number' => null,
+            'tin_number' => null,
+            'id_card_type' => 'Other',
+            'id_card_number' => null,
+            'emergency_contact_name' => "{$roleName} Emergency Contact", // Generic default
+            'emergency_contact_phone' => 'N/A', // Default
+        ])) {
+            throw new \Exception("Default user profile creation failed unexpectedly for role '{$roleName}'.");
+        }
+
+        $hireDate = date('Y-m-d');
         $this->employeeModel->createEmployeeRecord([
             'user_id' => $userId,
             'tenant_id' => $tenantId,
             'employee_id' => 'EMP-' . $userId,
-            'hire_date' => date('Y-m-d'),
+            'hire_date' => $hireDate,
             'current_position_id' => null,
-            'employment_type' => 'Full-time',
+            'employment_type' => 'Full-Time',
             'current_salary_ghs' => 0.00,
             'payment_method' => 'Bank Transfer',
             'bank_name' => null,
@@ -366,5 +500,185 @@ class SuperAdminController extends Controller
             'bank_account_name' => null,
             'is_payroll_eligible' => 1,
         ]);
+
+        // Log employment history (Hired)
+        $employmentHistoryModel = new \Jeffrey\Sikapay\Models\EmploymentHistoryModel();
+        if (!$employmentHistoryModel->create([
+            'user_id' => $userId,
+            'tenant_id' => $tenantId,
+            'effective_date' => $hireDate,
+            'record_type' => 'Hired',
+            'old_salary' => null,
+            'new_salary' => 0.00,
+            'notes' => "Initial hiring record for {$roleName} during tenant provisioning.",
+        ])) {
+            Log::error("Failed to create employment history for default user {$userId} ({$roleName}).");
+        }
+    }
+
+    /**
+     * Handles the cancellation of a tenant's subscription.
+     * @param int $id The ID of the tenant.
+     */
+    public function cancelTenantSubscription(int $id): void
+    {
+        $this->checkPermission('super:manage_subscriptions');
+
+        $validator = new Validator($_POST);
+        $validator->validate([
+            'reason' => 'required|min:3',
+            'cancellation_date' => 'optional|date',
+        ]);
+
+        if ($validator->fails()) {
+            $_SESSION['flash_error'] = 'Cancellation failed: ' . implode('<br>', $validator->errors());
+            $this->redirect('/tenants/' . $id);
+            return;
+        }
+
+        try {
+            $reason = $validator->get('reason');
+            $cancellationDate = $validator->get('cancellation_date', 'string', null);
+            $success = $this->subscriptionModel->cancelSubscription($id, $reason, $cancellationDate);
+
+            if ($success) {
+                $_SESSION['flash_success'] = "Subscription for tenant {$id} cancelled successfully.";
+                $this->auditModel->log(1, 'SUBSCRIPTION_CANCELLED', ['tenant_id' => $id, 'reason' => $reason]);
+            } else {
+                $_SESSION['flash_error'] = "Failed to cancel subscription for tenant {$id}.";
+            }
+        } catch (\Throwable $e) {
+            Log::error('Failed to cancel subscription for tenant ' . $id . ': ' . $e->getMessage());
+            $_SESSION['flash_error'] = 'Error cancelling subscription: ' . $e->getMessage();
+        }
+        $this->redirect('/tenants/' . $id);
+    }
+
+    /**
+     * Handles the renewal of a tenant's subscription.
+     * @param int $id The ID of the tenant.
+     */
+    public function renewTenantSubscription(int $id): void
+    {
+        $this->checkPermission('super:manage_subscriptions');
+
+        $validator = new Validator($_POST);
+        $validator->validate([
+            'plan_id' => 'required|int',
+            'new_end_date' => 'required|date',
+            'amount_paid' => 'required|numeric|min:0',
+        ]);
+
+        if ($validator->fails()) {
+            $_SESSION['flash_error'] = 'Renewal failed: ' . implode('<br>', $validator->errors());
+            $this->redirect('/tenants/' . $id);
+            return;
+        }
+
+        try {
+            $planId = $validator->get('plan_id', 'int');
+            $newEndDate = $validator->get('new_end_date');
+            $amountPaid = $validator->get('amount_paid', 'float');
+
+            $success = $this->subscriptionModel->renewSubscription($id, $planId, $newEndDate, $amountPaid);
+
+            if ($success) {
+                $_SESSION['flash_success'] = "Subscription for tenant {$id} renewed successfully.";
+                $this->auditModel->log(1, 'SUBSCRIPTION_RENEWED', ['tenant_id' => $id, 'plan_id' => $planId, 'new_end_date' => $newEndDate, 'amount_paid' => $amountPaid]);
+            } else {
+                $_SESSION['flash_error'] = "Failed to renew subscription for tenant {$id}.";
+            }
+        } catch (\Throwable $e) {
+            Log::error('Failed to renew subscription for tenant ' . $id . ': ' . $e->getMessage());
+            $_SESSION['flash_error'] = 'Error renewing subscription: ' . $e->getMessage();
+        }
+        $this->redirect('/tenants/' . $id);
+    }
+
+    /**
+     * Handles upgrading a tenant's subscription.
+     * @param int $id The ID of the tenant.
+     */
+    public function upgradeTenantSubscription(int $id): void
+    {
+        $this->checkPermission('super:manage_subscriptions');
+
+        $validator = new Validator($_POST);
+        $validator->validate([
+            'new_plan_id' => 'required|int',
+        ]);
+
+        if ($validator->fails()) {
+            $_SESSION['flash_error'] = 'Upgrade failed: ' . implode('<br>', $validator->errors());
+            $this->redirect('/tenants/' . $id);
+            return;
+        }
+
+        try {
+            $newPlanId = $validator->get('new_plan_id', 'int');
+            $success = $this->subscriptionModel->upgradeSubscription($id, $newPlanId);
+
+            if ($success) {
+                $_SESSION['flash_success'] = "Subscription for tenant {$id} upgraded successfully.";
+                $this->auditModel->log(1, 'SUBSCRIPTION_UPGRADED', ['tenant_id' => $id, 'new_plan_id' => $newPlanId]);
+            } else {
+                $_SESSION['flash_error'] = "Failed to upgrade subscription for tenant {$id}.";
+            }
+        } catch (\Throwable $e) {
+            Log::error('Failed to upgrade subscription for tenant ' . $id . ': ' . $e->getMessage());
+            $_SESSION['flash_error'] = 'Error upgrading subscription: ' . $e->getMessage();
+        }
+        $this->redirect('/tenants/' . $id);
+    }
+
+    /**
+     * Handles downgrading a tenant's subscription.
+     * @param int $id The ID of the tenant.
+     */
+    public function downgradeTenantSubscription(int $id): void
+    {
+        $this->checkPermission('super:manage_subscriptions');
+
+        $validator = new Validator($_POST);
+        $validator->validate([
+            'new_plan_id' => 'required|int',
+        ]);
+
+        if ($validator->fails()) {
+            $_SESSION['flash_error'] = 'Downgrade failed: ' . implode('<br>', $validator->errors());
+            $this->redirect('/tenants/' . $id);
+            return;
+        }
+
+        try {
+            $newPlanId = $validator->get('new_plan_id', 'int');
+            $success = $this->subscriptionModel->downgradeSubscription($id, $newPlanId);
+
+            if ($success) {
+                $_SESSION['flash_success'] = "Subscription for tenant {$id} downgraded successfully.";
+                $this->auditModel->log(1, 'SUBSCRIPTION_DOWNGRADED', ['tenant_id' => $id, 'new_plan_id' => $newPlanId]);
+            } else {
+                $_SESSION['flash_error'] = "Failed to downgrade subscription for tenant {$id}.";
+            }
+        } catch (\Throwable $e) {
+            Log::error('Failed to downgrade subscription for tenant ' . $id . ': ' . $e->getMessage());
+            $_SESSION['flash_error'] = 'Error downgrading subscription: ' . $e->getMessage();
+        }
+        $this->redirect('/tenants/' . $id);
+    }
+
+    /**
+     * Display system-wide reports for Super Admin.
+     */
+    public function reports(): void
+    {
+        try {
+            $this->view('superadmin/reports/index', [
+                'title' => 'System Reports',
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Failed to load system reports page: ' . $e->getMessage());
+            ErrorResponder::respond(500, 'Could not load system reports.');
+        }
     }
 }

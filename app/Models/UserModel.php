@@ -118,31 +118,57 @@ class UserModel extends Model
                     }
                 }
             
-                /**
-                 * Retrieves all users belonging to a specific role within a given tenant.
-                 * @param int $tenantId The ID of the tenant.
-                 * @param string $roleName The name of the role.
-                 * @return array An array of user records (id, email, etc.).
-                 */
-                public function getUsersByRole(int $tenantId, string $roleName): array
-                {
-                    $sql = "SELECT u.id, u.email, u.first_name, u.last_name 
-                            FROM users u
-                            JOIN roles r ON u.role_id = r.id
-                            WHERE u.tenant_id = :tenant_id AND r.name = :role_name AND u.is_active = TRUE";
-                    
-                    try {
-                        $stmt = $this->db->prepare($sql);
-                        $stmt->execute([
-                            ':tenant_id' => $tenantId,
-                            ':role_name' => $roleName
-                        ]);
-                        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
-                    } catch (PDOException $e) {
-                        Log::error("Failed to retrieve users for role '{$roleName}' in Tenant {$tenantId}. Error: " . $e->getMessage(), [
-                            'acting_user_id' => Auth::userId()
-                        ]);
-                        return [];
-                    }
-                }
-            }
+    /**
+     * Retrieves all users belonging to a specific role within a given tenant.
+     * @param int $tenantId The ID of the tenant.
+     * @param string $roleName The name of the role.
+     * @return array An array of user records (id, email, etc.).
+     */
+    public function getUsersByRole(int $tenantId, string $roleName): array
+    {
+        $sql = "SELECT u.id, u.email, u.first_name, u.last_name 
+                FROM users u
+                JOIN roles r ON u.role_id = r.id
+                WHERE u.tenant_id = :tenant_id AND r.name = :role_name AND u.is_active = TRUE";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                ':tenant_id' => $tenantId,
+                ':role_name' => $roleName
+            ]);
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            Log::error("Failed to retrieve users for role '{$roleName}' in Tenant {$tenantId}. Error: " . $e->getMessage(), [
+                'acting_user_id' => Auth::userId()
+            ]);
+            return [];
+        }
+    }
+
+    /**
+     * Retrieves the tenant administrator user for a given tenant ID.
+     * @param int $tenantId The ID of the tenant.
+     * @return array|null The tenant admin user record, or null if not found.
+     */
+    public function findTenantAdminUser(int $tenantId): ?array
+    {
+        $sql = "SELECT u.id, u.email, u.first_name, u.last_name, u.phone, u.created_at, r.name AS role_name
+                FROM users u
+                JOIN roles r ON u.role_id = r.id
+                WHERE u.tenant_id = :tenant_id 
+                AND r.name = 'tenant_admin'
+                AND u.is_active = TRUE
+                LIMIT 1";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([':tenant_id' => $tenantId]);
+            $result = $stmt->fetch(\PDO::FETCH_ASSOC);
+            return $result ?: null;
+        } catch (PDOException $e) {
+            Log::error("Failed to retrieve tenant admin user for Tenant {$tenantId}. Error: " . $e->getMessage());
+            return null;
+        }
+    }
+}

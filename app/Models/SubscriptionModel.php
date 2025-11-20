@@ -210,6 +210,63 @@ class SubscriptionModel extends Model
     }
 
     /**
+     * Retrieves all active subscriptions that are expiring within a given number of days.
+     * @param int $days The number of days to look ahead for expiring subscriptions.
+     * @return array
+     */
+    public function getExpiringSoonSubscriptions(int $days): array
+    {
+        $sql = "SELECT 
+                    s.tenant_id, s.current_plan_id, s.end_date,
+                    t.name as tenant_name,
+                    p.name as plan_name,
+                    DATEDIFF(s.end_date, CURDATE()) as days_left
+                FROM {$this->table} s
+                JOIN tenants t ON s.tenant_id = t.id
+                JOIN plans p ON s.current_plan_id = p.id
+                WHERE s.status = 'active' 
+                AND s.end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL :days DAY)";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([':days' => $days]);
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            Log::error("Failed to retrieve expiring soon subscriptions. Error: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Retrieves all subscriptions that are 'past_due' or expiring within X days.
+     * @param int $days The number of days to look ahead for expiring subscriptions.
+     * @return array
+     */
+    public function getAtRiskSubscriptions(int $days = 7): array
+    {
+        $sql = "SELECT 
+                    s.tenant_id, s.status, s.end_date,
+                    t.name as tenant_name,
+                    p.name as plan_name,
+                    DATEDIFF(s.end_date, CURDATE()) as days_left
+                FROM {$this->table} s
+                JOIN tenants t ON s.tenant_id = t.id
+                JOIN plans p ON s.current_plan_id = p.id
+                WHERE s.status = 'past_due' 
+                OR (s.status = 'active' AND s.end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL :days DAY))
+                ORDER BY s.end_date ASC";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([':days' => $days]);
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            Log::error("Failed to retrieve at-risk subscriptions. Error: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
      * Updates the status of a subscription for a given tenant.
      * @param int $tenantId
      * @param string $status
@@ -290,4 +347,277 @@ class SubscriptionModel extends Model
         }
         return $data;
     }
+
+    /**
+     * Retrieves all tenants subscribed to a specific plan.
+     * @param int $planId The ID of the plan.
+     * @return array
+     */
+    public function getTenantsByPlan(int $planId): array
+    {
+        $sql = "SELECT t.id, t.name, t.subdomain, s.status, s.start_date, s.end_date
+                FROM {$this->table} s
+                JOIN tenants t ON s.tenant_id = t.id
+                WHERE s.current_plan_id = :plan_id
+                ORDER BY t.name ASC";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([':plan_id' => $planId]);
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            Log::error("Failed to retrieve tenants for plan ID {$planId}. Error: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Calculates the total revenue accrued from a specific plan.
+     * @param int $planId The ID of the plan.
+     * @return float
+     */
+    public function getRevenueByPlan(int $planId): float
+    {
+        $sql = "SELECT SUM(p.price_ghs) 
+                FROM subscription_history sh
+                JOIN plans p ON sh.plan_id = p.id
+                WHERE sh.plan_id = :plan_id AND sh.action_type = 'Renewal'";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([':plan_id' => $planId]);
+            return (float)$stmt->fetchColumn();
+        } catch (PDOException $e) {
+            Log::error("Failed to calculate revenue for plan ID {$planId}. Error: " . $e->getMessage());
+            return 0.0;
+        }
+    }
+
+    /**
+     * Retrieves the subscription history for a given tenant.
+     *
+     * @param int $tenantId The ID of the tenant.
+     * @return array An array of subscription history records.
+     */
+    public function getHistoryForTenant(int $tenantId): array
+    {
+        $sql = "SELECT 
+                    sh.*, 
+                    p.name AS plan_name
+                FROM subscription_history sh
+                JOIN plans p ON sh.plan_id = p.id
+                WHERE sh.tenant_id = :tenant_id
+                ORDER BY sh.created_at DESC";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([':tenant_id' => $tenantId]);
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            Log::error("Failed to retrieve subscription history for tenant {$tenantId}. Error: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Cancels a tenant's subscription.
+     *
+     * @param int $tenantId The ID of the tenant.
+     * @param string $reason The reason for cancellation.
+     * @param string|null $cancellationDate The date of cancellation (defaults to today).
+     * @return bool True on success, false otherwise.
+     */
+    public function cancelSubscription(int $tenantId, string $reason, ?string $cancellationDate = null): bool
+    {
+        $cancellationDate = $cancellationDate ?? date('Y-m-d');
+        $this->db->beginTransaction();
+        try {
+            // Update the main subscriptions table
+            $sql = "UPDATE {$this->table} SET status = 'cancelled', end_date = :cancellation_date WHERE tenant_id = :tenant_id";
+            $stmt = $this->db->prepare($sql);
+            $success = $stmt->execute([
+                ':cancellation_date' => $cancellationDate,
+                ':tenant_id' => $tenantId,
+            ]);
+
+            if ($success) {
+                // Log to history
+                $currentSubscription = $this->getCurrentSubscription($tenantId);
+                $this->logHistory(
+                    $tenantId,
+                    (int)$currentSubscription['current_plan_id'],
+                    'Cancellation',
+                    "Subscription cancelled. Reason: {$reason}.",
+                    null,
+                    $currentSubscription['start_date'],
+                    $cancellationDate
+                );
+            }
+            $this->db->commit();
+            return $success;
+        } catch (PDOException $e) {
+            $this->db->rollBack();
+            Log::error("Failed to cancel subscription for tenant {$tenantId}. Error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Renews a tenant's subscription.
+     *
+     * @param int $tenantId The ID of the tenant.
+     * @param int $planId The ID of the plan being renewed (should be current).
+     * @param string $newEndDate The new end date for the subscription.
+     * @param float $amountPaid The amount paid for renewal.
+     * @return bool True on success, false otherwise.
+     */
+    public function renewSubscription(int $tenantId, int $planId, string $newEndDate, float $amountPaid): bool
+    {
+        $this->db->beginTransaction();
+        try {
+            // Update the main subscriptions table
+            $sql = "UPDATE {$this->table} SET 
+                        status = 'active', 
+                        end_date = :new_end_date, 
+                        next_billing_date = :new_end_date, 
+                        last_payment_date = CURDATE()
+                    WHERE tenant_id = :tenant_id AND current_plan_id = :plan_id";
+            $stmt = $this->db->prepare($sql);
+            $success = $stmt->execute([
+                ':new_end_date' => $newEndDate,
+                ':tenant_id' => $tenantId,
+                ':plan_id' => $planId,
+            ]);
+
+            if ($success) {
+                // Log to history
+                $currentSubscription = $this->getCurrentSubscription($tenantId);
+                $this->logHistory(
+                    $tenantId,
+                    $planId,
+                    'Renewal',
+                    "Subscription renewed for plan '{$currentSubscription['plan_name']}'. New end date: {$newEndDate}.",
+                    $amountPaid,
+                    $currentSubscription['start_date'], // Use old start date for continuity or determine new cycle start
+                    $newEndDate
+                );
+            }
+            $this->db->commit();
+            return $success;
+        } catch (PDOException $e) {
+            $this->db->rollBack();
+            Log::error("Failed to renew subscription for tenant {$tenantId}. Error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Upgrades a tenant's subscription to a new plan.
+     *
+     * @param int $tenantId The ID of the tenant.
+     * @param int $newPlanId The ID of the new plan.
+     * @return bool True on success, false otherwise.
+     */
+    public function upgradeSubscription(int $tenantId, int $newPlanId): bool
+    {
+        $this->db->beginTransaction();
+        try {
+            $currentSubscription = $this->getCurrentSubscription($tenantId);
+            if (!$currentSubscription) {
+                throw new \Exception("No active subscription found for tenant {$tenantId}.");
+            }
+            $oldPlanId = (int)$currentSubscription['current_plan_id'];
+
+            // Update the main subscriptions table
+            $sql = "UPDATE {$this->table} SET 
+                        current_plan_id = :new_plan_id, 
+                        status = 'active', 
+                        updated_at = NOW()
+                    WHERE tenant_id = :tenant_id";
+            $stmt = $this->db->prepare($sql);
+            $success = $stmt->execute([
+                ':new_plan_id' => $newPlanId,
+                ':tenant_id' => $tenantId,
+            ]);
+
+            if ($success) {
+                // Log to history
+                $this->logHistory(
+                    $tenantId,
+                    $newPlanId,
+                    'Upgrade',
+                    "Subscription upgraded from plan ID {$oldPlanId} to plan ID {$newPlanId}.",
+                    null, // Amount paid can be handled separately
+                    $currentSubscription['start_date'],
+                    $currentSubscription['end_date']
+                );
+            }
+            $this->db->commit();
+            return $success;
+        } catch (PDOException $e) {
+            $this->db->rollBack();
+            Log::error("Failed to upgrade subscription for tenant {$tenantId} to plan {$newPlanId}. Error: " . $e->getMessage());
+            return false;
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            Log::error("Upgrade subscription failed for tenant {$tenantId}: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Downgrades a tenant's subscription to a new plan.
+     *
+     * @param int $tenantId The ID of the tenant.
+     * @param int $newPlanId The ID of the new plan.
+     * @return bool True on success, false otherwise.
+     */
+    public function downgradeSubscription(int $tenantId, int $newPlanId): bool
+    {
+        $this->db->beginTransaction();
+        try {
+            $currentSubscription = $this->getCurrentSubscription($tenantId);
+            if (!$currentSubscription) {
+                throw new \Exception("No active subscription found for tenant {$tenantId}.");
+            }
+            $oldPlanId = (int)$currentSubscription['current_plan_id'];
+
+            // Update the main subscriptions table
+            $sql = "UPDATE {$this->table} SET 
+                        current_plan_id = :new_plan_id, 
+                        status = 'active', 
+                        updated_at = NOW()
+                    WHERE tenant_id = :tenant_id";
+            $stmt = $this->db->prepare($sql);
+            $success = $stmt->execute([
+                ':new_plan_id' => $newPlanId,
+                ':tenant_id' => $tenantId,
+            ]);
+
+            if ($success) {
+                // Log to history
+                $this->logHistory(
+                    $tenantId,
+                    $newPlanId,
+                    'Downgrade',
+                    "Subscription downgraded from plan ID {$oldPlanId} to plan ID {$newPlanId}.",
+                    null, // Amount paid can be handled separately
+                    $currentSubscription['start_date'],
+                    $currentSubscription['end_date']
+                );
+            }
+            $this->db->commit();
+            return $success;
+        } catch (PDOException $e) {
+            $this->db->rollBack();
+            Log::error("Failed to downgrade subscription for tenant {$tenantId} to plan {$newPlanId}. Error: " . $e->getMessage());
+            return false;
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            Log::error("Downgrade subscription failed for tenant {$tenantId}: " . $e->getMessage());
+            return false;
+        }
+    }
+
+
 }

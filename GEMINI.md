@@ -34,3 +34,10 @@ Based on the Product Requirements Document (PRD) and recent discussions, the imm
     *   Enhance the Employee Self-Service portal with more features (e.g., leave requests, document uploads).
     *   Build out more detailed reporting options for Tenant Admins.
     *   Refine the UI/UX of tenant-facing pages for better usability.
+
+2.  **Super Admin - Impersonate Tenant Admin:**
+    *   **Objective:** Allow Super Admins to temporarily assume the identity of a Tenant Admin for a specific tenant to assist with tenant-specific operations (e.g., user management, payroll runs).
+    *   **Future Tasks:**
+        *   Implement secure session switching and restoration mechanisms in the `Auth` module.
+        *   Develop UI integration for initiating and exiting impersonation on the tenant details page.
+        *   Ensure robust audit logging of all impersonation activities for security and compliance.
