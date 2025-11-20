@@ -30,7 +30,7 @@
                     <div class="col-7 col-stats">
                         <div class="numbers">
                             <p class="card-category">Monthly Recurring Revenue</p>
-                            <h4 class="card-title">GH&cent; <?= $h(number_format($stats['mrr'] ?? 0, 2)) ?></h4>
+                            <h4 class="card-title">&cent; <?= $h(number_format($stats['mrr'] ?? 0, 2)) ?></h4>
                         </div>
                     </div>
                 </div>
