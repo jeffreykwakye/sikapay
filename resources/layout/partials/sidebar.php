@@ -235,12 +235,14 @@
                 <?php endif; // End Tenant User Section ?>
 
 
-                <?php if ($auth->hasPermission('self:view_notifications')): ?>
-                <li class="nav-item">
-                    <a href="/messages">
-                        <i class="fas fa-envelope"></i>
-                        <p>Messages</p>
-                        <span class="badge badge-secondary">1</span>
+                <?php if ($auth->hasPermission('tenant:send_support_message') || $isSuperAdmin): ?>
+                <li class="nav-item <?= ($this->viewPath === 'support/index' || $this->viewPath === 'support/super_admin_index') ? 'active' : '' ?>">
+                    <a href="/support">
+                        <i class="fas fa-headset"></i>
+                        <p>Support</p>
+                        <?php if ($isSuperAdmin && $openSupportTicketsCount > 0): ?>
+                            <span class="badge badge-danger"><?= $openSupportTicketsCount ?></span>
+                        <?php endif; ?>
                     </a>
                 </li>
                 <?php endif; ?>

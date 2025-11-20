@@ -13,6 +13,7 @@ use Jeffrey\Sikapay\Models\UserModel;
 use Jeffrey\Sikapay\Models\TenantProfileModel;
 use Jeffrey\Sikapay\Models\SubscriptionModel;
 use Jeffrey\Sikapay\Models\UserProfileModel; // NEW
+use Jeffrey\Sikapay\Models\SupportMessageModel; // NEW
 use Jeffrey\Sikapay\Helpers\ViewHelper;
 use Jeffrey\Sikapay\Security\CsrfToken;
 
@@ -30,8 +31,10 @@ abstract class Controller
     protected TenantProfileModel $tenantProfileModel;
     protected SubscriptionModel $subscriptionModel;
     protected UserProfileModel $userProfileModel; // NEW PROPERTY
-    
+    protected SupportMessageModel $supportMessageModel; // NEW PROPERTY
+    protected int $openSupportTicketsCount = 0; // NEW PROPERTY
 
+    
     protected ?string $tenantName = null;
     protected ?string $tenantLogo = null;
     protected ?string $subscriptionPlan = null;
@@ -64,6 +67,7 @@ abstract class Controller
             $this->tenantProfileModel = new TenantProfileModel();
             $this->subscriptionModel = new SubscriptionModel();
             $this->userProfileModel = new UserProfileModel(); // NEW INSTANTIATION
+            $this->supportMessageModel = new SupportMessageModel(); // NEW INSTANTIATION
 
             // Fetch contextual data
             try {
@@ -77,6 +81,11 @@ abstract class Controller
                     $this->tenantLogo = $tenantProfile['logo_path'] ?? null;
                     $subscription = $this->subscriptionModel->getCurrentSubscription($this->tenantId);
                     $this->subscriptionPlan = $subscription['plan_name'] ?? null;
+                }
+
+                // NEW: Fetch open support tickets count for Super Admin
+                if (Auth::isSuperAdmin()) {
+                    $this->openSupportTicketsCount = $this->supportMessageModel->getOpenTicketsCount();
                 }
             } catch (\Exception $e) {
                 // Catch model initialization failure (e.g., DB down)
@@ -137,6 +146,7 @@ abstract class Controller
             'userProfileImageUrl' => $this->userProfileImageUrl, // NEW DATA
 
             'isSuperAdmin' => $this->auth->isSuperAdmin(),
+            'openSupportTicketsCount' => $this->openSupportTicketsCount, // NEW DATA
             
             'unreadNotificationCount' => (isset($this->notificationService) && $this->userId > 0)
                 ? $this->notificationService->getUnreadCount($this->userId) 

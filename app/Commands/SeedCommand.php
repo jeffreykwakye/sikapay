@@ -147,6 +147,7 @@ class SeedCommand
             ['key_name' => 'tenant:manage_subscription', 'description' => 'Can view plan, manage payment details, and change billing plans.'],
             ['key_name' => 'tenant:view_audit_logs', 'description' => 'Can access the tenant-specific security audit trail.'],
             ['key_name' => 'tenant:configure_roles', 'description' => 'Can assign or modify role permissions.'],
+            ['key_name' => 'tenant:send_support_message', 'description' => 'Can send support messages to the super admin.'],
 
             // --- CONFIGURATION MANAGEMENT (3 Permissions) ---
             ['key_name' => 'config:manage_departments', 'description' => 'Can create, edit, and delete company departments.'],
@@ -312,6 +313,7 @@ class SeedCommand
                 $permissionMap['tenant:manage_users'], $permissionMap['tenant:manage_settings'], 
                 $permissionMap['tenant:manage_subscription'], $permissionMap['tenant:view_audit_logs'],
                 $permissionMap['tenant:configure_roles'],
+                $permissionMap['tenant:send_support_message'],
                 // CONFIG & LEAVE (4)
                 $permissionMap['config:manage_departments'],
                 $permissionMap['config:manage_positions'],

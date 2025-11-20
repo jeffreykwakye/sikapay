@@ -171,4 +171,27 @@ class UserModel extends Model
             return null;
         }
     }
+
+    /**
+     * Retrieves all users with the 'super_admin' role.
+     * This method bypasses tenant scoping as Super Admins are global.
+     *
+     * @return array An array of super admin user records (id, email, first_name, last_name).
+     */
+    public function getSuperAdminUsers(): array
+    {
+        $sql = "SELECT u.id, u.email, u.first_name, u.last_name
+                FROM users u
+                JOIN roles r ON u.role_id = r.id
+                WHERE r.name = 'super_admin' AND u.is_active = TRUE"; // Assuming 'super_admin' is the role name
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute();
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            Log::error("Failed to retrieve Super Admin users. Error: " . $e->getMessage());
+            return [];
+        }
+    }
 }

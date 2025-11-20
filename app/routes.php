@@ -603,4 +603,23 @@ return [
         'permission' => ['PermissionMiddleware', 'tenant:manage_subscription'],
         'handler' => ['SubscriptionController', 'index']
     ]],
+
+    // =========================================================
+    // Tenant Support Routes
+    // =========================================================
+    ['GET', '/support', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'tenant:send_support_message'],
+        'handler' => ['SupportController', 'index']
+    ]],
+    ['POST', '/support', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'tenant:send_support_message'],
+        'handler' => ['SupportController', 'store']
+    ]],
+    ['POST', '/support/{id:\d+}/respond', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'super_admin'], // Only Super Admin can respond
+        'handler' => ['SupportController', 'respond']
+    ]],
 ];
