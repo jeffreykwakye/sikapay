@@ -487,6 +487,16 @@ return [
         'permission' => ['PermissionMiddleware', 'self:view_profile'], // User must be able to view their profile to create it
         'handler' => ['EmployeeController', 'storeMyEmployeeProfile']
     ]],
+    ['GET', '/my-account/change-password', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'self:update_profile'],
+        'handler' => ['UserController', 'changePassword']
+    ]],
+    ['POST', '/my-account/change-password', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'self:update_profile'],
+        'handler' => ['UserController', 'changePassword']
+    ]],
 
     // =========================================================
     // Configuration Routes: Department Management (Protected)

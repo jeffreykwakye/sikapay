@@ -10,6 +10,7 @@
 - Employee Management Enhancements: Implemented Active/Inactive Staff views.
 - Tenant Subscription Management: Implemented tenant-facing page for viewing current subscription plan, features, and history.
 - Tenant Support Messaging System: Implemented tenant-to-Super Admin support ticket system with replies, Super Admin interface for viewing/responding, notification system, and open ticket count badge. Includes prevention of replies/responses to closed tickets.
+- Configuration System Overhaul: Replaced `.env` file loading with a native `app/config.php` file to support shared hosting environments. Refactored `AppConfig` and related services, and debugged production database connection issues.
 
 ## SikaPay Project Status (2025-11-17)
 

@@ -1,17 +1,18 @@
-# Vendor directory
-/vendor/
-
-# Sensitive files
-.env
-
-# OS/IDE files
-.DS_Store
-.idea/
-.vscode/
-
-# Runtime/Logs
-*.log
-gemini_notes.md
-/logs/
-/public/assets/files/
+# Vendor directory                                                                   
+/vendor/                                                                             
+                                                                                     
+# Sensitive files                                                                    
+.env                                                                                 
+app/config.php
+                                                                                     
+# OS/IDE files                                                                       
+.DS_Store                                                                            
+.idea/                                                                               
+.vscode/                                                                             
+                                                                                     
+# Runtime/Logs                                                                       
+*.log                                                                                
+gemini_notes.md                                                                      
+/logs/                                                                               
+/public/assets/files/                                                                
 /public/assets/images/

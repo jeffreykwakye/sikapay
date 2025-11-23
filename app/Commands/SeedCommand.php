@@ -12,7 +12,7 @@ class SeedCommand
 
     public function __construct()
     {
-        $this->db = Database::getInstance() ?? throw new \Exception("Database connection is required for seeding commands.");
+        $this->db = Database::getInstance();
     }
 
     public function execute(string $command, array $args): void

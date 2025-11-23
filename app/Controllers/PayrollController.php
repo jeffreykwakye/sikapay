@@ -11,6 +11,7 @@ use Jeffrey\Sikapay\Services\PayrollService;
 use Jeffrey\Sikapay\Services\NotificationService;
 use Jeffrey\Sikapay\Services\EmailService; // ADDED
 use Jeffrey\Sikapay\Models\PayrollPeriodModel;
+use Jeffrey\Sikapay\Core\Auth;
 use \Throwable;
 
 class PayrollController extends Controller
@@ -171,14 +172,17 @@ class PayrollController extends Controller
             );
 
             // Send email to the user who initiated the payroll run
-            $currentUserEmail = $this->auth->user()['email'] ?? null;
-            if ($currentUserEmail) {
+            $currentUserId = Auth::userId();
+            $currentUser = $this->userModel->find($currentUserId); // Retrieve full user object
+
+            if ($currentUser && !empty($currentUser['email'])) {
                 $subject = "SikaPay: Payroll Run Completed for {$payrollPeriod['period_name']}";
-                $body = "Dear {$this->auth->user()['first_name']},<br><br>"
+                $appUrl = \Jeffrey\Sikapay\Config\AppConfig::get('app.url');
+                $body = "Dear {$currentUser['first_name']},<br><br>" // Use retrieved user data
                       . "The payroll for the period '{$payrollPeriod['period_name']}' has been successfully processed.<br>"
-                      . "You can view the payslip history and reports here: <a href=\"{$_ENV['APP_URL']}/payroll/payslips\">Payslip History</a><br><br>"
+                      . "You can view the payslip history and reports here: <a href=\"{$appUrl}/payroll/payslips\">Payslip History</a><br><br>"
                       . "Thank you,<br>SikaPay Team";
-                $this->emailService->send($currentUserEmail, $subject, $body);
+                $this->emailService->send($currentUser['email'], $subject, $body); // Use retrieved user email
             }
 
         } catch (Throwable $e) {

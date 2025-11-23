@@ -14,17 +14,20 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 
 1.  **Clone Repository:** (If checking out)
     ```bash
-    git clone [https://github.com/jeffreykwakye/sikapay.git](https://github.com/jeffreykwakye/sikapay.git)
+    git clone https://github.com/jeffreykwakye/sikapay.git
     cd sikapay
     ```
-2.  **Environment:** Create a `.env` file in the root directory.
-    * *Note: See the `PROJECT_CONTEXT.md` for specific required environment variables.*
+2.  **Configuration:** Create a configuration file.
+    ```bash
+    cp app/config.example.php app/config.php
+    ```
+    Now, edit `app/config.php` and fill in your database and mail server details.
 3.  **Composer:** Install PHP dependencies.
     ```bash
     composer install
     ```
 4.  **Virtual Host:** Ensure your web server points the document root to the `/public` directory (e.g., `sikapay.localhost`).
-5.  **Database:** Create the database defined in your `.env` file (e.g., `sikapay`).
+5.  **Database:** Create the database defined in your `app/config.php` file (e.g., `sikapay_db`).
 
 ## 🛠️ Installation and Initial Data
 

@@ -104,3 +104,4 @@ The tenant creation process adheres to the **Single Responsibility Principle (SR
 | **2025-11-20** | **Employee Management: Active/Inactive Staff Views** | Implemented dedicated views and filtering for active and inactive employees. | **Complete** |
 | **2025-11-20** | **Tenant Subscription Management** | Implemented tenant-facing page for viewing current subscription plan, features, and history. | **Complete** |
 | **2025-11-20** | **Tenant Support Messaging System** | Implemented tenant-to-Super Admin support ticket system with replies, Super Admin interface for viewing/responding, notification system, and open ticket count badge. | **Complete** |
+| **2025-11-23** | **Configuration System Refactor** | Replaced `.env` file loading with a native `app/config.php` system to support shared hosting environments. Refactored `AppConfig` and related services. | **Complete** |

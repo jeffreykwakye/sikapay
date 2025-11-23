@@ -6,6 +6,7 @@ namespace Jeffrey\Sikapay\Services;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 use Jeffrey\Sikapay\Core\Log;
+use Jeffrey\Sikapay\Config\AppConfig;
 
 class EmailService
 {
@@ -20,17 +21,20 @@ class EmailService
     private function configure(): void
     {
         try {
+            // Load mail config from AppConfig
+            $mailConfig = AppConfig::get('mail');
+
             // Server settings
             $this->mailer->isSMTP();
-            $this->mailer->Host = $_ENV['MAIL_HOST'] ?? 'smtp.mailtrap.io';
+            $this->mailer->Host = $mailConfig['host'] ?? 'smtp.mailtrap.io';
             $this->mailer->SMTPAuth = true;
-            $this->mailer->Username = $_ENV['MAIL_USERNAME'] ?? '';
-            $this->mailer->Password = $_ENV['MAIL_PASSWORD'] ?? '';
-            $this->mailer->SMTPSecure = $_ENV['MAIL_ENCRYPTION'] ?? PHPMailer::ENCRYPTION_STARTTLS;
-            $this->mailer->Port = (int)($_ENV['MAIL_PORT'] ?? 587);
+            $this->mailer->Username = $mailConfig['username'] ?? '';
+            $this->mailer->Password = $mailConfig['password'] ?? '';
+            $this->mailer->SMTPSecure = $mailConfig['encryption'] ?? PHPMailer::ENCRYPTION_STARTTLS;
+            $this->mailer->Port = (int)($mailConfig['port'] ?? 587);
 
             // Sender
-            $this->mailer->setFrom($_ENV['MAIL_FROM_ADDRESS'] ?? 'no-reply@sikapay.com', $_ENV['MAIL_FROM_NAME'] ?? 'SikaPay');
+            $this->mailer->setFrom($mailConfig['from_address'] ?? 'no-reply@sikapay.com', $mailConfig['from_name'] ?? 'SikaPay');
 
         } catch (Exception $e) {
             Log::critical('PHPMailer configuration failed: ' . $e->getMessage());

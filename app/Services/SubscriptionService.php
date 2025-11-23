@@ -51,7 +51,7 @@ class SubscriptionService
                 JOIN features f ON pf.feature_id = f.id
                 WHERE 
                     s.tenant_id = :tenant_id AND 
-                    s.status = 'active' AND 
+                    s.status IN ('active', 'trial', 'past_due') AND 
                     f.key_name = :feature_key AND
                     pf.value = 'true'
         ";
@@ -93,7 +93,7 @@ class SubscriptionService
                 JOIN features f ON pf.feature_id = f.id
                 WHERE 
                     s.tenant_id = :tenant_id AND 
-                    s.status = 'active' AND 
+                    s.status IN ('active', 'trial', 'past_due') AND 
                     f.key_name = :feature_key
         ";
 
@@ -128,7 +128,7 @@ class SubscriptionService
             SELECT p.name 
             FROM subscriptions s
             JOIN plans p ON s.current_plan_id = p.id
-            WHERE s.tenant_id = :tenant_id AND s.status = 'active'
+            WHERE s.tenant_id = :tenant_id AND s.status IN ('active', 'trial', 'past_due')
         ";
         
         try {
