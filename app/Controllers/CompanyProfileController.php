@@ -67,6 +67,7 @@ class CompanyProfileController extends Controller
      */
     public function save(): void
     {
+        $this->checkActionIsAllowed();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('/company-profile');
         }
@@ -130,6 +131,7 @@ class CompanyProfileController extends Controller
      */
     public function uploadLogo(): void
     {
+        $this->checkActionIsAllowed();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('/company-profile');
         }

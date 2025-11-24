@@ -298,4 +298,43 @@ class PayslipModel extends Model
             return [];
         }
     }
+
+    /**
+     * Retrieves the payroll history for a specific department over the last specified number of months.
+     *
+     * @param int $departmentId The ID of the department.
+     * @param int $months The number of months of history to retrieve.
+     * @return array An array of payroll history data for the department.
+     */
+    public function getPayrollHistoryForDepartment(int $departmentId, int $months = 6): array
+    {
+        $sql = "SELECT 
+                    pp.period_name as month,
+                    SUM(p.gross_pay) as total_gross,
+                    SUM(p.net_pay) as total_net,
+                    SUM(p.paye_amount) as total_paye
+                FROM payslips p
+                JOIN payroll_periods pp ON p.payroll_period_id = pp.id
+                JOIN employees e ON p.user_id = e.user_id
+                JOIN positions pos ON e.current_position_id = pos.id
+                WHERE p.tenant_id = :tenant_id
+                  AND pos.department_id = :department_id
+                  AND pp.is_closed = TRUE
+                  AND pp.start_date >= DATE_SUB(CURDATE(), INTERVAL :months MONTH)
+                GROUP BY pp.id, pp.period_name, pp.start_date
+                ORDER BY pp.start_date ASC";
+
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                ':tenant_id' => $this->currentTenantId,
+                ':department_id' => $departmentId,
+                ':months' => $months,
+            ]);
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            Log::error("Failed to retrieve payroll history for department {$departmentId} in tenant {$this->currentTenantId}. Error: " . $e->getMessage());
+            return [];
+        }
+    }
 }

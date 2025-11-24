@@ -47,6 +47,7 @@ class AllowanceAndDeductionController extends Controller
 
     public function store(): void
     {
+        $this->checkActionIsAllowed();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('/payroll-elements');
         }
@@ -107,6 +108,7 @@ class AllowanceAndDeductionController extends Controller
 
     public function update(int $id): void
     {
+        $this->checkActionIsAllowed();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('/payroll-elements');
         }
@@ -167,6 +169,7 @@ class AllowanceAndDeductionController extends Controller
 
     public function delete(int $id): void
     {
+        $this->checkActionIsAllowed();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('/payroll-elements');
         }

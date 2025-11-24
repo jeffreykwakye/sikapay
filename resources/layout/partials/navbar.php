@@ -350,7 +350,7 @@
                                 </div>
                                 <div class="u-text">
                                     <h4><?= $h($userFirstName) ?></h4>
-                                    <p class="text-muted">hello@example.com</p>
+                                    <p class="text-muted"><?= $h($userEmail) ?></p>
                                 </div>
                             </div>
                         </li>

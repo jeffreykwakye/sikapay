@@ -445,17 +445,19 @@ class EmployeeModel extends Model
                 JOIN users u ON e.user_id = u.id
                 WHERE e.tenant_id = :tenant_id AND u.is_active = TRUE
                 AND (
-                    DATE_ADD(e.hire_date, INTERVAL YEAR(CURDATE()) - YEAR(e.hire_date) YEAR) BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL :days DAY)
+                    DATE_ADD(e.hire_date, INTERVAL YEAR(CURDATE()) - YEAR(e.hire_date) YEAR) BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL :days1 DAY)
                     OR
-                    DATE_ADD(e.hire_date, INTERVAL YEAR(CURDATE()) - YEAR(e.hire_date) + 1 YEAR) BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL :days DAY)
+                    DATE_ADD(e.hire_date, INTERVAL YEAR(CURDATE()) - YEAR(e.hire_date) + 1 YEAR) BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL :days2 DAY)
                 )
                 ORDER BY MONTH(e.hire_date), DAY(e.hire_date) ASC";
 
         try {
             $stmt = $this->db->prepare($sql);
-            $stmt->bindValue(':tenant_id', $tenantId, \PDO::PARAM_INT);
-            $stmt->bindValue(':days', $days, \PDO::PARAM_INT);
-            $stmt->execute();
+            $stmt->execute([
+                ':tenant_id' => $tenantId,
+                ':days1' => $days,
+                ':days2' => $days,
+            ]);
             
             return $stmt->fetchAll(\PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
@@ -489,6 +491,40 @@ class EmployeeModel extends Model
             return $stmt->fetchAll(\PDO::FETCH_KEY_PAIR);
         } catch (PDOException $e) {
             Log::error("Failed to get employee count by department for Tenant {$tenantId}. Error: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Retrieves all active employees for a specific department within the current tenant.
+     *
+     * @param int $departmentId The ID of the department.
+     * @return array An array of employee records.
+     */
+    public function getEmployeesByDepartmentId(int $departmentId): array
+    {
+        $sql = "SELECT
+                    e.user_id, e.employee_id,
+                    u.first_name, u.last_name, u.email,
+                    p.title as position_title,
+                    e.hire_date
+                FROM employees e
+                JOIN users u ON e.user_id = u.id
+                JOIN positions p ON e.current_position_id = p.id
+                WHERE e.tenant_id = :tenant_id 
+                  AND p.department_id = :department_id 
+                  AND u.is_active = TRUE
+                ORDER BY u.last_name, u.first_name";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                ':tenant_id' => $this->currentTenantId,
+                ':department_id' => $departmentId,
+            ]);
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            Log::error("Failed to retrieve employees for Department {$departmentId} in Tenant {$this->currentTenantId}. Error: " . $e->getMessage());
             return [];
         }
     }

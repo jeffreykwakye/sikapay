@@ -59,6 +59,7 @@ class PayrollController extends Controller
 
     public function createPeriod(): void
     {
+        $this->checkActionIsAllowed();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('/payroll');
         }
@@ -117,6 +118,7 @@ class PayrollController extends Controller
 
     public function runPayroll(): void
     {
+        $this->checkActionIsAllowed();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('/payroll');
         }

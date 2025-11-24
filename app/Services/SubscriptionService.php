@@ -181,4 +181,28 @@ class SubscriptionService
         // The check 'currentCount < limit' will correctly handle this.
         return $currentCount < $limit;
     }
+
+    /**
+     * Checks if a tenant's subscription is in a state that allows core actions.
+     * @param int $tenantId The ID of the tenant.
+     * @return bool True if the subscription is 'active' or 'trial'.
+     */
+    public function isActionable(int $tenantId): bool
+    {
+        $sql = "SELECT status FROM subscriptions WHERE tenant_id = :tenant_id";
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([':tenant_id' => $tenantId]);
+            $status = $stmt->fetchColumn();
+
+            return in_array($status, ['active', 'trial']);
+        } catch (Throwable $e) {
+            Log::error("Subscription actionability check FAILED for Tenant {$tenantId}.", [
+                'error' => $e->getMessage(),
+                'acting_user_id' => Auth::userId()
+            ]);
+            // Fail safe: Deny action if status cannot be confirmed.
+            return false;
+        }
+    }
 }

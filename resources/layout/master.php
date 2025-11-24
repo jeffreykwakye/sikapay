@@ -24,6 +24,29 @@
             <!-- End Sidebar -->
 
             <div class="main-panel">
+                <style>
+                    .subscription-notice {
+                        padding: 15px;
+                        background-color: #f8d7da;
+                        color: #721c24;
+                        border: 1px solid #f5c6cb;
+                        text-align: center;
+                        font-weight: bold;
+                        position: sticky;
+                        top: 0;
+                        z-index: 1031; /* Above navbar */
+                    }
+                    .subscription-notice a {
+                        color: #721c24;
+                        font-weight: bold;
+                        text-decoration: underline;
+                    }
+                </style>
+                <?php if (isset($subscriptionStatus) && $subscriptionStatus === 'past_due'): ?>
+                    <div class="subscription-notice">
+                        Your subscription is past due. Please <a href="/subscription">renew your plan</a> to restore full functionality.
+                    </div>
+                <?php endif; ?>
                 <div class="main-header">
                     <div class="main-header-logo">
                         <!-- Logo Header -->
@@ -51,7 +74,7 @@
              
 
             <!-- Custom template | don't include it in your project! -->
-            <div class="custom-template">
+            <!-- <div class="custom-template">
                 <div class="title">Settings</div>
                     <div class="custom-content">
                         <div class="switcher">
@@ -242,7 +265,7 @@
                 <div class="custom-toggle">
                     <i class="icon-settings"></i>
                 </div>
-            </div>
+            </div> -->
             <!-- End Custom template -->
         </div>
         <!--   Core JS Files   -->

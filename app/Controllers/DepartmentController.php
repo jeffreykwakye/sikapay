@@ -103,6 +103,7 @@ class DepartmentController extends Controller
      */
     public function store(): void
     {
+        $this->checkActionIsAllowed();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('/departments');
         }
@@ -154,6 +155,7 @@ class DepartmentController extends Controller
      */
     public function update(string $id): void // Changed type hint to string
     {
+        $this->checkActionIsAllowed();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('/departments');
         }
@@ -214,6 +216,7 @@ class DepartmentController extends Controller
      */
     public function delete(string $id): void 
     {
+        $this->checkActionIsAllowed();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('/departments');
         }
@@ -256,5 +259,39 @@ class DepartmentController extends Controller
         }
 
         $this->redirect('/departments');
+    }
+
+    /**
+     * Renders the dashboard for a specific department.
+     * @param string $id The department ID.
+     */
+    public function dashboard(string $id): void
+    {
+        try {
+            $departmentId = (int)Sanitizer::text($id);
+            $department = $this->departmentModel->find($departmentId);
+
+            if (!$department) {
+                ErrorResponder::respond(404, "Department not found.");
+                return;
+            }
+
+            // Fetch data for the dashboard widgets
+            $staff = $this->employeeModel->getEmployeesByDepartmentId($departmentId);
+            $payrollHistory = $this->payslipModel->getPayrollHistoryForDepartment($departmentId, 6);
+            $periods = $this->payrollPeriodModel->getAllPeriods($this->tenantId);
+
+            $this->view('departments/dashboard', [
+                'title' => 'Dashboard for ' . $department['name'],
+                'department' => $department,
+                'staff' => $staff,
+                'payrollHistory' => $payrollHistory,
+                'periods' => $periods,
+            ]);
+
+        } catch (\Throwable $e) {
+            Log::error("Failed to load department dashboard for ID {$id}. Error: " . $e->getMessage());
+            ErrorResponder::respond(500, "Could not load the department dashboard.");
+        }
     }
 }

@@ -7,7 +7,7 @@ use Jeffrey\Sikapay\Core\Auth;
 use Jeffrey\Sikapay\Core\View;
 use Jeffrey\Sikapay\Core\Log; 
 use Jeffrey\Sikapay\Core\ErrorResponder;
-use Jeffrey\Sikapay\Services\NotificationService;
+use Jeffrey\Sikapay\Services\SubscriptionService;
 use Jeffrey\Sikapay\Models\TenantModel;
 use Jeffrey\Sikapay\Models\UserModel;
 use Jeffrey\Sikapay\Models\TenantProfileModel;
@@ -16,6 +16,7 @@ use Jeffrey\Sikapay\Models\UserProfileModel; // NEW
 use Jeffrey\Sikapay\Models\SupportMessageModel; // NEW
 use Jeffrey\Sikapay\Helpers\ViewHelper;
 use Jeffrey\Sikapay\Security\CsrfToken;
+use Jeffrey\Sikapay\Services\NotificationService;
 
 
 abstract class Controller
@@ -25,7 +26,8 @@ abstract class Controller
     protected int $userId; 
     protected int $tenantId; 
 
-    protected NotificationService $notificationService; 
+    protected NotificationService $notificationService;
+    protected SubscriptionService $subscriptionService;
     protected TenantModel $tenantModel;
     protected UserModel $userModel; 
     protected TenantProfileModel $tenantProfileModel;
@@ -38,7 +40,9 @@ abstract class Controller
     protected ?string $tenantName = null;
     protected ?string $tenantLogo = null;
     protected ?string $subscriptionPlan = null;
+    protected ?string $subscriptionStatus = null;
     protected array $userName = ['first_name' => null, 'last_name' => null];
+    protected ?string $userEmail = null;
     protected ?string $userProfileImageUrl = null; // NEW PROPERTY
 
     
@@ -63,6 +67,7 @@ abstract class Controller
             // Initialize Models/Services
             $this->userModel = new UserModel();
             $this->notificationService = new NotificationService();
+            $this->subscriptionService = new SubscriptionService();
             $this->tenantModel = new TenantModel();
             $this->tenantProfileModel = new TenantProfileModel();
             $this->subscriptionModel = new SubscriptionModel();
@@ -71,16 +76,21 @@ abstract class Controller
 
             // Fetch contextual data
             try {
-                $this->userName = $this->userModel->getNameById($this->userId);
+                $user = $this->userModel->find($this->userId);
+                if ($user) {
+                    $this->userName = ['first_name' => $user['first_name'], 'last_name' => $user['last_name']];
+                    $this->userEmail = $user['email'];
+                }
                 $userProfile = $this->userProfileModel->findByUserId($this->userId); // NEW FETCH
                 $this->userProfileImageUrl = $userProfile['profile_picture_url'] ?? null; // NEW ASSIGNMENT
 
-                if ($this->tenantId > 0) {
+                if ($this->tenantId > 0 && !$this->auth->isSuperAdmin()) {
                     $this->tenantName = $this->tenantModel->getNameById($this->tenantId);
                     $tenantProfile = $this->tenantProfileModel->findByTenantId($this->tenantId);
                     $this->tenantLogo = $tenantProfile['logo_path'] ?? null;
                     $subscription = $this->subscriptionModel->getCurrentSubscription($this->tenantId);
                     $this->subscriptionPlan = $subscription['plan_name'] ?? null;
+                    $this->subscriptionStatus = $subscription['status'] ?? null;
                 }
 
                 // NEW: Fetch open support tickets count for Super Admin
@@ -98,7 +108,7 @@ abstract class Controller
     }
 
     // ------------------------------------------------------------------
-    // SECURITY-FOCUSED AUTHORIZATION METHOD
+    // SECURITY-FOCUSED AUTHORIZATION METHODS
     // ------------------------------------------------------------------
 
     /**
@@ -125,6 +135,22 @@ abstract class Controller
         // If permission check passes, the method returns normally, and execution continues.
     }
 
+    /**
+     * Checks if the tenant's subscription is active enough to perform state-changing actions.
+     * If not, redirects to the subscription management page.
+     */
+    protected function checkActionIsAllowed(): void
+    {
+        if ($this->auth->isSuperAdmin()) {
+            return; // Super admins are not subject to this
+        }
+
+        if (!$this->subscriptionService->isActionable($this->tenantId)) {
+            $_SESSION['flash_error'] = 'Your subscription is not active. Please renew to perform this action.';
+            $this->redirect('/subscription');
+        }
+    }
+
 
     /**
      * Loads the view using the master layout and passes common system data.
@@ -141,8 +167,10 @@ abstract class Controller
             'tenantName' => $this->tenantName ?? 'System/Public',
             'tenantLogo' => $this->tenantLogo,
             'subscriptionPlan' => $this->subscriptionPlan,
+            'subscriptionStatus' => $this->subscriptionStatus,
             'userFirstName' => $this->userName['first_name'] ?? 'User',
             'userLastName' => $this->userName['last_name'] ?? '',
+            'userEmail' => $this->userEmail,
             'userProfileImageUrl' => $this->userProfileImageUrl, // NEW DATA
 
             'isSuperAdmin' => $this->auth->isSuperAdmin(),

@@ -280,6 +280,7 @@ class EmployeeController extends Controller
      */  
     public function store(): void
     {
+        $this->checkActionIsAllowed();
         $this->checkPermission('employee:create');
         
         // 1. Validation and Sanitization
@@ -479,6 +480,7 @@ class EmployeeController extends Controller
      */
     public function updateEmploymentData(int $userId): void
     {
+        $this->checkActionIsAllowed();
         header('Content-Type: application/json');
         
         // Security check: Must belong to tenant
@@ -547,6 +549,7 @@ class EmployeeController extends Controller
      */
     public function updatePersonalData(int $userId): void
     {
+        $this->checkActionIsAllowed();
         header('Content-Type: application/json');
         
         if (!$this->employeeModel->isEmployeeInTenant($userId, $this->tenantId)) {
@@ -624,6 +627,7 @@ class EmployeeController extends Controller
      */
     public function updateStatutoryData(int $userId): void
     {
+        $this->checkActionIsAllowed();
         header('Content-Type: application/json');
         
         if (!$this->employeeModel->isEmployeeInTenant($userId, $this->tenantId)) {
@@ -687,6 +691,7 @@ class EmployeeController extends Controller
      */
     public function updateBankData(int $userId): void
     {
+        $this->checkActionIsAllowed();
         header('Content-Type: application/json');
         
         if (!$this->employeeModel->isEmployeeInTenant($userId, $this->tenantId)) {
@@ -751,6 +756,7 @@ class EmployeeController extends Controller
      */
     public function updateEmergencyContactData(int $userId): void
     {
+        $this->checkActionIsAllowed();
         header('Content-Type: application/json');
         
         if (!$this->employeeModel->isEmployeeInTenant($userId, $this->tenantId)) {
@@ -807,6 +813,7 @@ class EmployeeController extends Controller
      */
     public function updateSalary(int $userId): void
     {
+        $this->checkActionIsAllowed();
         header('Content-Type: application/json');
         $this->checkPermission(self::PERM_EDIT_SALARY);
         
@@ -880,6 +887,7 @@ class EmployeeController extends Controller
      */
     public function updateRoleAndPermissions(int $userId): void
     {
+        $this->checkActionIsAllowed();
         header('Content-Type: application/json');
         $this->checkPermission(self::PERM_EDIT_ROLES);
         
@@ -966,6 +974,7 @@ class EmployeeController extends Controller
      */
     public function resetPermissionsToDefaults(int $userId): void
     {
+        $this->checkActionIsAllowed();
         header('Content-Type: application/json');
         $this->checkPermission('tenant:configure_roles'); // Same permission as updating individual permissions
         
@@ -1012,6 +1021,7 @@ class EmployeeController extends Controller
      */
     public function toggleIndividualPermission(int $userId, int $permissionId): void
     {
+        $this->checkActionIsAllowed();
         header('Content-Type: application/json');
         $this->checkPermission('tenant:configure_roles');
         
@@ -1147,6 +1157,7 @@ class EmployeeController extends Controller
      */
     public function delete(int $userId): void
     {
+        $this->checkActionIsAllowed();
         $this->checkPermission(self::PERM_DELETE); 
         
         if (!$this->employeeModel->isEmployeeInTenant($userId, $this->tenantId)) {
@@ -1231,6 +1242,7 @@ class EmployeeController extends Controller
 
     public function updateProfileImage(int $userId): void
     {
+        $this->checkActionIsAllowed();
         $this->checkPermission('employee:update');
 
         if (!$this->employeeModel->isEmployeeInTenant($userId, $this->tenantId)) {
@@ -1255,6 +1267,7 @@ class EmployeeController extends Controller
 
     public function uploadStaffFile(int $userId): void
     {
+        $this->checkActionIsAllowed();
         $this->checkPermission('employee:update');
 
         if (!$this->employeeModel->isEmployeeInTenant($userId, $this->tenantId)) {
@@ -1286,6 +1299,7 @@ class EmployeeController extends Controller
 
     public function deleteStaffFile(int $userId, int $fileId): void
     {
+        $this->checkActionIsAllowed();
         $this->checkPermission('employee:update');
 
         if (!$this->employeeModel->isEmployeeInTenant($userId, $this->tenantId)) {
@@ -1312,6 +1326,7 @@ class EmployeeController extends Controller
 
     public function assignPayrollElement(int $userId): void
     {
+        $this->checkActionIsAllowed();
         $this->checkPermission('employee:assign_payroll_elements');
 
         if (!$this->employeeModel->isEmployeeInTenant($userId, $this->tenantId)) {
@@ -1361,6 +1376,7 @@ class EmployeeController extends Controller
 
     public function unassignPayrollElement(int $userId, int $payrollElementId): void
     {
+        $this->checkActionIsAllowed();
         $this->checkPermission('employee:assign_payroll_elements');
 
         if (!$this->employeeModel->isEmployeeInTenant($userId, $this->tenantId)) {
@@ -1391,6 +1407,7 @@ class EmployeeController extends Controller
      */
     public function storeMyEmployeeProfile(): void
     {
+        $this->checkActionIsAllowed();
         // Ensure the user is authenticated and has permission to view their own profile
         // The middleware already handles 'self:view_profile'
         $currentUserId = Auth::userId();

@@ -68,6 +68,7 @@ class PositionController extends Controller
 
     public function store(): void
     {
+        $this->checkActionIsAllowed();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('/positions');
         }
@@ -117,6 +118,7 @@ class PositionController extends Controller
 
     public function update(string $id): void
     {
+        $this->checkActionIsAllowed();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('/positions');
         }
@@ -174,6 +176,7 @@ class PositionController extends Controller
 
     public function delete(string $id): void
     {
+        $this->checkActionIsAllowed();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('/positions');
         }

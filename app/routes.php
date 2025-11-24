@@ -528,6 +528,12 @@ return [
         'permission' => ['PermissionMiddleware', 'config:manage_departments'],
         'handler' => ['DepartmentController', 'delete']
     ]],
+
+    ['GET', '/departments/{id:\d+}/dashboard', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'config:manage_departments'],
+        'handler' => ['DepartmentController', 'dashboard']
+    ]],
 // -----------------------------------------------------------------
 // =========================================================
 // Configuration Routes: Position Management (Protected)
