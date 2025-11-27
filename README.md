@@ -56,7 +56,7 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 | **Statutory Reports** | Generation of PAYE and SSNIT reports in PDF and Excel formats. | **Complete** | Allows tenants to generate statutory reports for compliance. |
 | **Company Profile** | Tenant Profile Management | **Complete** | Allows tenants to manage their own company profile, including logo upload. |
 | **Dashboard** | **Tenant Dashboard Overhaul** | **Complete** | Features dynamic KPI cards for key metrics (employees, departments, subscription), a payroll summary graph, and lists for recent hires and anniversaries. |
-| **Subscriptions** | Initial Trial Provisioning; Tenant Subscription Details & History | **Complete** | Dedicated tables populated transactionally, with a tenant-facing view for current plan, features, and history. |
+| **Subscriptions** | Initial Trial Provisioning; Tenant Subscription Details & History; Automated Subscription Lifecycle Management | **Complete** | Dedicated tables populated transactionally, with a tenant-facing view for current plan, features, and history. |
 | **Audit/Compliance** | Audit Logging & Activity Page | **Complete** | Logs critical actions and provides a dedicated, role-aware page for viewing system and tenant-level activity. |
 | **In-App Notifications**| Full System Pipeline | **Complete** | Real-time alerts, a dynamic navbar dropdown with recent notifications, and a dedicated page for all notifications. |
 | **Employee Profile** | View, Profile Picture Upload, Staff File Upload, Staff File Deletion | **Complete** | Modern, two-column layout with tabbed navigation. |
@@ -65,6 +65,8 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 | **Advanced Payroll Logic** | Conditional tax/SSNIT logic for different employment types (Contract, Intern, National-Service, Casual-Worker). | **Complete** | Implemented withholding tax for contractors/casuals and exemptions for interns/NSS. |
 | **Super Admin Features** | **Dashboard Overhaul, Subscription & Plan Management (CRUD), Automated Subscription Lifecycle, Statutory Rates Management (CRUD)** | **Complete** | Full suite of tools for Super Admins to manage the entire platform, including revenue metrics, plan creation, subscription lifecycle, and global statutory rates. |
 | **Support Messaging** | Tenant-to-Super Admin Support Tickets with Replies; Super Admin Interface | **Complete** | Tenants can submit/reply to tickets; Super Admins can view/respond to all tickets, with notification system and open ticket count badge. |
+
+| **Configuration System** | Replaced .env with native app/config.php; refactored AppConfig | **Complete** | Supports shared hosting environments and improves configuration management. |
 
 ---
 
