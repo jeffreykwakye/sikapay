@@ -1,109 +1,71 @@
+html, body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+}
+
 body {
     font-family: 'Arial', sans-serif;
-    background-color: #f0f2f5; /* Light gray background */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
+    background-color: #f8f9fa; /* A very light gray, subtle background */
     margin: 0;
-    padding: 20px;
     box-sizing: border-box;
 }
 
+/* The login-container is now primarily styled by Bootstrap (card, shadow, p-4) */
+/* We keep custom styles for specific refinements not fully covered by Bootstrap or overrides */
 .login-container {
-    background-color: #ffffff;
-    padding: 40px;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-    width: 100%;
-    max-width: 400px;
-    text-align: center;
+    border-radius: 12px; /* Ensure consistent border-radius */
+    max-width: 400px; /* Control max width explicitly if needed, but Bootstrap columns usually handle this */
+    width: 100%; /* Ensure it takes full width up to max-width */
+    text-align: center; /* Keep container text aligned center for heading, logo etc. */
 }
 
-.login-logo {
-    margin-bottom: 30px;
+/* Override text-align for specific form elements to left */
+.login-container .mb-3,
+.login-container .form-label {
+    text-align: left;
 }
+
 
 .login-logo img {
-    max-width: 180px;
+    max-width: 150px;
     height: auto;
 }
 
 h2 {
-    color: #333333;
-    margin-bottom: 25px;
-    font-size: 24px;
+    color: #343a40; /* Darker text for heading */
+    font-size: 24px; /* Slightly larger heading */
     font-weight: bold;
 }
 
-.form-group {
-    margin-bottom: 20px;
-    text-align: left;
+/* Custom styles for labels and inputs are largely replaced by Bootstrap's form-label and form-control */
+/* Keeping these for potential fine-tuning if Bootstrap defaults aren't perfect */
+label.form-label {
+    font-weight: 600; /* Slightly bolder labels */
+    color: #495057; /* Darker label text */
+    font-size: 15px;
 }
 
-label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: bold;
-    color: #555555;
-    font-size: 14px;
+.form-control {
+    height: calc(2.25rem + 2px); /* Standard height for form controls */
+    font-size: 1rem; /* Standard font size */
+    border-radius: .25rem; /* Standard border radius */
 }
 
-input[type="email"],
-input[type="password"] {
-    width: 100%;
-    padding: 12px 15px;
-    border: 1px solid #cccccc;
-    border-radius: 8px;
-    box-sizing: border-box;
-    font-size: 16px;
-    transition: border-color 0.3s ease;
+.form-control:focus {
+    border-color: #80bdff;
+    outline: 0;
+    box-shadow: 0 0 0 .2rem rgba(0, 123, 255, .25);
 }
 
-input[type="email"]:focus,
-input[type="password"]:focus {
-    border-color: #007bff;
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
-}
-
-button {
-    width: 100%;
-    padding: 12px;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 18px;
-    font-weight: bold;
-    transition: background-color 0.3s ease, transform 0.2s ease;
-}
-
-button:hover {
-    background-color: #0056b3;
-    transform: translateY(-1px);
-}
-
-.error {
-    color: #dc3545;
-    background-color: #f8d7da;
-    border: 1px solid #f5c6cb;
-    padding: 10px;
-    border-radius: 8px;
-    text-align: center;
-    margin-bottom: 20px;
-    font-size: 14px;
-}
-
-/* Responsive adjustments */
+/* Responsive adjustments - simplified as Bootstrap handles much of this */
 @media (max-width: 480px) {
     .login-container {
-        padding: 25px;
-        margin: 0 15px;
+        padding: 25px; /* Slightly less padding on small screens */
+        margin: 0 15px; /* Add horizontal margin to prevent touching edges */
     }
     h2 {
-        font-size: 20px;
+        font-size: 22px;
     }
     .login-logo img {
         max-width: 150px;
