@@ -30,8 +30,9 @@ class PlanController extends Controller
     /**
      * Display the specified plan.
      */
-    public function show(int $id): void
+    public function show(string $id): void
     {
+        $id = (int)$id;
         try {
             $plan = $this->planModel->find($id);
             if (!$plan) {
@@ -59,8 +60,9 @@ class PlanController extends Controller
     /**
      * Update the specified plan in storage.
      */
-    public function update(int $id): void
+    public function update(string $id): void
     {
+        $id = (int)$id;
         $validator = new Validator($_POST);
         $validator->validate([
             'name' => 'required|min:3|max:100',

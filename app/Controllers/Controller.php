@@ -175,6 +175,7 @@ abstract class Controller
 
             'isSuperAdmin' => $this->auth->isSuperAdmin(),
             'openSupportTicketsCount' => $this->openSupportTicketsCount, // NEW DATA
+            'viewPath' => $viewPath, // Pass the view path for sidebar active state
             
             'unreadNotificationCount' => (isset($this->notificationService) && $this->userId > 0)
                 ? $this->notificationService->getUnreadCount($this->userId) 

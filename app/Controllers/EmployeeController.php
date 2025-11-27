@@ -162,8 +162,9 @@ class EmployeeController extends Controller
     /**
      * Display a single employee's profile.
      */
-    public function show(int $userId): void
+    public function show(string $userId): void
     {
+        $userId = (int)$userId;
         try {
             // No permission check here, the model handles tenant scoping
             $employee = $this->employeeModel->getEmployeeProfile($userId); 
@@ -212,8 +213,9 @@ class EmployeeController extends Controller
     /**
      * Display the form to edit an existing employee's profile.
      */
-    public function edit(int $userId): void
+    public function edit(string $userId): void
     {
+        $userId = (int)$userId;
         try {
             $this->checkPermission('employee:update'); // Generic edit permission for access
             
@@ -235,7 +237,7 @@ class EmployeeController extends Controller
             
             $roles = $this->roleModel->all(); // Fetch all roles
             $allPermissions = $this->permissionModel->all(); // Fetch all system permissions
-            $rolePermissions = $this->roleModel->getPermissionsForRole($employee['role_id']); // Permissions inherited from role
+            $rolePermissions = $this->roleModel->getPermissionsForRole((int)$employee['role_id']); // Permissions inherited from role
             $individualPermissions = $this->userPermissionModel->getPermissionsForUser($userId); // Individual user overrides
 
             // --- START NEW LOGIC FOR ROLE AND PERMISSION FILTERING ---
@@ -478,8 +480,9 @@ class EmployeeController extends Controller
     /**
      * Handles the PUT request to update the employee's core **Employment Data** (Position, Hire Date, ID, Type).
      */
-    public function updateEmploymentData(int $userId): void
+    public function updateEmploymentData(string $userId): void
     {
+        $userId = (int)$userId;
         $this->checkActionIsAllowed();
         header('Content-Type: application/json');
         
@@ -547,8 +550,9 @@ class EmployeeController extends Controller
     /**
      * Handles the PUT request to update the employee's **Personal Information** (Name, Phone, Address, DOB, Gender).
      */
-    public function updatePersonalData(int $userId): void
+    public function updatePersonalData(string $userId): void
     {
+        $userId = (int)$userId;
         $this->checkActionIsAllowed();
         header('Content-Type: application/json');
         
@@ -625,8 +629,9 @@ class EmployeeController extends Controller
     /**
      * Handles the PUT request to update the employee's **Statutory Information** (TIN, SSNIT, ID Card).
      */
-    public function updateStatutoryData(int $userId): void
+    public function updateStatutoryData(string $userId): void
     {
+        $userId = (int)$userId;
         $this->checkActionIsAllowed();
         header('Content-Type: application/json');
         
@@ -689,8 +694,9 @@ class EmployeeController extends Controller
     /**
      * Handles the PUT request to update the employee's **Bank Information**.
      */
-    public function updateBankData(int $userId): void
+    public function updateBankData(string $userId): void
     {
+        $userId = (int)$userId;
         $this->checkActionIsAllowed();
         header('Content-Type: application/json');
         
@@ -754,8 +760,9 @@ class EmployeeController extends Controller
     /**
      * Handles the PUT request to update the employee's **Emergency Contact Information**.
      */
-    public function updateEmergencyContactData(int $userId): void
+    public function updateEmergencyContactData(string $userId): void
     {
+        $userId = (int)$userId;
         $this->checkActionIsAllowed();
         header('Content-Type: application/json');
         
@@ -811,8 +818,9 @@ class EmployeeController extends Controller
     /**
      * Handles updating the monthly base salary and logs the change to employment_history.
      */
-    public function updateSalary(int $userId): void
+    public function updateSalary(string $userId): void
     {
+        $userId = (int)$userId;
         $this->checkActionIsAllowed();
         header('Content-Type: application/json');
         $this->checkPermission(self::PERM_EDIT_SALARY);
@@ -885,8 +893,9 @@ class EmployeeController extends Controller
     /**
      * Handles the PUT request to update the employee's **Role and Permissions** (is_active, role_id).
      */
-    public function updateRoleAndPermissions(int $userId): void
+    public function updateRoleAndPermissions(string $userId): void
     {
+        $userId = (int)$userId;
         $this->checkActionIsAllowed();
         header('Content-Type: application/json');
         $this->checkPermission(self::PERM_EDIT_ROLES);
@@ -972,8 +981,9 @@ class EmployeeController extends Controller
     /**
      * Handles the POST request to reset an employee's individual permissions to their role's defaults.
      */
-    public function resetPermissionsToDefaults(int $userId): void
+    public function resetPermissionsToDefaults(string $userId): void
     {
+        $userId = (int)$userId;
         $this->checkActionIsAllowed();
         header('Content-Type: application/json');
         $this->checkPermission('tenant:configure_roles'); // Same permission as updating individual permissions
@@ -1019,8 +1029,10 @@ class EmployeeController extends Controller
      * Handles the POST request to toggle an employee's individual permission.
      * This method adds, updates, or deletes an individual permission override.
      */
-    public function toggleIndividualPermission(int $userId, int $permissionId): void
+    public function toggleIndividualPermission(string $userId, string $permissionId): void
     {
+        $userId = (int)$userId;
+        $permissionId = (int)$permissionId;
         $this->checkActionIsAllowed();
         header('Content-Type: application/json');
         $this->checkPermission('tenant:configure_roles');
@@ -1137,12 +1149,15 @@ class EmployeeController extends Controller
             // If employee profile exists, render the self-service portal view
             $payslips = $this->payslipModel->getPayslipsByUserId($currentUserId, $this->tenantId);
             $assignedPayrollElements = $this->employeePayrollDetailsModel->getDetailsForEmployee($currentUserId, $this->tenantId);
+            $staffFileModel = new StaffFileModel();
+            $staffFiles = $staffFileModel->getFilesByUserId($currentUserId);
 
             $this->view('employee/my_account/index', [
                 'title' => 'My Account',
                 'employee' => $employee,
                 'payslips' => $payslips,
                 'assignedPayrollElements' => $assignedPayrollElements,
+                'staffFiles' => $staffFiles,
             ]);
 
         } catch (Throwable $e) {
@@ -1155,8 +1170,9 @@ class EmployeeController extends Controller
     /**
      * DELETE the employee record (Soft Delete/Deactivate).
      */
-    public function delete(int $userId): void
+    public function delete(string $userId): void
     {
+        $userId = (int)$userId;
         $this->checkActionIsAllowed();
         $this->checkPermission(self::PERM_DELETE); 
         
@@ -1240,8 +1256,9 @@ class EmployeeController extends Controller
 
 
 
-    public function updateProfileImage(int $userId): void
+    public function updateProfileImage(string $userId): void
     {
+        $userId = (int)$userId;
         $this->checkActionIsAllowed();
         $this->checkPermission('employee:update');
 
@@ -1265,8 +1282,9 @@ class EmployeeController extends Controller
 
     
 
-    public function uploadStaffFile(int $userId): void
+    public function uploadStaffFile(string $userId): void
     {
+        $userId = (int)$userId;
         $this->checkActionIsAllowed();
         $this->checkPermission('employee:update');
 
@@ -1297,8 +1315,10 @@ class EmployeeController extends Controller
         }
     }
 
-    public function deleteStaffFile(int $userId, int $fileId): void
+    public function deleteStaffFile(string $userId, string $fileId): void
     {
+        $userId = (int)$userId;
+        $fileId = (int)$fileId;
         $this->checkActionIsAllowed();
         $this->checkPermission('employee:update');
 
@@ -1324,8 +1344,72 @@ class EmployeeController extends Controller
         }
     }
 
-    public function assignPayrollElement(int $userId): void
+    public function downloadStaffFile(string $userId, string $fileId): void
     {
+        $userId = (int)$userId;
+        $fileId = (int)$fileId;
+        try {
+            // Security Check 1: Can the current user view this employee's data?
+            $isOwner = ($userId === Auth::userId());
+            $canAdminView = $this->auth->hasPermission('employee:read_all');
+
+            if (!$isOwner && !$canAdminView) {
+                ErrorResponder::respond(403, "You do not have permission to access this file.");
+                return;
+            }
+
+            // Security Check 2: Does the employee belong to the current tenant?
+            if (!$this->employeeModel->isEmployeeInTenant($userId, $this->tenantId)) {
+                ErrorResponder::respond(404, "The specified employee was not found in your tenant.");
+                return;
+            }
+
+            // Fetch file details from the database
+            $staffFileModel = new StaffFileModel();
+            $file = $staffFileModel->find($fileId);
+
+            // Security Check 3: Does the file exist and belong to the correct user and tenant?
+            if (!$file || (int)$file['user_id'] !== $userId || (int)$file['tenant_id'] !== $this->tenantId) {
+                ErrorResponder::respond(404, "The requested file could not be found.");
+                return;
+            }
+
+            // Construct the full, absolute path to the file on the server
+            $projectRoot = dirname(__DIR__, 2);
+            $serverFilePath = $projectRoot . '/public' . $file['file_path'];
+
+            // Security Check 4: Does the file physically exist?
+            if (!file_exists($serverFilePath)) {
+                Log::error("File not found on disk for download.", ['path' => $serverFilePath, 'file_id' => $fileId]);
+                ErrorResponder::respond(404, "File not found on the server. It may have been moved or deleted.");
+                return;
+            }
+
+            // Securely serve the file for download
+            header('Content-Description: File Transfer');
+            header('Content-Type: application/octet-stream'); // Generic binary stream
+            header('Content-Disposition: attachment; filename="' . basename($file['file_name']) . '"');
+            header('Expires: 0');
+            header('Cache-Control: must-revalidate');
+            header('Pragma: public');
+            header('Content-Length: ' . filesize($serverFilePath));
+            
+            // Clear output buffer before reading the file
+            ob_clean();
+            flush();
+            
+            readfile($serverFilePath);
+            exit;
+
+        } catch (\Throwable $e) {
+            Log::critical("Staff file download failed for User {$userId}, File {$fileId}. Error: " . $e->getMessage());
+            ErrorResponder::respond(500, "A critical system error occurred while trying to download the file.");
+        }
+    }
+
+    public function assignPayrollElement(string $userId): void
+    {
+        $userId = (int)$userId;
         $this->checkActionIsAllowed();
         $this->checkPermission('employee:assign_payroll_elements');
 
@@ -1374,8 +1458,10 @@ class EmployeeController extends Controller
         }
     }
 
-    public function unassignPayrollElement(int $userId, int $payrollElementId): void
+    public function unassignPayrollElement(string $userId, string $payrollElementId): void
     {
+        $userId = (int)$userId;
+        $payrollElementId = (int)$payrollElementId;
         $this->checkActionIsAllowed();
         $this->checkPermission('employee:assign_payroll_elements');
 

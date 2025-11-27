@@ -106,8 +106,9 @@ class AllowanceAndDeductionController extends Controller
         $this->redirect('/payroll-elements');
     }
 
-    public function update(int $id): void
+    public function update(string $id): void
     {
+        $id = (int)$id;
         $this->checkActionIsAllowed();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('/payroll-elements');
@@ -167,8 +168,9 @@ class AllowanceAndDeductionController extends Controller
         $this->redirect('/payroll-elements');
     }
 
-    public function delete(int $id): void
+    public function delete(string $id): void
     {
+        $id = (int)$id;
         $this->checkActionIsAllowed();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('/payroll-elements');

@@ -43,7 +43,9 @@ class Database
                 } catch (PDOException $e) {
                     $exception = $e;
                     Log::warning("Database connection attempt #{$attempt} of {$maxRetries} failed.", [
-                        'error' => $e->getMessage()
+                        'error' => $e->getMessage(),
+                        'dsn' => $config['dsn'],
+                        'user' => $config['user'],
                     ]);
                     if ($attempt < $maxRetries) {
                         sleep($retryDelay);
@@ -52,9 +54,10 @@ class Database
             }
 
             // If loop finishes, all retries have failed.
-            Log::critical("Database Connection Failed after {$maxRetries} attempts: " . $exception->getMessage(), [
-                'dsn_prefix' => substr($config['dsn'], 0, strpos($config['dsn'], ':')),
-                'database_user' => $config['user']
+            Log::critical("Database Connection Failed after {$maxRetries} attempts.", [
+                'dsn' => $config['dsn'],
+                'user' => $config['user'],
+                'error' => $exception->getMessage()
             ]);
 
             if (class_exists(ErrorResponder::class)) {

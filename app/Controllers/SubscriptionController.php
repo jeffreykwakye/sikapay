@@ -46,8 +46,9 @@ class SubscriptionController extends Controller
                 return;
             }
 
-            $plan = $this->planModel->find($subscription['current_plan_id']);
-            $features = $this->planModel->getPlanFeatures($subscription['current_plan_id']);
+            $planId = (int)$subscription['current_plan_id'];
+            $plan = $this->planModel->find($planId);
+            $features = $this->planModel->getPlanFeatures($planId);
             $history = $this->subscriptionModel->getHistoryForTenant($tenantId);
 
             $this->view('subscription/index', [

@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                     payslipsHtml += `
                                         <li class="list-group-item d-flex justify-content-between align-items-center">
                                             <span>${payslip.first_name} ${payslip.last_name} (${payslip.employee_id})</span>
-                                            <a href="/payroll/payslips/download/${payslip.id}" target="_blank" class="btn btn-sm btn-primary"><i class="icon-cloud-download"></i> Download Payslip</a>
+                                            <a href="/payroll/payslips/download/${payslip.id}" class="btn btn-sm btn-primary"><i class="icon-cloud-download"></i> Download Payslip</a>
                                         </li>
                                     `;
                                 });

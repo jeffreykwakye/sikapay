@@ -92,7 +92,7 @@ class SupportController extends Controller
         try {
             if ($isReply) {
                 // Check if the ticket exists and is not closed before allowing a reply
-                $currentTicket = $this->supportMessageModel->find($messageId);
+                $currentTicket = $this->supportMessageModel->find((int)$messageId);
                 if (!$currentTicket || (int)$currentTicket['tenant_id'] !== $this->tenantId) {
                     $_SESSION['flash_error'] = "Ticket not found or unauthorized.";
                     $this->redirect('/support');
@@ -171,8 +171,9 @@ class SupportController extends Controller
     /**
      * Handles the Super Admin's response to a support ticket.
      */
-    public function respond(int $id): void
+    public function respond(string $id): void
     {
+        $id = (int)$id;
         // Security: Only Super Admins can respond
         if (!Auth::isSuperAdmin()) {
             ErrorResponder::respond(403, "You do not have permission to perform this action.");

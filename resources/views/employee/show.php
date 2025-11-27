@@ -151,7 +151,7 @@ $unassignedElements = array_filter($availablePayrollElements, function($element)
                                     <?php else: ?>
                                         <?php foreach ($staffFiles as $file): ?>
                                         <tr>
-                                            <td><a href="<?= $h($file['file_path']) ?>" target="_blank"><i class="icon-doc"></i> <?= $h($file['file_name']) ?></a></td>
+                                            <td><a href="/employees/<?= $h($e['user_id']) ?>/files/<?= $h($file['id']) ?>/download"><i class="icon-doc"></i> <?= $h($file['file_name']) ?></a></td>
                                             <td><?= $h($file['file_type']) ?></td>
                                             <td><?= date('M j, Y, g:i a', strtotime($file['uploaded_at'])) ?></td>
                                             <td><button class="btn btn-danger btn-sm delete-file-btn" data-file-id="<?= $file['id'] ?>"><i class="icon-trash"></i></button></td>

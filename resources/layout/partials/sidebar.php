@@ -146,6 +146,9 @@
                             <?php if ($auth->hasPermission('config:manage_positions')): ?>
                             <li><a href="/positions"><span class="sub-item">Positions</span></a></li>
                             <?php endif; ?>
+                            <?php if ($auth->hasPermission('leave:manage_types')): ?>
+                            <li><a href="/leave/types"><span class="sub-item">Leave Types</span></a></li>
+                            <?php endif; ?>
                             <?php if ($auth->hasPermission('config:manage_payroll_elements')): ?>
                             <li><a href="/payroll-elements"><span class="sub-item">Payroll Elements</span></a></li>
                             <li><a href="/payroll-settings"><span class="sub-item">Payroll Settings</span></a></li>
@@ -236,7 +239,7 @@
 
 
                 <?php if ($auth->hasPermission('tenant:send_support_message') || $isSuperAdmin): ?>
-                <li class="nav-item <?= ($this->viewPath === 'support/index' || $this->viewPath === 'support/super_admin_index') ? 'active' : '' ?>">
+                <li class="nav-item <?= ($viewPath === 'support/index' || $viewPath === 'support/super_admin_index') ? 'active' : '' ?>">
                     <a href="/support">
                         <i class="fas fa-headset"></i>
                         <p>Support</p>

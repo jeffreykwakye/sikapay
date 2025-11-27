@@ -114,7 +114,6 @@ class SeedCommand
             ['key_name' => 'self:view_dashboard', 'description' => 'Can access the main user dashboard.'],
             ['key_name' => 'self:view_profile', 'description' => 'Can view own personal and employment profile data.'], // ADDED
             ['key_name' => 'self:view_payslip', 'description' => 'Can view own payslips.'],
-            ['key_name' => 'self:manage_leave', 'description' => 'Can request and track own leave.'],
             ['key_name' => 'self:update_profile', 'description' => 'Can update own password only (no personal data modification).'], 
             ['key_name' => 'self:view_docs', 'description' => 'Can view personal documents (e.g., contract, payslips).'],
             ['key_name' => 'self:manage_loan', 'description' => 'Can submit and track own loan applications.'], 
@@ -155,8 +154,11 @@ class SeedCommand
             ['key_name' => 'config:manage_payroll_elements', 'description' => 'Can create, edit, and delete custom payroll allowances and deductions.'],
             ['key_name' => 'config:manage_payroll_settings', 'description' => 'Can manage tenant-wide payroll settings like withholding tax rate.'],
 
-            // --- LEAVE MANAGEMENT (1 Permission) ---
+            // --- LEAVE MANAGEMENT (4 Permissions) ---
+            ['key_name' => 'leave:apply', 'description' => 'Can apply for leave and view own leave history'],
             ['key_name' => 'leave:approve', 'description' => 'Can approve or reject employee leave/time-off requests.'],
+            ['key_name' => 'leave:manage_types', 'description' => 'Can create, edit, and delete tenant-level leave types'],
+            ['key_name' => 'leave:manage_balances', 'description' => 'Can view and adjust leave balances for employees'],
 
             // --- SUPER ADMINISTRATION (4 Permissions) ---
             ['key_name' => 'super:manage_statutory_rates', 'description' => 'Can globally configure SSNIT, Income Tax, and other mandatory rates.'],
@@ -221,7 +223,7 @@ class SeedCommand
         // 2. Prepare UPSERT statements for plans
         $planStmt = $this->db->prepare("
             INSERT INTO plans (name, price_ghs) VALUES (:name, :price)
-            ON DUPLICATE KEY UPDATE price_ghs = :price
+            ON DUPLICATE KEY UPDATE price_ghs = VALUES(price_ghs)
         ");
         
         $deleteFeatureStmt = $this->db->prepare("DELETE FROM plan_features WHERE plan_id = :plan_id");
@@ -233,7 +235,9 @@ class SeedCommand
             $planStmt->execute([':name' => $name, ':price' => $data['price']]);
 
             // Get the plan ID (whether inserted or existing)
-            $planId = $this->db->query("SELECT id FROM plans WHERE name = '{$name}'")->fetchColumn();
+            $planIdStmt = $this->db->prepare("SELECT id FROM plans WHERE name = :name");
+            $planIdStmt->execute([':name' => $name]);
+            $planId = $planIdStmt->fetchColumn();
             
             // Delete ALL existing features for this plan to ensure a clean update (Idempotency)
             $deleteFeatureStmt->execute([':plan_id' => $planId]);
@@ -294,7 +298,7 @@ class SeedCommand
             $roleMap['tenant_admin'] => [
                 // SELF (7)
                 $permissionMap['self:view_dashboard'], $permissionMap['self:update_profile'], 
-                $permissionMap['self:view_payslip'], $permissionMap['self:manage_leave'],
+                $permissionMap['self:view_payslip'], $permissionMap['leave:apply'],
                 $permissionMap['self:view_docs'], $permissionMap['self:manage_loan'],
                 $permissionMap['self:view_notifications'],
                 $permissionMap['self:view_profile'], // ADDED
@@ -320,13 +324,15 @@ class SeedCommand
                 $permissionMap['config:manage_payroll_elements'],
                 $permissionMap['config:manage_payroll_settings'],
                 $permissionMap['leave:approve'],
+                $permissionMap['leave:manage_types'],
+                $permissionMap['leave:manage_balances'],
             ],
 
             // HR Manager:
             $roleMap['hr_manager'] => [
                 // SELF (7)
                 $permissionMap['self:view_dashboard'], $permissionMap['self:update_profile'], 
-                $permissionMap['self:view_payslip'], $permissionMap['self:manage_leave'],
+                $permissionMap['self:view_payslip'], $permissionMap['leave:apply'],
                 $permissionMap['self:view_docs'], $permissionMap['self:manage_loan'],
                 $permissionMap['self:view_notifications'],
                 $permissionMap['self:view_profile'], // ADDED
@@ -345,13 +351,15 @@ class SeedCommand
                 $permissionMap['config:manage_departments'],
                 $permissionMap['config:manage_positions'],
                 $permissionMap['leave:approve'],
+                $permissionMap['leave:manage_types'],
+                $permissionMap['leave:manage_balances'],
             ],
 
             // Accountant:
             $roleMap['accountant'] => [
                 // SELF (7)
                 $permissionMap['self:view_dashboard'], $permissionMap['self:update_profile'], 
-                $permissionMap['self:view_payslip'], $permissionMap['self:manage_leave'],
+                $permissionMap['self:view_payslip'], $permissionMap['leave:apply'],
                 $permissionMap['self:view_docs'], $permissionMap['self:manage_loan'],
                 $permissionMap['self:view_notifications'],
                 $permissionMap['self:view_profile'], // ADDED
@@ -376,7 +384,7 @@ class SeedCommand
                 $permissionMap['self:view_profile'], // ADDED
                 $permissionMap['self:update_profile'], 
                 $permissionMap['self:view_payslip'], 
-                $permissionMap['self:manage_leave'],
+                $permissionMap['leave:apply'],
                 $permissionMap['self:view_docs'], 
                 $permissionMap['self:manage_loan'],
                 $permissionMap['self:view_notifications'],

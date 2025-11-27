@@ -31,6 +31,9 @@ $e = $employee; // Shorthand for employee data
                             <a class="nav-link" id="pills-payslips-tab" data-bs-toggle="pill" href="#pills-payslips" role="tab" aria-controls="pills-payslips" aria-selected="false">Payslips</a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link" id="pills-documents-tab" data-bs-toggle="pill" href="#pills-documents" role="tab" aria-controls="pills-documents" aria-selected="false">Documents</a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" id="pills-leave-tab" data-bs-toggle="pill" href="#pills-leave" role="tab" aria-controls="pills-leave" aria-selected="false">Leave</a>
                         </li>
                         <li class="nav-item">
@@ -215,7 +218,7 @@ $e = $employee; // Shorthand for employee data
                                                     <td><?= $h(date('M j, Y', strtotime($payslip['generated_at']))) ?></td>
                                                     <td>
                                                         <?php if (!empty($payslip['payslip_path'])): ?>
-                                                            <a href="<?= $h($payslip['payslip_path']) ?>" target="_blank" class="btn btn-sm btn-primary">
+                                                            <a href="/my-account/payslips/<?= $h($payslip['id']) ?>/download" class="btn btn-sm btn-primary">
                                                                 <i class="fa fa-download"></i> Download
                                                             </a>
                                                         <?php else: ?>
@@ -227,6 +230,44 @@ $e = $employee; // Shorthand for employee data
                                         <?php else: ?>
                                             <tr>
                                                 <td colspan="5" class="text-center">No payslips found.</td>
+                                            </tr>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Documents Tab Content -->
+                        <div class="tab-pane fade" id="pills-documents" role="tabpanel" aria-labelledby="pills-documents-tab">
+                            <h5 class="mb-3 mt-4">My Documents</h5>
+                            <p class="text-muted">View and download your personal documents.</p>
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>File Name</th>
+                                            <th>Type</th>
+                                            <th>Date Uploaded</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php if (!empty($staffFiles)): ?>
+                                            <?php foreach ($staffFiles as $file): ?>
+                                                <tr>
+                                                    <td><?= $h($file['file_name']) ?></td>
+                                                    <td><?= $h($file['file_type']) ?></td>
+                                                    <td><?= $h(date('M j, Y', strtotime($file['uploaded_at']))) ?></td>
+                                                    <td>
+                                                        <a href="/employees/<?= $h($e['user_id']) ?>/files/<?= $h($file['id']) ?>/download" class="btn btn-sm btn-primary">
+                                                            <i class="fa fa-download"></i> Download
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        <?php else: ?>
+                                            <tr>
+                                                <td colspan="4" class="text-center">No documents found.</td>
                                             </tr>
                                         <?php endif; ?>
                                     </tbody>

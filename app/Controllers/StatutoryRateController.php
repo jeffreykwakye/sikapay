@@ -144,8 +144,9 @@ class StatutoryRateController extends Controller
     /**
      * Update the specified Tax Band.
      */
-    public function updateTaxBand(int $id): void
+    public function updateTaxBand(string $id): void
     {
+        $id = (int)$id;
         $validator = new Validator($_POST);
         $validator->validate([
             'tax_year' => 'required|int|min:1900',
@@ -224,8 +225,9 @@ class StatutoryRateController extends Controller
     /**
      * Update the specified SSNIT rate.
      */
-    public function updateSsnitRate(int $id): void
+    public function updateSsnitRate(string $id): void
     {
+        $id = (int)$id;
         $validator = new Validator($_POST);
         $validator->validate([
             'employee_rate' => 'required|numeric|min:0',
@@ -262,8 +264,9 @@ class StatutoryRateController extends Controller
     /**
      * Delete an SSNIT rate.
      */
-    public function deleteSsnitRate(int $id): void
+    public function deleteSsnitRate(string $id): void
     {
+        $id = (int)$id;
         try {
             $this->ssnitRateModel->delete($id);
             $_SESSION['flash_success'] = 'SSNIT Rate deleted successfully.';
@@ -318,8 +321,9 @@ class StatutoryRateController extends Controller
     /**
      * Update the specified Withholding Tax rate.
      */
-    public function updateWithholdingTaxRate(int $id): void
+    public function updateWithholdingTaxRate(string $id): void
     {
+        $id = (int)$id;
         $validator = new Validator($_POST);
         $validator->validate([
             'rate' => 'required|numeric|min:0',
@@ -356,8 +360,9 @@ class StatutoryRateController extends Controller
     /**
      * Delete a Withholding Tax rate.
      */
-    public function deleteWithholdingTaxRate(int $id): void
+    public function deleteWithholdingTaxRate(string $id): void
     {
+        $id = (int)$id;
         try {
             $this->withholdingTaxRateModel->delete($id);
             $_SESSION['flash_success'] = 'Withholding Tax Rate deleted successfully.';
@@ -373,8 +378,9 @@ class StatutoryRateController extends Controller
      * API endpoint to get SSNIT rate details for editing.
      * @param int $id
      */
-    public function getSsnitRateDetails(int $id): void
+    public function getSsnitRateDetails(string $id): void
     {
+        $id = (int)$id;
         try {
             $rate = $this->ssnitRateModel->find($id);
             if (!$rate) {
@@ -396,8 +402,9 @@ class StatutoryRateController extends Controller
      * API endpoint to get Withholding Tax rate details for editing.
      * @param int $id
      */
-    public function getWithholdingTaxRateDetails(int $id): void
+    public function getWithholdingTaxRateDetails(string $id): void
     {
+        $id = (int)$id;
         try {
             $rate = $this->withholdingTaxRateModel->find($id);
             if (!$rate) {
@@ -418,8 +425,9 @@ class StatutoryRateController extends Controller
     /**
      * Delete a Tax Band.
      */
-    public function deleteTaxBand(int $id): void
+    public function deleteTaxBand(string $id): void
     {
+        $id = (int)$id;
         try {
             $this->taxBandModel->delete($id);
             $_SESSION['flash_success'] = 'Tax Band deleted successfully.';
@@ -435,8 +443,9 @@ class StatutoryRateController extends Controller
      * API endpoint to get Tax Band details for editing.
      * @param int $id
      */
-    public function getTaxBandDetails(int $id): void
+    public function getTaxBandDetails(string $id): void
     {
+        $id = (int)$id;
         try {
             $rate = $this->taxBandModel->find($id);
             if (!$rate) {

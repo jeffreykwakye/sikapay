@@ -408,8 +408,9 @@ class SuperAdminController extends Controller
      * Display details of a specific tenant.
      * @param int $id The ID of the tenant.
      */
-    public function tenantsShow(int $id): void
+    public function tenantsShow(string $id): void
     {
+        $id = (int) $id;
         try {
             $tenant = $this->tenantModel->find($id);
             if (!$tenant) {
@@ -542,8 +543,9 @@ class SuperAdminController extends Controller
      * Handles the cancellation of a tenant's subscription.
      * @param int $id The ID of the tenant.
      */
-    public function cancelTenantSubscription(int $id): void
+    public function cancelTenantSubscription(string $id): void
     {
+        $id = (int) $id;
         $this->checkPermission('super:manage_subscriptions');
 
         $validator = new Validator($_POST);
@@ -580,8 +582,9 @@ class SuperAdminController extends Controller
      * Handles the renewal of a tenant's subscription.
      * @param int $id The ID of the tenant.
      */
-    public function renewTenantSubscription(int $id): void
+    public function renewTenantSubscription(string $id): void
     {
+        $id = (int) $id;
         $this->checkPermission('super:manage_subscriptions');
 
         $validator = new Validator($_POST);
@@ -621,8 +624,9 @@ class SuperAdminController extends Controller
      * Handles upgrading a tenant's subscription.
      * @param int $id The ID of the tenant.
      */
-    public function upgradeTenantSubscription(int $id): void
+    public function upgradeTenantSubscription(string $id): void
     {
+        $id = (int) $id;
         $this->checkPermission('super:manage_subscriptions');
 
         $validator = new Validator($_POST);
@@ -657,8 +661,9 @@ class SuperAdminController extends Controller
      * Handles downgrading a tenant's subscription.
      * @param int $id The ID of the tenant.
      */
-    public function downgradeTenantSubscription(int $id): void
+    public function downgradeTenantSubscription(string $id): void
     {
+        $id = (int) $id;
         $this->checkPermission('super:manage_subscriptions');
 
         $validator = new Validator($_POST);

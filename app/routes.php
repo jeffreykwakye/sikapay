@@ -332,6 +332,13 @@ return [
         'handler' => ['EmployeeController', 'deleteStaffFile']
     ]],
 
+    // Route for securely downloading a staff file
+    ['GET', '/employees/{userId:\d+}/files/{fileId:\d+}/download', [
+        'auth' => 'AuthMiddleware',
+        // No specific permission here, as the controller method handles ownership/admin checks
+        'handler' => ['EmployeeController', 'downloadStaffFile']
+    ]],
+
     // Route for Assigning Payroll Elements
     ['POST', '/employees/{userId:\d+}/payroll-elements', [
         'auth' => 'AuthMiddleware',
@@ -375,7 +382,7 @@ return [
     ['GET', '/payroll/payslips/download/{payslipId:\d+}', [
         'auth' => 'AuthMiddleware',
         'permission' => ['PermissionMiddleware', 'payroll:view_all'],
-        'handler' => ['PayrollController', 'downloadPayslip']
+        'handler' => ['PayrollController', 'downloadPayslipForAdmin']
     ]],
 
 
@@ -421,6 +428,52 @@ return [
         'auth' => 'AuthMiddleware',
         'permission' => ['PermissionMiddleware', 'payroll:view_all'],
         'handler' => ['StatutoryReportController', 'downloadAllPayslipsAsZip']
+    ]],
+
+    // =========================================================
+    // Leave Management Routes (Protected)
+    // =========================================================
+    ['GET', '/leave', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'leave:apply'],
+        'handler' => ['LeaveController', 'index']
+    ]],
+
+    ['GET', '/leave/types', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'leave:manage_types'],
+        'handler' => ['LeaveController', 'manageTypes']
+    ]],
+    ['POST', '/leave/types/create', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'leave:manage_types'],
+        'handler' => ['LeaveController', 'createType']
+    ]],
+    ['POST', '/leave/types/update/{id:\d+}', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'leave:manage_types'],
+        'handler' => ['LeaveController', 'updateType']
+    ]],
+    ['POST', '/leave/types/delete/{id:\d+}', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'leave:manage_types'],
+        'handler' => ['LeaveController', 'deleteType']
+    ]],
+
+    ['POST', '/leave/apply', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'leave:apply'],
+        'handler' => ['LeaveController', 'applyForLeave']
+    ]],
+    ['POST', '/leave/approve/{id:\d+}', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'leave:approve'],
+        'handler' => ['LeaveController', 'approveLeave']
+    ]],
+    ['POST', '/leave/reject/{id:\d+}', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'leave:approve'],
+        'handler' => ['LeaveController', 'rejectLeave']
     ]],
 
     // NOTE: The API Route for Cascading Dropdown is REMOVED as it's now handled by client-side JS.
@@ -496,6 +549,13 @@ return [
         'auth' => 'AuthMiddleware',
         'permission' => ['PermissionMiddleware', 'self:update_profile'],
         'handler' => ['UserController', 'changePassword']
+    ]],
+
+    // Route for securely downloading an employee's payslip
+    ['GET', '/my-account/payslips/{payslipId:\d+}/download', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'self:view_payslip'], 
+        'handler' => ['PayrollController', 'downloadMyPayslip']
     ]],
 
     // =========================================================

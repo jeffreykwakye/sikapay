@@ -68,24 +68,39 @@ class AppConfig
                 'env' => (string)($loadedConfig['app']['env'] ?? 'production'),
                 'url' => $loadedConfig['app']['url'] ?? 'http://localhost',
             ],
-            'db' => [
-                'dsn' => sprintf(
+            'db' => (function() use ($loadedConfig) {
+                $dbConfig = $loadedConfig['db'];
+
+                // Assemble DSN
+                $dsn = sprintf(
                     '%s:host=%s;port=%s;dbname=%s',
-                    $loadedConfig['db']['driver'],
-                    $loadedConfig['db']['host'],
-                    $loadedConfig['db']['port'] ?? '3306',
-                    $loadedConfig['db']['name']
-                ),
-                'user' => (string)$loadedConfig['db']['user'],
-                'password' => (string)($loadedConfig['db']['password'] ?? ''),
-                'options' => [
+                    $dbConfig['driver'],
+                    $dbConfig['host'],
+                    $dbConfig['port'] ?? '3306',
+                    $dbConfig['name']
+                );
+
+                // Base PDO options. Persistent connections are disabled as Database::getInstance handles reconnections.
+                $options = [
                     \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
                     \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
                     \PDO::ATTR_EMULATE_PREPARES => false,
-                    \PDO::ATTR_PERSISTENT => true,
-                    // \PDO::ATTR_TIMEOUT => 10,
-                ]
-            ],
+                    \PDO::ATTR_PERSISTENT => false,
+                ];
+
+                // Conditionally add SSL options if enabled in config.php
+                if (!empty($dbConfig['ssl']) && $dbConfig['ssl'] === true) {
+                    $options[\PDO::MYSQL_ATTR_SSL_CA] = $dbConfig['ssl_ca'] ?? '';
+                    $options[\PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = $dbConfig['ssl_verify'] ?? false;
+                }
+
+                return [
+                    'dsn' => $dsn,
+                    'user' => (string)$dbConfig['user'],
+                    'password' => (string)($dbConfig['password'] ?? ''),
+                    'options' => $options,
+                ];
+            })(),
             'mail' => $loadedConfig['mail'] ?? [], // Pass the whole mail config
             'security' => $loadedConfig['security'] ?? [ // Keep defaults
                 'session_lifetime' => 7200,
