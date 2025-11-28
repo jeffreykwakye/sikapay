@@ -3,39 +3,53 @@ declare(strict_types=1);
 
 namespace Jeffrey\Sikapay\Core;
 
-
 use Jeffrey\Sikapay\Core\Log; 
+use Jeffrey\Sikapay\Core\Auth; 
+use Jeffrey\Sikapay\Helpers\ViewHelper; // Added
 
 class ErrorResponder
 {
     /**
-     * Renders the appropriate error view file based on the status code.
+     * Renders the appropriate error view file based on the status code and chosen layout.
      */
-    private static function renderErrorView(string $file, array $data): void
+    private static function renderErrorView(string $file, array $data, string $layoutPath): void
     {
-        // Define the absolute path to the views directory
-        // Assumes Core is in src/Core and views is in src/views/errors
-        $path = __DIR__ . "/../../views/errors/{$file}"; 
+        // Define the absolute path to the views directory for error content
+        $errorViewPath = __DIR__ . "/../../resources/views/error/{$file}"; 
         
-        // Make the data variables available to the included view file
-        extract($data);
+        // Security helpers to be available in all views
+        $securityHelpers = [
+            'h'         => [ViewHelper::class, 'h'],
+            'id'        => [ViewHelper::class, 'id'],
+            'nl2br_h'   => [ViewHelper::class, 'nl2br_h'],
+        ];
 
-        // Load the view file or fall back to a minimal display
-        if (file_exists($path)) {
-            require_once $path;
+        // Merge security helpers with controller-specific data
+        $finalData = array_merge($securityHelpers, $data);
+
+        // Ensure the data variables are available to the included view file
+        extract($finalData);
+
+        // Define a variable that the layout expects for the content file
+        $__content_file = $errorViewPath;
+
+        // Load the chosen layout, which in turn will include our error view file
+        if (file_exists($layoutPath)) {
+            require_once $layoutPath;
         } else {
-            // CRITICAL FALLBACK: If the designed view file is missing
-            echo "<!DOCTYPE html><html><head><title>{$data['code']} Error</title></head><body>";
-            echo "<h1>{$data['code']} Error: {$data['title']}</h1>";
-            echo "<p>{$data['message']}</p>";
-            echo "<p>NOTE: Custom error view file '{$file}' is missing.</p></body></html>";
+            // CRITICAL FALLBACK if the chosen layout is missing
+            echo "<!DOCTYPE html><html><head><title>{$finalData['code']} Error</title></head><body>";
+            echo "<h1>{$finalData['code']} Error: {$finalData['title']}</h1>";
+            echo "<p>{$finalData['message']}</p>";
+            echo "<p>NOTE: The chosen layout file '{$layoutPath}' is missing.</p>";
+            echo "<p>Also, custom error view file '{$errorViewPath}' might be missing.</p></body></html>";
         }
     }
 
 
     /**
      * Sets the HTTP response code and displays the relevant error page.
-     * * @param int $code The HTTP status code (e.g., 404, 500).
+     * @param int $code The HTTP status code (e.g., 404, 500).
      * @param string $message Optional custom message to override the default.
      */
     public static function respond(int $code, string $message = ''): void
@@ -78,12 +92,20 @@ class ErrorResponder
 
         $displayMessage = !empty($message) ? $message : $defaultMessage;
 
+        // Determine login status (still needed for conditional buttons in error templates)
+        $authInstance = Auth::getInstance();
+        $isLoggedIn = $authInstance->check();
+
+        // Always use minimal.php for error pages to ensure stability and reduce dependencies.
+        $layoutPath = __DIR__ . "/../../resources/layout/minimal.php";
+
         // Load the custom error view
         self::renderErrorView($viewFile, [
             'code' => $code,
             'title' => $title,
-            'message' => $displayMessage
-        ]);
+            'message' => $displayMessage,
+            'isLoggedIn' => $isLoggedIn, // Pass login status to the view for conditional navigation
+        ], $layoutPath);
 
         // Terminate execution
         exit();

@@ -13,40 +13,23 @@
         <link rel="stylesheet" href="/assets/css/bootstrap.min.css" />
         <link rel="stylesheet" href="/assets/css/plugins.min.css" />
         <link rel="stylesheet" href="/assets/css/kaiadmin.min.css" />
+        <link rel="stylesheet" href="/assets/css/custom.css" /> <!-- NEW: Custom styles for the project -->
 
         <!-- CSS Just for demo purpose, don't include it in your project -->
         <link rel="stylesheet" href="/assets/css/demo.css" />
     </head>
-    <body>
+    <body class="<?= (isset($subscriptionStatus) && $subscriptionStatus === 'past_due') ? 'has-subscription-notice' : '' ?>">
+        <?php if (isset($subscriptionStatus) && $subscriptionStatus === 'past_due'): ?>
+            <div class="subscription-notice">
+                Your subscription is past due. Please <a href="/subscription">renew your plan</a> to restore full functionality.
+            </div>
+        <?php endif; ?>
         <div class="wrapper">
             <!-- Sidebar -->
             <?php require __DIR__ . '/partials/sidebar.php'; ?>
             <!-- End Sidebar -->
 
             <div class="main-panel">
-                <style>
-                    .subscription-notice {
-                        padding: 15px;
-                        background-color: #f8d7da;
-                        color: #721c24;
-                        border: 1px solid #f5c6cb;
-                        text-align: center;
-                        font-weight: bold;
-                        position: sticky;
-                        top: 0;
-                        z-index: 1031; /* Above navbar */
-                    }
-                    .subscription-notice a {
-                        color: #721c24;
-                        font-weight: bold;
-                        text-decoration: underline;
-                    }
-                </style>
-                <?php if (isset($subscriptionStatus) && $subscriptionStatus === 'past_due'): ?>
-                    <div class="subscription-notice">
-                        Your subscription is past due. Please <a href="/subscription">renew your plan</a> to restore full functionality.
-                    </div>
-                <?php endif; ?>
                 <div class="main-header">
                     <div class="main-header-logo">
                         <!-- Logo Header -->
@@ -232,32 +215,32 @@
                                     type="button"
                                     class="changeTopBarColor"
                                     data-color="orange2"
-                                    ></button>
+                                        ></button>
                                     <button
-                                    type="button"
-                                    class="changeTopBarColor"
-                                    data-color="red2"
-                                    ></button>
+                                        type="button"
+                                        class="changeTopBarColor"
+                                        data-color="red2"
+                                        ></button>
                                 </div>
                             </div>
                             <div class="switch-block">
                                 <h4>Sidebar</h4>
                                 <div class="btnSwitch">
                                     <button
-                                    type="button"
-                                    class="selected changeSideBarColor"
-                                    data-color="white"
-                                    ></button>
+                                        type="button"
+                                        class="selected changeSideBarColor"
+                                        data-color="white"
+                                        ></button>
                                     <button
-                                    type="button"
-                                    class="changeSideBarColor"
-                                    data-color="dark"
-                                    ></button>
+                                        type="button"
+                                        class="changeSideBarColor"
+                                        data-color="dark"
+                                        ></button>
                                     <button
-                                    type="button"
-                                    class="changeSideBarColor"
-                                    data-color="dark2"
-                                    ></button>
+                                        type="button"
+                                        class="changeSideBarColor"
+                                        data-color="dark2"
+                                        ></button>
                                 </div>
                             </div>
                         </div>

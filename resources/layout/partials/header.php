@@ -30,7 +30,7 @@
 </header> -->
 
 
-<div class="logo-header" data-background-color="dark">
+<div class="logo-header" data-background-color="light-blue">
     <a href="/" class="logo">SikaPay</a>
     <div class="nav-toggle">
         <button class="btn btn-toggle toggle-sidebar">
