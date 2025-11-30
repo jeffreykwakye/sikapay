@@ -20,6 +20,7 @@ use Jeffrey\Sikapay\Models\PayrollPeriodModel; // NEW
 use Jeffrey\Sikapay\Models\PayslipModel; // NEW
 
 use Jeffrey\Sikapay\Services\NotificationService;
+use Jeffrey\Sikapay\Services\EmailService;
 use Jeffrey\Sikapay\Core\Validator;
 
 class SuperAdminController extends Controller
@@ -37,11 +38,14 @@ class SuperAdminController extends Controller
     protected PositionModel $positionModel; // NEW
     protected PayrollPeriodModel $payrollPeriodModel; // NEW
     protected PayslipModel $payslipModel; // NEW
+    protected EmailService $emailService;
 
     public function __construct()
     {
         parent::__construct();
-        $this->checkPermission('super_admin'); // A simple check for the role name
+        if (!$this->auth->isSuperAdmin()) {
+            ErrorResponder::respond(403, 'Access denied. Super administrator privileges required.');
+        }
 
         try {
             $this->tenantModel = new TenantModel();
@@ -52,6 +56,7 @@ class SuperAdminController extends Controller
             $this->auditModel = new AuditModel();
             $this->employeeModel = new EmployeeModel();
             $this->notificationService = new NotificationService();
+            $this->emailService = new EmailService();
             $this->featureModel = new FeatureModel(); // NEW
             $this->departmentModel = new DepartmentModel(); // NEW
             $this->positionModel = new PositionModel(); // NEW
@@ -61,6 +66,54 @@ class SuperAdminController extends Controller
             Log::critical('SuperAdminController failed to initialize models/services: ' . $e->getMessage());
             ErrorResponder::respond(500, 'A critical system error occurred during Super Admin initialization.');
         }
+    }
+    
+    public function sendEmailToTenant(string $tenantId): void
+    {
+        $tenantId = (int) $tenantId;
+        $this->checkPermission('super:manage_tenants');
+
+        $validator = new Validator($_POST);
+        $validator->validate([
+            'subject' => 'required|min:3',
+            'body' => 'required|min:10',
+        ]);
+
+        if ($validator->fails()) {
+            $_SESSION['flash_error'] = 'Email failed: ' . implode('<br>', $validator->errors());
+            $this->redirect('/tenants/' . $tenantId);
+            return;
+        }
+
+        try {
+            $tenant = $this->tenantModel->find($tenantId);
+            if (!$tenant) {
+                ErrorResponder::respond(404, 'Tenant not found.');
+                return;
+            }
+
+            $adminUser = $this->userModel->findTenantAdminUser($tenantId);
+            if (!$adminUser) {
+                $_SESSION['flash_error'] = 'Could not find an admin user for this tenant to send the email to.';
+                $this->redirect('/tenants/' . $tenantId);
+                return;
+            }
+
+            $subject = $validator->get('subject');
+            $body = $validator->get('body');
+
+            if ($this->emailService->send($adminUser['email'], $subject, $body)) {
+                $_SESSION['flash_success'] = 'Email sent successfully to ' . $adminUser['email'];
+                $this->auditModel->log($tenantId, 'EMAIL_SENT_TO_TENANT', ['subject' => $subject, 'sent_by_user_id' => Auth::userId()]);
+            } else {
+                $_SESSION['flash_error'] = 'Failed to send email.';
+            }
+        } catch (\Throwable $e) {
+            Log::error('Failed to send email to tenant ' . $tenantId . ': ' . $e->getMessage());
+            $_SESSION['flash_error'] = 'Error sending email: ' . $e->getMessage();
+        }
+
+        $this->redirect('/tenants/' . $tenantId);
     }
 
     /**
@@ -692,6 +745,41 @@ class SuperAdminController extends Controller
             $_SESSION['flash_error'] = 'Error downgrading subscription: ' . $e->getMessage();
         }
         $this->redirect('/tenants/' . $id);
+    }
+
+    /**
+     * Allows a Super Admin to impersonate a Tenant Admin.
+     * @param int $tenantId The ID of the tenant whose admin will be impersonated.
+     */
+    public function impersonateTenantAdmin(string $tenantId): void
+    {
+        $tenantId = (int) $tenantId;
+        $this->checkPermission('super:impersonate_tenant_admin'); // Ensure Super Admin has permission
+
+        try {
+            // Find the Tenant Admin user for this tenant
+            $tenantAdmin = $this->userModel->findTenantAdminUser($tenantId);
+
+            if (!$tenantAdmin) {
+                $_SESSION['flash_error'] = "Tenant Admin not found for tenant ID {$tenantId}.";
+                $this->redirect('/tenants/' . $tenantId);
+                return;
+            }
+
+            $auth = Auth::getInstance();
+            if ($auth->startImpersonation((int)$tenantAdmin['id'])) {
+                $_SESSION['flash_success'] = "Successfully impersonating Tenant Admin '{$tenantAdmin['first_name']} {$tenantAdmin['last_name']}'.";
+                // Redirect to the tenant's dashboard after impersonation
+                $this->redirect('/dashboard'); 
+            } else {
+                $_SESSION['flash_error'] = "Failed to start impersonation.";
+                $this->redirect('/tenants/' . $tenantId);
+            }
+        } catch (\Throwable $e) {
+            Log::error("Failed to impersonate tenant admin for tenant ID {$tenantId}: " . $e->getMessage());
+            $_SESSION['flash_error'] = 'Error starting impersonation: ' . $e->getMessage();
+            $this->redirect('/tenants/' . $tenantId);
+        }
     }
 
     /**

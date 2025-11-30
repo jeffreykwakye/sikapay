@@ -21,12 +21,12 @@ return [
     ],
 
     'mail' => [
-        'host' => 'smtp.example.com',
-        'port' => 587,
-        'username' => 'your_smtp_user',
-        'password' => 'your_smtp_password',
-        'encryption' => 'tls', // 'tls' or 'ssl'
-        'from_address' => 'no-reply@your-domain.com',
+        'host' => 'sikapay.nexusonegh.com',
+        'port' => 465,
+        'username' => 'admin@sikapay.nexusonegh.com',
+        'password' => 'YOUR_EMAIL_ACCOUNT_PASSWORD', // Replace with your actual email password
+        'encryption' => 'ssl', // 'tls' or 'ssl'
+        'from_address' => 'admin@sikapay.nexusonegh.com',
         'from_name' => 'SikaPay',
     ],
 

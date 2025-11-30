@@ -104,6 +104,19 @@ return [
         'handler' => ['SuperAdminController', 'downgradeTenantSubscription']
     ]],
 
+    ['POST', '/super/tenants/{tenantId}/send-email', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'super:manage_tenants'],
+        'handler' => ['SuperAdminController', 'sendEmailToTenant']
+    ]],
+
+    // Impersonation Routes (Super Admin Only)
+    ['GET', '/super/impersonate/{tenantId:\d+}', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'super:impersonate_tenant_admin'],
+        'handler' => ['SuperAdminController', 'impersonateTenantAdmin']
+    ]],
+
     // Statutory Rates Management Routes (Super Admin Only)
     ['GET', '/super/statutory-rates/paye', [
         'auth' => 'AuthMiddleware',

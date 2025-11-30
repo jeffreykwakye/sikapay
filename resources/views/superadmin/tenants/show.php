@@ -150,6 +150,10 @@
                             <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#upgradeSubscriptionModal">Upgrade</button>
                             <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#downgradeSubscriptionModal">Downgrade</button>
                             <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#cancelSubscriptionModal">Cancel</button>
+                            <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#sendEmailModal">Send Email</button>
+                            <?php if ($isSuperAdmin): ?>
+                                <a href="/super/impersonate/<?php echo $h((string)$data['tenant']['id']); ?>" class="btn btn-primary btn-sm">Impersonate Admin</a>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -157,6 +161,35 @@
                     <a href="/tenants" class="btn btn-primary">Back to Tenants</a>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Send Email Modal -->
+<div class="modal fade" id="sendEmailModal" tabindex="-1" aria-labelledby="sendEmailModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="/super/tenants/<?php echo $h((string)$data['tenant']['id']); ?>/send-email" method="POST">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="sendEmailModalLabel">Send Email to <?php echo $h($data['tenant']['name']); ?></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <?php echo $CsrfToken::field(); ?>
+                    <div class="mb-3">
+                        <label for="email_subject" class="form-label">Subject</label>
+                        <input type="text" class="form-control" id="email_subject" name="subject" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="email_body" class="form-label">Body</label>
+                        <textarea class="form-control" id="email_body" name="body" rows="5" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-success">Send Email</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

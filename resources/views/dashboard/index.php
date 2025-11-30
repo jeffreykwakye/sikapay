@@ -25,7 +25,7 @@
 <?php else: ?>
     <!-- KPI CARDS ROW -->
     <div class="row">
-        <div class="col-sm-6 col-md-3">
+        <div class="col-xl-3">
             <div class="card card-stats card-info card-round">
                 <div class="card-body">
                     <div class="row">
@@ -45,7 +45,7 @@
             </div>
         </div>
 
-        <div class="col-sm-6 col-md-3">
+        <div class="col-xl-3">
             <div class="card card-stats card-secondary card-round">
                 <div class="card-body">
                     <div class="row">
@@ -65,7 +65,7 @@
             </div>
         </div>
 
-        <div class="col-sm-6 col-md-3">
+        <div class="col-xl-3">
             <div class="card card-stats card-success card-round">
                 <div class="card-body">
                     <div class="row">
@@ -85,7 +85,7 @@
             </div>
         </div>
 
-        <div class="col-sm-6 col-md-3">
+        <div class="col-xl-3">
             <div class="card card-stats card-danger card-round">
                 <div class="card-body">
                     <div class="row">

@@ -174,6 +174,7 @@ abstract class Controller
             'userProfileImageUrl' => $this->userProfileImageUrl, // NEW DATA
 
             'isSuperAdmin' => $this->auth->isSuperAdmin(),
+            'isImpersonating' => $this->auth->isImpersonating(),
             'openSupportTicketsCount' => $this->openSupportTicketsCount, // NEW DATA
             'viewPath' => $viewPath, // Pass the view path for sidebar active state
             

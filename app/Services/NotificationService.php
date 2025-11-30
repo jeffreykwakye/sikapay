@@ -7,21 +7,21 @@ use Jeffrey\Sikapay\Core\Log;
 use Jeffrey\Sikapay\Core\Auth;
 use Jeffrey\Sikapay\Models\NotificationModel;
 use Jeffrey\Sikapay\Models\UserModel;
-use Jeffrey\Sikapay\Services\EmailService; // ADDED
+use Jeffrey\Sikapay\Services\EmailService;
 use \Throwable;
 
 class NotificationService
 {
     private NotificationModel $notificationModel;
     private UserModel $userModel;
-    private EmailService $emailService; // ADDED
+    private EmailService $emailService;
 
     public function __construct()
     {
         try {
             $this->notificationModel = new NotificationModel();
             $this->userModel = new UserModel();
-            $this->emailService = new EmailService(); // ADDED
+            $this->emailService = new EmailService();
         } catch (Throwable $e) {
             Log::critical("NotificationService failed to instantiate its models/services.", [
                 'error' => $e->getMessage(),

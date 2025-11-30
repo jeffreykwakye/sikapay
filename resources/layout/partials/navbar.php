@@ -1,28 +1,15 @@
-<!-- <nav class="navbar">
-    <a href="/dashboard" class="nav-item">Dashboard</a>
-    
-    <?php 
-    // $isSuperAdmin is available via the master's 'extract' call
-    //if (isset($isSuperAdmin) && $isSuperAdmin): 
-    ?>
-        <a href="/tenants" class="nav-item nav-admin">Tenant Management</a>
-        <a href="/plans" class="nav-item nav-admin">Plans</a>
-    <?php //endif; ?>
-</nav> -->
-
+<?php if (isset($subscriptionStatus) && $subscriptionStatus === 'past_due'): ?>
+            <div class="subscription-notice">
+                Your subscription is past due. Please <a href="/subscription">renew your plan</a> to restore full functionality.
+            </div>
+        <?php endif; ?>
+        <?php if ($isImpersonating): ?>
+            <div class="impersonation-notice">
+                <i class="fas fa-user-secret"></i> You are currently impersonating a Tenant Admin.
+            </div>
+        <?php endif; ?>
 <nav class="navbar navbar-header navbar-header-transparent navbar-expand-lg border-bottom">
     <div class="container-fluid">
-        <!-- <nav class="navbar navbar-header-left navbar-expand-lg navbar-form nav-search p-0 d-none d-lg-flex">
-            <div class="input-group">
-                <div class="input-group-prepend">
-                    <button type="submit" class="btn btn-search pe-1">
-                    <i class="fa fa-search search-icon"></i>
-                    </button>
-                </div>
-                <input type="text" placeholder="Search ..." class="form-control"/>
-            </div>
-        </nav> -->
-
         <ul class="navbar-nav topbar-nav ms-md-auto align-items-center">
             <!-- <li class="nav-item topbar-icon dropdown hidden-caret d-flex d-lg-none">
                 <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" 
@@ -364,7 +351,7 @@
                             <form action="/logout" method="POST" class="logout-form" style="display: inline;">
                                 <?= $CsrfToken::field() ?> 
                                 
-                                <button type="submit" class="btn-logout btn-small btn-info btn mx-2 px-2">
+                                <button type="submit" class="btn-logout btn-sm btn-info btn mx-2 px-2">
                                     <i class="fas fa-sign-out-alt"></i> Log Out
                                 </button>
                             </form>

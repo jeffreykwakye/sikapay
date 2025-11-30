@@ -52,10 +52,7 @@ class SeedCommand
             ['effective_date' => '2025-01-01', 'rate' => 0.0500, 'employment_type' => 'Casual-Worker', 'description' => 'Withholding Tax Rate for Casual Workers'],
         ];
 
-        $stmt = $this->db->prepare("
-            INSERT INTO withholding_tax_rates (effective_date, rate, employment_type, description) VALUES (:effective_date, :rate, :employment_type, :description)
-            ON DUPLICATE KEY UPDATE rate = VALUES(rate), description = VALUES(description)
-        ");
+        $stmt = $this->db->prepare("\n            INSERT INTO withholding_tax_rates (effective_date, rate, employment_type, description) VALUES (:effective_date, :rate, :employment_type, :description)\n            ON DUPLICATE KEY UPDATE rate = VALUES(rate), description = VALUES(description)\n        ");
         
         foreach ($rates as $rate) {
             $stmt->execute($rate);
@@ -110,68 +107,63 @@ class SeedCommand
     {
         echo " - Seeding/Updating Permissions...\n";
         $permissions = [
-            // --- SELF-SERVICE (8 Permissions) --- // Note: Count increased by 1
-            ['key_name' => 'self:view_dashboard', 'description' => 'Can access the main user dashboard.'],
-            ['key_name' => 'self:view_profile', 'description' => 'Can view own personal and employment profile data.'], // ADDED
-            ['key_name' => 'self:view_payslip', 'description' => 'Can view own payslips.'],
-            ['key_name' => 'self:update_profile', 'description' => 'Can update own password only (no personal data modification).'], 
-            ['key_name' => 'self:view_docs', 'description' => 'Can view personal documents (e.g., contract, payslips).'],
-            ['key_name' => 'self:manage_loan', 'description' => 'Can submit and track own loan applications.'], 
-            ['key_name' => 'self:view_notifications', 'description' => 'Can view and dismiss system notifications.'], 
-
-            // --- EMPLOYEE MANAGEMENT (6 Permissions) ---
-            ['key_name' => 'employee:create', 'description' => 'Can add new employee records.'],
-            ['key_name' => 'employee:update', 'description' => 'Can modify ALL employee profile data, including resetting password, salary, position, and bank.'], 
-            ['key_name' => 'employee:read_all', 'description' => 'Can view all employee profiles.'],
-            ['key_name' => 'employee:delete', 'description' => 'Can delete or deactivate employee records.'],
-            ['key_name' => 'employee:manage_docs', 'description' => 'Can upload, view, and manage employee documents.'],
-            ['key_name' => 'employee:manage_contracts', 'description' => 'Can create/edit employment contract details.'],
-            ['key_name' => 'employee:assign_payroll_elements', 'description' => 'Can assign custom payroll allowances and deductions to employees.'],
-
-            // --- PAYROLL MANAGEMENT (6 Permissions) ---
-            ['key_name' => 'payroll:manage_rules', 'description' => 'Can modify tenant-specific payroll items (bonuses, allowances, deductions, Tier 3 rates).'],
-            ['key_name' => 'payroll:prepare', 'description' => 'Can input data and calculate the monthly payroll draft.'],
-            ['key_name' => 'payroll:audit', 'description' => 'Can review calculated payroll and approve the audit step.'],
-            ['key_name' => 'payroll:approve', 'description' => 'Can set payroll status to final Approved for payment.'],
-            ['key_name' => 'payroll:view_all', 'description' => 'Can view all historic and current payrolls.'],
-            ['key_name' => 'payroll:run_reports', 'description' => 'Can generate statutory reports (e.g., SSNIT/PAYE).'],
+                        ['key_name' => 'self:manage_loan', 'description' => 'Can submit and track own loan applications.'], 
+                        ['key_name' => 'self:view_notifications', 'description' => 'Can view and dismiss system notifications.'], 
+                        ['key_name' => 'self:manage_notifications', 'description' => 'Can manage own notifications.'],
             
-            // --- LOAN MANAGEMENT (2 Permissions) ---
-            ['key_name' => 'loan:manage_applications', 'description' => 'Can create, review, and process employee loan requests.'],
-            ['key_name' => 'loan:approve', 'description' => 'Can grant final financial approval for employee loans.'],
-
-            // --- TENANT ADMINISTRATION (5 Permissions) ---
-            ['key_name' => 'tenant:manage_users', 'description' => 'Can create, edit, and deactivate tenant users (HR/Acc/Emp).'],
-            ['key_name' => 'tenant:manage_settings', 'description' => 'Can edit tenant branding and financial settings.'],
-            ['key_name' => 'tenant:manage_subscription', 'description' => 'Can view plan, manage payment details, and change billing plans.'],
-            ['key_name' => 'tenant:view_audit_logs', 'description' => 'Can access the tenant-specific security audit trail.'],
-            ['key_name' => 'tenant:configure_roles', 'description' => 'Can assign or modify role permissions.'],
-            ['key_name' => 'tenant:send_support_message', 'description' => 'Can send support messages to the super admin.'],
-
-            // --- CONFIGURATION MANAGEMENT (3 Permissions) ---
-            ['key_name' => 'config:manage_departments', 'description' => 'Can create, edit, and delete company departments.'],
-            ['key_name' => 'config:manage_positions', 'description' => 'Can create, edit, and delete company job titles/positions.'],
-            ['key_name' => 'config:manage_payroll_elements', 'description' => 'Can create, edit, and delete custom payroll allowances and deductions.'],
-            ['key_name' => 'config:manage_payroll_settings', 'description' => 'Can manage tenant-wide payroll settings like withholding tax rate.'],
-
-            // --- LEAVE MANAGEMENT (4 Permissions) ---
-            ['key_name' => 'leave:apply', 'description' => 'Can apply for leave and view own leave history'],
-            ['key_name' => 'leave:approve', 'description' => 'Can approve or reject employee leave/time-off requests.'],
-            ['key_name' => 'leave:manage_types', 'description' => 'Can create, edit, and delete tenant-level leave types'],
-            ['key_name' => 'leave:manage_balances', 'description' => 'Can view and adjust leave balances for employees'],
-
-            // --- SUPER ADMINISTRATION (4 Permissions) ---
-            ['key_name' => 'super:manage_statutory_rates', 'description' => 'Can globally configure SSNIT, Income Tax, and other mandatory rates.'],
-            ['key_name' => 'super:view_tenants', 'description' => 'Can view a list of all client tenants.'],
-            ['key_name' => 'super:create_tenant', 'description' => 'Can provision new client tenants.'],
-            ['key_name' => 'super:impersonate', 'description' => 'Can temporarily log in as any tenant user.'],
-            ['key_name' => 'super:manage_plans', 'description' => 'Can create, edit, and delete subscription plans.'],
-            ['key_name' => 'super:view_reports', 'description' => 'Can view system-wide reports.'],
-            ['key_name' => 'super:manage_users', 'description' => 'Can manage all users across all tenants.'],
-            ['key_name' => 'super:view_audit_logs', 'description' => 'Can view system-wide audit logs.'],
-            ['key_name' => 'super:manage_settings', 'description' => 'Can manage system-wide settings.'],
-        ];
-
+                        // --- EMPLOYEE MANAGEMENT (6 Permissions) ---
+                        ['key_name' => 'employee:create', 'description' => 'Can add new employee records.'],
+                        ['key_name' => 'employee:update', 'description' => 'Can modify ALL employee profile data, including resetting password, salary, position, and bank.'], 
+                        ['key_name' => 'employee:read_all', 'description' => 'Can view all employee profiles.'],
+                        ['key_name' => 'employee:delete', 'description' => 'Can delete or deactivate employee records.'],
+                        ['key_name' => 'employee:manage_docs', 'description' => 'Can upload, view, and manage employee documents.'],
+                        ['key_name' => 'employee:manage_contracts', 'description' => 'Can create/edit employment contract details.'],
+                        ['key_name' => 'employee:assign_payroll_elements', 'description' => 'Can assign custom payroll allowances and deductions to employees.'],
+            
+                        // --- PAYROLL MANAGEMENT (6 Permissions) ---
+                        ['key_name' => 'payroll:manage_rules', 'description' => 'Can modify tenant-specific payroll items (bonuses, allowances, deductions, Tier 3 rates).'],
+                        ['key_name' => 'payroll:prepare', 'description' => 'Can input data and calculate the monthly payroll draft.'],
+                        ['key_name' => 'payroll:audit', 'description' => 'Can review calculated payroll and approve the audit step.'],
+                        ['key_name' => 'payroll:approve', 'description' => 'Can set payroll status to final Approved for payment.'],
+                        ['key_name' => 'payroll:view_all', 'description' => 'Can view all historic and current payrolls.'],
+                        ['key_name' => 'payroll:run_reports', 'description' => 'Can generate statutory reports (e.g., SSNIT/PAYE).'],
+                        
+                        // --- LOAN MANAGEMENT (2 Permissions) ---
+                        ['key_name' => 'loan:manage_applications', 'description' => 'Can create, review, and process employee loan requests.'],
+                        ['key_name' => 'loan:approve', 'description' => 'Can grant final financial approval for employee loans.'],
+            
+                        // --- TENANT ADMINISTRATION (5 Permissions) ---
+                        ['key_name' => 'tenant:manage_users', 'description' => 'Can create, edit, and deactivate tenant users (HR/Acc/Emp).'],
+                        ['key_name' => 'tenant:manage_settings', 'description' => 'Can edit tenant branding and financial settings.'], 
+                        ['key_name' => 'tenant:manage_subscription', 'description' => 'Can view plan, manage payment details, and change billing plans.'],
+                        ['key_name' => 'tenant:view_audit_logs', 'description' => 'Can access the tenant-specific security audit trail.'],
+                        ['key_name' => 'tenant:configure_roles', 'description' => 'Can assign or modify role permissions.'],
+                        ['key_name' => 'tenant:send_support_message', 'description' => 'Can send support messages to the super admin.'],
+            
+                        // --- CONFIGURATION MANAGEMENT (3 Permissions) ---
+                        ['key_name' => 'config:manage_departments', 'description' => 'Can create, edit, and delete company departments.'],
+                        ['key_name' => 'config:manage_positions', 'description' => 'Can create, edit, and delete company job titles/positions.'],
+                        ['key_name' => 'config:manage_payroll_elements', 'description' => 'Can create, edit, and delete custom payroll allowances and deductions.'],
+                        ['key_name' => 'config:manage_payroll_settings', 'description' => 'Can manage tenant-wide payroll settings like withholding tax rate.'],
+            
+                        // --- LEAVE MANAGEMENT (4 Permissions) ---
+                        ['key_name' => 'leave:apply', 'description' => 'Can apply for leave and view own leave history'],
+                        ['key_name' => 'leave:approve', 'description' => 'Can approve or reject employee leave/time-off requests.'],
+                        ['key_name' => 'leave:manage_types', 'description' => 'Can create, edit, and delete tenant-level leave types'],
+                        ['key_name' => 'leave:manage_balances', 'description' => 'Can view and adjust leave balances for employees'],
+            
+                        // --- SUPER ADMINISTRATION (4 Permissions) ---
+                        ['key_name' => 'super:manage_statutory_rates', 'description' => 'Can globally configure SSNIT, Income Tax, and other mandatory rates.'],
+                        ['key_name' => 'super:view_tenants', 'description' => 'Can view a list of all client tenants.'],
+                        ['key_name' => 'super:create_tenant', 'description' => 'Can provision new client tenants.'],
+                        ['key_name' => 'super:impersonate_tenant_admin', 'description' => 'Can temporarily log in as any tenant user.'],
+                        ['key_name' => 'super:manage_plans', 'description' => 'Can create, edit, and delete subscription plans.'],
+                        ['key_name' => 'super:view_reports', 'description' => 'Can view system-wide reports.'],
+                        ['key_name' => 'super:manage_users', 'description' => 'Can manage all users across all tenants.'],
+                        ['key_name' => 'super:view_audit_logs', 'description' => 'Can view system-wide audit logs.'],
+                        ['key_name' => 'super:manage_settings', 'description' => 'Can manage system-wide settings.'],
+                        ['key_name' => 'public:stop_impersonation', 'description' => 'A public permission to allow stopping impersonation.'],
+                    ];
         $stmt = $this->db->prepare("INSERT IGNORE INTO permissions (key_name, description) VALUES (:key_name, :description)");
         foreach ($permissions as $permission) {
             $stmt->execute($permission);
@@ -221,10 +213,7 @@ class SeedCommand
         }
 
         // 2. Prepare UPSERT statements for plans
-        $planStmt = $this->db->prepare("
-            INSERT INTO plans (name, price_ghs) VALUES (:name, :price)
-            ON DUPLICATE KEY UPDATE price_ghs = VALUES(price_ghs)
-        ");
+        $planStmt = $this->db->prepare("\n            INSERT INTO plans (name, price_ghs) VALUES (:name, :price)\n            ON DUPLICATE KEY UPDATE price_ghs = VALUES(price_ghs)\n        ");
         
         $deleteFeatureStmt = $this->db->prepare("DELETE FROM plan_features WHERE plan_id = :plan_id");
         $insertFeatureStmt = $this->db->prepare("INSERT INTO plan_features (plan_id, feature_id, value) VALUES (:plan_id, :feature_id, :value)");
@@ -277,7 +266,7 @@ class SeedCommand
         $permissionResult = $this->db->query("SELECT id, key_name FROM permissions")->fetchAll(\PDO::FETCH_ASSOC);
         $permissionMap = array_column($permissionResult, 'id', 'key_name');
 
-        if (!isset($roleMap[self::SUPER_ADMIN_ROLE_NAME]) || count($permissionMap) < 33) {
+        if (!isset($roleMap[self::SUPER_ADMIN_ROLE_NAME]) || count($permissionMap) < 46) {
             throw new \Exception("CRITICAL RBAC ERROR: Failed to map roles or permissions. Check table status.");
         }
         
@@ -407,7 +396,7 @@ class SeedCommand
             if ($roleId === null) { continue; }
             foreach ($permIds as $permId) {
                 if ($permId === null) {
-                    throw new \Exception("CRITICAL RBAC ERROR: Attempting to insert a NULL permission ID for Role ID: {$roleId}. Check permissions config.");
+                    throw new \Exception("CRITICAL RBAC ERROR: Attempting to insert a NULL permission ID for Role ID: {" . $roleId . "}. Check permissions config.");
                 }
                 $stmt->execute([':role_id' => $roleId, ':permission_id' => $permId]);
             }
@@ -421,10 +410,8 @@ class SeedCommand
         
         // --- 1. Create System Tenant (ID 1) ---
         $tenantName = "SikaPay Internal System Tenant"; 
-        $stmt = $this->db->prepare("
-            INSERT INTO tenants (id, name, subscription_status) VALUES (1, :name, 'active') 
-            ON DUPLICATE KEY UPDATE name=name
-        ");
+        $stmt = $this->db->prepare("\n            INSERT INTO tenants (id, name, subscription_status) VALUES (1, :name, 'active') 
+            ON DUPLICATE KEY UPDATE name=name\n        ");
         $stmt->execute([':name' => $tenantName]);
         $tenantId = 1; 
         
@@ -456,6 +443,6 @@ class SeedCommand
         } else {
              echo " - Super Admin User '{$email}' already exists.\n";
         }
-        echo " - System Tenant (ID: {$tenantId}) ensured.\n";
+        echo " - System Tenant (ID: {" . $tenantId . "}) ensured.\n";
     }
 }

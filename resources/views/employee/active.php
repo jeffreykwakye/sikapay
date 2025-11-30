@@ -51,10 +51,8 @@ if (!isset($h)) {
                                 <tr>
                                     <th>Employee ID</th>
                                     <th>Name</th>
-                                    <th>Email</th>
                                     <th>Position</th>
                                     <th>Status</th>
-                                    <th>Hire Date</th>
                                     <th class="text-center">Actions</th>
                                 </tr>
                             </thead>
@@ -63,14 +61,12 @@ if (!isset($h)) {
                                     <tr>
                                         <td><?= $h($employee['employee_id']) ?></td>
                                         <td><?= $h($employee['first_name'] . ' ' . $employee['last_name']) ?></td>
-                                        <td><?= $h($employee['email']) ?></td>
                                         <td><?= $h($employee['position_title'] ?? 'N/A') ?></td>
                                         <td>
                                             <span class="badge <?= $employee['is_active'] ? 'bg-success' : 'bg-danger' ?>">
                                                 <?= $employee['is_active'] ? 'Active' : 'Inactive' ?>
                                             </span>
                                         </td>
-                                        <td><?= date('M j, Y', strtotime($employee['hire_date'])) ?></td>
                                         <td class="text-center">
                                             <?php if ($this->auth->can('employee:read_all')): ?>
                                                 <a href="/employees/<?= $employee['user_id'] ?>" class="btn btn-sm btn-info" title="View Profile"><i class="icon-eye"></i></a>

@@ -41,16 +41,43 @@ class EmailService
         }
     }
 
+    private function renderTemplate(string $body, array $data = []): string
+    {
+        // Default data
+        $data['year'] = date('Y');
+        $data['body'] = $body;
+
+        // Extract data variables into the current scope
+        extract($data);
+
+        // Start output buffering
+        ob_start();
+
+        // Include the template file
+        require __DIR__ . '/../../resources/views/emails/master.php';
+
+        // Get the content of the buffer and clean it
+        return ob_get_clean();
+    }
+
     public function send(string $to, string $subject, string $body, ?string $altBody = ''): bool
     {
         try {
+            // Default data for the template, now hardcoded to SikaPay branding
+            $templateData = [
+                'subject' => $subject,
+                'site_url' => AppConfig::get('app.url'),
+                'tenant_name' => 'SikaPay', // Hardcoded SikaPay brand
+                'logo_url' => AppConfig::get('app.url') . '/assets/images/tenant_logos/main-logo.svg', // Hardcoded SikaPay logo
+            ];
+
             // Recipients
             $this->mailer->addAddress($to);
 
             // Content
             $this->mailer->isHTML(true);
             $this->mailer->Subject = $subject;
-            $this->mailer->Body = $body;
+            $this->mailer->Body = $this->renderTemplate($body, $templateData);
             $this->mailer->AltBody = $altBody ?: strip_tags($body);
 
             $this->mailer->send();

@@ -12,6 +12,7 @@ class Auth
     private static ?Auth $instance = null;
     private \PDO $db;
     private const SUPER_ADMIN_ROLE_NAME = 'super_admin';
+    private const ORIGINAL_SESSION_KEY = 'original_super_admin_session';
 
     // Make constructor private for Singleton pattern
     private function __construct() 
@@ -26,9 +27,8 @@ class Auth
             throw new \Exception("Auth Service cannot initialize: Database unavailable.");
         }
             
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
+        // Ensure session is started through the SessionManager
+        SessionManager::start();
     }
     
     
@@ -61,19 +61,7 @@ class Auth
             }
 
             // --- Authentication successful: Set session data ---
-            
-            $roleId = (int)$user['role_id'];
-            $roleName = $this->getRoleNameById($roleId); // Fetch role name once
-
-            $_SESSION['user_id'] = (int)$user['id'];
-            $_SESSION['tenant_id'] = (int)$user['tenant_id'];
-            
-            // Store the Role ID and Role Name in session
-            $_SESSION['role_id'] = $roleId; 
-            $_SESSION['role_name'] = $roleName; 
-            
-            $_SESSION['is_super_admin'] = ($roleName === self::SUPER_ADMIN_ROLE_NAME); 
-
+            $this->loadUserSession($user);
             $this->updateLastLogin((int)$user['id']);
 
             return true;
@@ -158,7 +146,103 @@ class Auth
         session_unset();
         session_destroy();
     }
-    
+
+    /**
+     * Allows a Super Admin to impersonate another user.
+     * Stores the Super Admin's session and loads the impersonated user's session.
+     * @param int $impersonateUserId The ID of the user to impersonate.
+     * @return bool True on success, false if user not found or already impersonating.
+     */
+    public function startImpersonation(int $impersonateUserId): bool
+    {
+        if (!self::isSuperAdmin()) {
+            Log::warning("Non-super admin attempted to start impersonation.");
+            return false; // Only Super Admins can impersonate
+        }
+
+        if (self::isImpersonating()) {
+            Log::warning("Super Admin " . self::userId() . " attempted to start impersonation while already impersonating.");
+            return false; // Already impersonating, stop current first
+        }
+
+        try {
+            $stmt = $this->db->prepare("SELECT id, tenant_id, role_id FROM users WHERE id = :id AND is_active = TRUE");
+            $stmt->execute([':id' => $impersonateUserId]);
+            $userToImpersonate = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+            if (!$userToImpersonate) {
+                Log::error("Attempted to impersonate non-existent or inactive user ID: {$impersonateUserId}");
+                return false;
+            }
+
+            // Store current Super Admin session details
+            $_SESSION[self::ORIGINAL_SESSION_KEY] = [
+                'user_id' => $_SESSION['user_id'] ?? null,
+                'tenant_id' => $_SESSION['tenant_id'] ?? null,
+                'role_id' => $_SESSION['role_id'] ?? null,
+                'role_name' => $_SESSION['role_name'] ?? null,
+                'is_super_admin' => $_SESSION['is_super_admin'] ?? false,
+            ];
+
+            // Load the impersonated user's session
+            $this->loadUserSession($userToImpersonate);
+
+            Log::info("Super Admin " . $_SESSION[self::ORIGINAL_SESSION_KEY]['user_id'] . " started impersonating user " . $impersonateUserId);
+            return true;
+        } catch (\PDOException $e) {
+            Log::error("Database error during impersonation start for user ID {$impersonateUserId}: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Stops impersonation and restores the original Super Admin's session.
+     */
+    public function stopImpersonation(): bool
+    {
+        if (!self::isImpersonating()) {
+            Log::warning("Attempted to stop impersonation when not impersonating.");
+            return false;
+        }
+
+        // Restore original Super Admin session details
+        $originalSession = $_SESSION[self::ORIGINAL_SESSION_KEY];
+        
+        // Clear current session data
+        session_unset();
+        session_destroy();
+        SessionManager::start(); // Restart session
+
+        // Restore Super Admin's session variables
+        $_SESSION['user_id'] = $originalSession['user_id'];
+        $_SESSION['tenant_id'] = $originalSession['tenant_id'];
+        $_SESSION['role_id'] = $originalSession['role_id'];
+        $_SESSION['role_name'] = $originalSession['role_name'];
+        $_SESSION['is_super_admin'] = $originalSession['is_super_admin'];
+
+        // Remove the original session key
+        unset($_SESSION[self::ORIGINAL_SESSION_KEY]);
+
+        Log::info("Impersonation stopped. Restored Super Admin " . $_SESSION['user_id'] . " session.");
+        return true;
+    }
+
+    /**
+     * Checks if the current user is an impersonated user.
+     */
+    public static function isImpersonating(): bool
+    {
+        return isset($_SESSION[self::ORIGINAL_SESSION_KEY]);
+    }
+
+    /**
+     * If currently impersonating, returns the ID of the original Super Admin.
+     * Otherwise, returns 0.
+     */
+    public static function getImpersonatorId(): int
+    {
+        return self::isImpersonating() ? (int)$_SESSION[self::ORIGINAL_SESSION_KEY]['user_id'] : 0;
+    }
     
     // --- RBAC Private Helper Methods ---
 
@@ -231,6 +315,22 @@ class Auth
     {
         $stmt = $this->db->prepare("UPDATE users SET last_login = NOW() WHERE id = :id");
         $stmt->execute([':id' => $userId]);
+    }
+    
+    /**
+     * Loads user-specific data into the session.
+     * This method is called after successful login or during impersonation.
+     */
+    private function loadUserSession(array $userData): void
+    {
+        $roleId = (int)$userData['role_id'];
+        $roleName = $this->getRoleNameById($roleId);
+
+        $_SESSION['user_id'] = (int)$userData['id'];
+        $_SESSION['tenant_id'] = (int)$userData['tenant_id'];
+        $_SESSION['role_id'] = $roleId;
+        $_SESSION['role_name'] = $roleName;
+        $_SESSION['is_super_admin'] = ($roleName === self::SUPER_ADMIN_ROLE_NAME);
     }
     
     // --- RBAC Static Getter Methods ---

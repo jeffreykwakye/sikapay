@@ -16,15 +16,12 @@
         <link rel="stylesheet" href="/assets/css/custom.css" /> <!-- NEW: Custom styles for the project -->
 
         <!-- CSS Just for demo purpose, don't include it in your project -->
-        <link rel="stylesheet" href="/assets/css/demo.css" />
+        <!-- <link rel="stylesheet" href="/assets/css/demo.css" /> -->
     </head>
     <body class="<?= (isset($subscriptionStatus) && $subscriptionStatus === 'past_due') ? 'has-subscription-notice' : '' ?>">
-        <?php if (isset($subscriptionStatus) && $subscriptionStatus === 'past_due'): ?>
-            <div class="subscription-notice">
-                Your subscription is past due. Please <a href="/subscription">renew your plan</a> to restore full functionality.
-            </div>
-        <?php endif; ?>
+        
         <div class="wrapper">
+            
             <!-- Sidebar -->
             <?php require __DIR__ . '/partials/sidebar.php'; ?>
             <!-- End Sidebar -->

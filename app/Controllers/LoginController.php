@@ -9,6 +9,7 @@ use Jeffrey\Sikapay\Core\ErrorResponder;
 use Jeffrey\Sikapay\Core\Validator;
 use Jeffrey\Sikapay\Models\AuditModel;
 use Jeffrey\Sikapay\Controllers\SubscriptionController; // NEW
+use Jeffrey\Sikapay\Security\CsrfToken;
 use \Throwable;
 
 class LoginController extends Controller
@@ -28,6 +29,7 @@ class LoginController extends Controller
     {
         try {
             $this->preventCache();
+            CsrfToken::init();
             
             // Check if already authenticated
             if ($this->auth->check()) {
