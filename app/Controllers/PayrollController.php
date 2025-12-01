@@ -12,6 +12,7 @@ use Jeffrey\Sikapay\Services\NotificationService;
 use Jeffrey\Sikapay\Services\EmailService; // ADDED
 use Jeffrey\Sikapay\Models\PayrollPeriodModel;
 use Jeffrey\Sikapay\Core\Auth;
+use Jeffrey\Sikapay\Config\AppConfig;
 use \Throwable;
 
 class PayrollController extends Controller
@@ -179,7 +180,7 @@ class PayrollController extends Controller
 
             if ($currentUser && !empty($currentUser['email'])) {
                 $subject = "SikaPay: Payroll Run Completed for {$payrollPeriod['period_name']}";
-                $appUrl = \Jeffrey\Sikapay\Config\AppConfig::get('app.url');
+                $appUrl = AppConfig::get('app.url');
                 $body = "Dear {$currentUser['first_name']},<br><br>" // Use retrieved user data
                       . "The payroll for the period '{$payrollPeriod['period_name']}' has been successfully processed.<br>"
                       . "You can view the payslip history and reports here: <a href=\"{$appUrl}/payroll/payslips\">Payslip History</a><br><br>"

@@ -59,7 +59,10 @@ abstract class Controller
         $this->setSecurityHeaders();
         
         // CONDITIONAL INITIALIZATION BLOCK
-        if ($this->userId > 0) {
+        if ($this->auth->check()) {
+            if ($this->userId === 0 || (!$this->auth->isSuperAdmin() && $this->tenantId === 0)) {
+                $this->logout();
+            }
             
             // Prevent caching for ALL authenticated pages
             $this->preventCache(); 
@@ -285,6 +288,11 @@ abstract class Controller
         exit();
     }
 
+    protected function logout(): void
+    {
+        $this->auth->logout();
+        $this->redirect('/login');
+    }
     
     /**
      * Sends HTTP headers to prevent the browser from caching the page.

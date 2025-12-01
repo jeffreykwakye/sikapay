@@ -5,12 +5,13 @@ namespace Jeffrey\Sikapay\Core;
 
 use Jeffrey\Sikapay\Core\Database;
 use Jeffrey\Sikapay\Core\Log;
-
+use Jeffrey\Sikapay\Models\LoginAttemptModel;
 
 class Auth 
 {
     private static ?Auth $instance = null;
     private \PDO $db;
+    private LoginAttemptModel $loginAttemptModel;
     private const SUPER_ADMIN_ROLE_NAME = 'super_admin';
     private const ORIGINAL_SESSION_KEY = 'original_super_admin_session';
 
@@ -20,6 +21,7 @@ class Auth
         try {
             $this->db = Database::getInstance() 
                 ?? throw new \Exception("Database connection required for Auth service.");
+            $this->loginAttemptModel = new LoginAttemptModel();
         } catch (\Exception $e) {
             // Critical DB setup failure
             Log::critical("Auth Service DB Initialization Failure: " . $e->getMessage());
@@ -49,6 +51,11 @@ class Auth
      */
     public function login(string $email, string $password): bool
     {
+        if ($this->loginAttemptModel->isLockedOut($email)) {
+            Log::warning("Login attempt for locked-out account: {$email}");
+            return false;
+        }
+
         try {
             $stmt = $this->db->prepare("SELECT u.id, u.tenant_id, u.role_id, u.password 
                                          FROM users u 
@@ -57,10 +64,12 @@ class Auth
             $user = $stmt->fetch(\PDO::FETCH_ASSOC);
 
             if (!$user || !password_verify($password, $user['password'])) {
+                $this->loginAttemptModel->recordFailedAttempt($email, $_SERVER['REMOTE_ADDR'] ?? 'N/A');
                 return false;
             }
 
-            // --- Authentication successful: Set session data ---
+            // --- Authentication successful: Clear attempts and set session data ---
+            $this->loginAttemptModel->clearAttempts($email);
             $this->loadUserSession($user);
             $this->updateLastLogin((int)$user['id']);
 

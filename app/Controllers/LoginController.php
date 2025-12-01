@@ -8,6 +8,7 @@ use Jeffrey\Sikapay\Core\Log;
 use Jeffrey\Sikapay\Core\ErrorResponder;
 use Jeffrey\Sikapay\Core\Validator;
 use Jeffrey\Sikapay\Models\AuditModel;
+use Jeffrey\Sikapay\Models\LoginAttemptModel;
 use Jeffrey\Sikapay\Controllers\SubscriptionController; // NEW
 use Jeffrey\Sikapay\Security\CsrfToken;
 use \Throwable;
@@ -15,11 +16,13 @@ use \Throwable;
 class LoginController extends Controller
 {
     private AuditModel $auditModel;
+    private LoginAttemptModel $loginAttemptModel;
 
     public function __construct()
     {
         parent::__construct();
         $this->auditModel = new AuditModel();
+        $this->loginAttemptModel = new LoginAttemptModel();
     }
 
     /**
@@ -99,6 +102,13 @@ class LoginController extends Controller
             // 3. Safely retrieve validated and sanitized input
             $email = $validator->get('email');
             $password = $validator->get('password');
+
+            if ($this->loginAttemptModel->isLockedOut($email)) {
+                $_SESSION['login_error'] = 'This account has been temporarily locked due to too many failed login attempts. Please try again later.';
+                Log::warning("Login attempt for locked-out account: {$email}");
+                $this->redirect('/login');
+                return;
+            }
             
             // Core authentication attempt, relies on Auth service
             if ($this->auth->login($email, $password)) {
