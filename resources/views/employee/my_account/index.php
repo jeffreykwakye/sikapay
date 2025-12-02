@@ -277,9 +277,94 @@ $e = $employee; // Shorthand for employee data
 
                         <!-- Leave Tab Content -->
                         <div class="tab-pane fade" id="pills-leave" role="tabpanel" aria-labelledby="pills-leave-tab">
-                            <h5 class="mb-3 mt-4">Leave & Time Off</h5>
-                            <p class="text-muted">Apply for leave and track your leave balances and requests.</p>
-                            <!-- Leave content will be loaded here -->
+                            <div class="row">
+                                <div class="col-md-5">
+                                    <div class="card">
+                                        <div class="card-header"><h4 class="card-title">Apply for Leave</h4></div>
+                                        <div class="card-body">
+                                            <form action="/my-account/leave/apply" method="POST">
+                                                <?= $CsrfToken::field() ?>
+                                                <div class="mb-3">
+                                                    <label for="leave_type_id" class="form-label">Leave Type</label>
+                                                    <?php if (!empty($leaveTypes)): ?>
+                                                        <select class="form-select" id="leave_type_id" name="leave_type_id" required>
+                                                            <option value="">Select a leave type...</option>
+                                                            <?php foreach ($leaveTypes as $type): ?>
+                                                                <option value="<?= $h($type['id']) ?>"><?= $h($type['name']) ?></option>
+                                                            <?php endforeach; ?>
+                                                        </select>
+                                                    <?php else: ?>
+                                                        <p class="text-danger">No leave types available. Please contact your HR administrator.</p>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="start_date" class="form-label">Start Date</label>
+                                                    <input type="date" class="form-control" id="start_date" name="start_date" required>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="end_date" class="form-label">End Date</label>
+                                                    <input type="date" class="form-control" id="end_date" name="end_date" required>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="reason" class="form-label">Reason (Optional)</label>
+                                                    <textarea class="form-control" id="reason" name="reason" rows="3"></textarea>
+                                                </div>
+                                                <button type="submit" class="btn btn-primary">Submit Application</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    <div class="card">
+                                        <div class="card-header"><h4 class="card-title">My Leave Balances</h4></div>
+                                        <div class="card-body">
+                                            <ul class="list-group list-group-flush">
+                                                <?php if (empty($myBalances)): ?>
+                                                    <li class="list-group-item">No leave balances found.</li>
+                                                <?php else: ?>
+                                                    <?php foreach ($myBalances as $balance): ?>
+                                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                            <?= $h($balance['leave_type_name']) ?>
+                                                            <span class="badge bg-primary rounded-pill"><?= $h($balance['balance']) ?> days</span>
+                                                        </li>
+                                                    <?php endforeach; ?>
+                                                <?php endif; ?>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-7">
+                                    <div class="card">
+                                        <div class="card-header"><h4 class="card-title">My Application History</h4></div>
+                                        <div class="card-body">
+                                            <div class="table-responsive">
+                                                <table class="table table-striped">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Type</th>
+                                                            <th>Dates</th>
+                                                            <th>Days</th>
+                                                            <th>Status</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                    <?php if (empty($myApplications)): ?>
+                                                        <tr><td colspan="4" class="text-center">You have not submitted any leave applications.</td></tr>
+                                                    <?php else: ?>
+                                                        <?php foreach ($myApplications as $app): ?>
+                                                        <tr>
+                                                            <td><?= $h($app['leave_type_name']) ?></td>
+                                                            <td><?= $h(date('M d, Y', strtotime($app['start_date']))) ?> - <?= $h(date('M d, Y', strtotime($app['end_date']))) ?></td>
+                                                            <td><?= $h($app['total_days']) ?></td>
+                                                            <td><span class="badge bg-info"><?= $h(ucfirst($app['status'])) ?></span></td>
+                                                        </tr>
+                                                        <?php endforeach; ?>
+                                                    <?php endif; ?>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Overtime Tab Content -->

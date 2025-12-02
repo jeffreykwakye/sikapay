@@ -110,6 +110,7 @@ class SeedCommand
                         ['key_name' => 'self:manage_loan', 'description' => 'Can submit and track own loan applications.'], 
                         ['key_name' => 'self:view_notifications', 'description' => 'Can view and dismiss system notifications.'], 
                         ['key_name' => 'self:manage_notifications', 'description' => 'Can manage own notifications.'],
+                        ['key_name' => 'self:apply_leave', 'description' => 'Can apply for leave from self-service portal.'], // NEW PERMISSION
             
                         // --- EMPLOYEE MANAGEMENT (6 Permissions) ---
                         ['key_name' => 'employee:create', 'description' => 'Can add new employee records.'],
@@ -195,7 +196,7 @@ class SeedCommand
                 'auditor_seats' => 2 
             ],
             'Enterprise' => [
-                'price' => 0.00, 
+                'price' => 3500.00, 
                 'employee_limit' => 99999, 
                 'features' => ['payroll_basic', 'audit_logs', 'statutory_reports', 'report_export_download'], // REMOVED 'auditor_seats'
                 'hr_manager_seats' => 99, 
@@ -289,7 +290,7 @@ class SeedCommand
                 $permissionMap['self:view_dashboard'], $permissionMap['self:update_profile'], 
                 $permissionMap['self:view_payslip'], $permissionMap['leave:apply'],
                 $permissionMap['self:view_docs'], $permissionMap['self:manage_loan'],
-                $permissionMap['self:view_notifications'],
+                $permissionMap['self:view_notifications'], $permissionMap['self:apply_leave'], // ADDED
                 $permissionMap['self:view_profile'], // ADDED
                 // EMPLOYEE (7)
                 $permissionMap['employee:create'], $permissionMap['employee:read_all'], 
@@ -323,7 +324,7 @@ class SeedCommand
                 $permissionMap['self:view_dashboard'], $permissionMap['self:update_profile'], 
                 $permissionMap['self:view_payslip'], $permissionMap['leave:apply'],
                 $permissionMap['self:view_docs'], $permissionMap['self:manage_loan'],
-                $permissionMap['self:view_notifications'],
+                $permissionMap['self:view_notifications'], $permissionMap['self:apply_leave'], // ADDED
                 $permissionMap['self:view_profile'], // ADDED
                 // EMPLOYEE (6)
                 $permissionMap['employee:create'], $permissionMap['employee:read_all'], 
@@ -350,7 +351,7 @@ class SeedCommand
                 $permissionMap['self:view_dashboard'], $permissionMap['self:update_profile'], 
                 $permissionMap['self:view_payslip'], $permissionMap['leave:apply'],
                 $permissionMap['self:view_docs'], $permissionMap['self:manage_loan'],
-                $permissionMap['self:view_notifications'],
+                $permissionMap['self:view_notifications'], $permissionMap['self:apply_leave'], // ADDED
                 $permissionMap['self:view_profile'], // ADDED
                 // EMPLOYEE (1)
                 $permissionMap['employee:read_all'], 
@@ -376,7 +377,7 @@ class SeedCommand
                 $permissionMap['leave:apply'],
                 $permissionMap['self:view_docs'], 
                 $permissionMap['self:manage_loan'],
-                $permissionMap['self:view_notifications'],
+                $permissionMap['self:view_notifications'], $permissionMap['self:apply_leave'], // ADDED
             ],
             
             // Auditor:

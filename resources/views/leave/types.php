@@ -39,6 +39,7 @@ $this->title = $title;
                                 <th>Name</th>
                                 <th>Default Days</th>
                                 <th>Accrued</th>
+                                <th>Paid</th>
                                 <th>Status</th>
                                 <th>Actions</th>
                             </tr>
@@ -49,6 +50,7 @@ $this->title = $title;
                                 <td><?= $h($type['name']) ?></td>
                                 <td><?= $h($type['default_days']) ?></td>
                                 <td><?= $type['is_accrued'] ? 'Yes' : 'No' ?></td>
+                                <td><?= $type['is_paid'] ? 'Yes' : 'No' ?></td>
                                 <td>
                                     <span class="badge <?= $type['is_active'] ? 'bg-success' : 'bg-danger' ?>">
                                         <?= $type['is_active'] ? 'Active' : 'Inactive' ?>
@@ -61,7 +63,8 @@ $this->title = $title;
                                             data-name="<?= $h($type['name']) ?>"
                                             data-default_days="<?= $h($type['default_days']) ?>"
                                             data-is_accrued="<?= $type['is_accrued'] ? '1' : '0' ?>"
-                                            data-is_active="<?= $type['is_active'] ? '1' : '0' ?>">
+                                            data-is_active="<?= $type['is_active'] ? '1' : '0' ?>"
+                                            data-is_paid="<?= $type['is_paid'] ? '1' : '0' ?>">
                                             <i class="fa fa-edit"></i>
                                         </button>
                                         <form action="/leave/types/delete/<?= $type['id'] ?>" method="POST" class="d-inline">
@@ -106,6 +109,12 @@ $this->title = $title;
                         <input class="form-check-input" type="checkbox" value="1" id="is_accrued" name="is_accrued">
                         <label class="form-check-label" for="is_accrued">
                             Is this leave type accrued over time?
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="1" id="is_paid" name="is_paid">
+                        <label class="form-check-label" for="is_paid">
+                            Is this leave type paid?
                         </label>
                     </div>
                     <div class="form-check">

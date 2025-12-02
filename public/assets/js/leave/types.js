@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const days = dataset.default_days;
             const isAccrued = dataset.is_accrued === '1';
             const isActive = dataset.is_active === '1';
+            const isPaid = dataset.is_paid === '1'; // NEW
 
             const form = document.getElementById('leaveTypeForm');
             form.action = '/leave/types/update/' + id;
@@ -43,6 +44,7 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('default_days').value = days;
             document.getElementById('is_accrued').checked = isAccrued;
             document.getElementById('is_active').checked = isActive;
+            document.getElementById('is_paid').checked = isPaid; // NEW
             
             leaveTypeModal.show();
         }
@@ -57,5 +59,6 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('leaveTypeId').value = '';
         document.getElementById('is_active').checked = true;
         document.getElementById('is_accrued').checked = false;
+        document.getElementById('is_paid').checked = false; // NEW
     });
 });

@@ -146,9 +146,6 @@
                             <?php if ($auth->hasPermission('config:manage_positions')): ?>
                             <li><a href="/positions"><span class="sub-item">Positions</span></a></li>
                             <?php endif; ?>
-                            <?php if ($auth->hasPermission('leave:manage_types')): ?>
-                            <li><a href="/leave/types"><span class="sub-item">Leave Types</span></a></li>
-                            <?php endif; ?>
                             <?php if ($auth->hasPermission('config:manage_payroll_elements')): ?>
                             <li><a href="/payroll-elements"><span class="sub-item">Payroll Elements</span></a></li>
                             <li><a href="/payroll-settings"><span class="sub-item">Payroll Settings</span></a></li>
@@ -201,12 +198,24 @@
                 </li>
                 <?php endif; ?>
                 
-                <?php if ($auth->hasPermission('leave:approve') || $auth->hasPermission('self:manage_leave')): ?>
+                <?php if ($auth->hasPermission('leave:approve')): ?>
                 <li class="nav-item">
-                    <a href="/leave">
+                    <a data-bs-toggle="collapse" href="#leave_management">
                         <i class="fas fa-calendar-alt"></i>
-                        <p>Leave & Time Off</p>
+                        <p>Leave Management</p>
+                        <span class="caret"></span>
                     </a>
+                    <div class="collapse" id="leave_management">
+                        <ul class="nav nav-collapse">
+                            <li><a href="/leave/pending"><span class="sub-item">Pending Applications</span></a></li>
+                            <li><a href="/leave/approved"><span class="sub-item">Approved Applications</span></a></li>
+                            <li><a href="/leave/on-leave"><span class="sub-item">Staff On Leave</span></a></li>
+                            <li><a href="/leave/returning"><span class="sub-item">Staff Returning</span></a></li>
+                            <?php if ($auth->hasPermission('leave:manage_types')): ?>
+                            <li><a href="/leave/types"><span class="sub-item">Leave Types</span></a></li>
+                            <?php endif; ?>
+                        </ul>
+                    </div>
                 </li>
                 <?php endif; ?>
 

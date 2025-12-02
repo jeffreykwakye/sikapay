@@ -448,8 +448,28 @@ return [
     // =========================================================
     ['GET', '/leave', [
         'auth' => 'AuthMiddleware',
-        'permission' => ['PermissionMiddleware', 'leave:apply'],
+        'permission' => ['PermissionMiddleware', 'leave:approve'], // Main dashboard for approvers
         'handler' => ['LeaveController', 'index']
+    ]],
+    ['GET', '/leave/pending', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'leave:approve'],
+        'handler' => ['LeaveController', 'pending']
+    ]],
+    ['GET', '/leave/approved', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'leave:approve'],
+        'handler' => ['LeaveController', 'approved']
+    ]],
+    ['GET', '/leave/on-leave', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'leave:approve'],
+        'handler' => ['LeaveController', 'onLeave']
+    ]],
+    ['GET', '/leave/returning', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'leave:approve'],
+        'handler' => ['LeaveController', 'returning']
     ]],
 
     ['GET', '/leave/types', [
@@ -473,114 +493,113 @@ return [
         'handler' => ['LeaveController', 'deleteType']
     ]],
 
-    ['POST', '/leave/apply', [
-        'auth' => 'AuthMiddleware',
-        'permission' => ['PermissionMiddleware', 'leave:apply'],
-        'handler' => ['LeaveController', 'applyForLeave']
-    ]],
-    ['POST', '/leave/approve/{id:\d+}', [
-        'auth' => 'AuthMiddleware',
-        'permission' => ['PermissionMiddleware', 'leave:approve'],
-        'handler' => ['LeaveController', 'approveLeave']
-    ]],
-    ['POST', '/leave/reject/{id:\d+}', [
-        'auth' => 'AuthMiddleware',
-        'permission' => ['PermissionMiddleware', 'leave:approve'],
-        'handler' => ['LeaveController', 'rejectLeave']
-    ]],
-
-    // NOTE: The API Route for Cascading Dropdown is REMOVED as it's now handled by client-side JS.
- 
-    // API Route for fetching positions by department
-    ['GET', '/api/positions', [
-        'auth' => 'AuthMiddleware',
-        'handler' => ['EmployeeController', 'getPositionsByDepartment']
-    ]],
- 
-    // =========================================================
-    // Configuration Routes: Company Profile (Protected)
-    // =========================================================
-    // Display the Company Profile form
-    ['GET', '/company-profile', [
-        'auth' => 'AuthMiddleware',
-        'permission' => ['PermissionMiddleware', 'tenant:manage_settings'],
-        'handler' => ['CompanyProfileController', 'index']
-    ]],
-
-    // Process the update for general details (Name, TIN, Address, etc.)
-    ['POST', '/company-profile/save', [
-        'auth' => 'AuthMiddleware',
-        'permission' => ['PermissionMiddleware', 'tenant:manage_settings'],
-        'handler' => ['CompanyProfileController', 'save']
-    ]],
-
-    // Process the update for the logo file only
-    ['POST', '/company-profile/upload-logo', [
-        'auth' => 'AuthMiddleware',
-        'permission' => ['PermissionMiddleware', 'tenant:manage_settings'],
-        'handler' => ['CompanyProfileController', 'uploadLogo']
-    ]],
-
-    // =========================================================
-    // Tenant Activity Log
-    // =========================================================
-    ['GET', '/activity-log', [
-        'auth' => 'AuthMiddleware',
-        'permission' => ['PermissionMiddleware', 'tenant:view_audit_logs'],
-        'handler' => ['ActivityLogController', 'index']
-    ]],
-    ['GET', '/activity-log/csv', [
-        'auth' => 'AuthMiddleware',
-        'permission' => ['PermissionMiddleware', 'tenant:view_audit_logs'],
-        'handler' => ['ActivityLogController', 'exportCsv']
-    ]],
-    ['GET', '/activity-log/pdf', [
-        'auth' => 'AuthMiddleware',
-        'permission' => ['PermissionMiddleware', 'tenant:view_audit_logs'],
-        'handler' => ['ActivityLogController', 'exportPdf']
-    ]],
-
-    // =========================================================
-    // Employee Self-Service Portal Routes (Protected)
-    // =========================================================
-    ['GET', '/my-account', [
-        'auth' => 'AuthMiddleware',
-        'permission' => ['PermissionMiddleware', 'self:view_profile'],
-        'handler' => ['EmployeeController', 'myAccountIndex']
-    ]],
-    ['POST', '/my-account/create-employee-profile', [
-        'auth' => 'AuthMiddleware',
-        'permission' => ['PermissionMiddleware', 'self:view_profile'], // User must be able to view their profile to create it
-        'handler' => ['EmployeeController', 'storeMyEmployeeProfile']
-    ]],
-    ['GET', '/my-account/change-password', [
-        'auth' => 'AuthMiddleware',
-        'permission' => ['PermissionMiddleware', 'self:update_profile'],
-        'handler' => ['UserController', 'changePassword']
-    ]],
-    ['POST', '/my-account/change-password', [
-        'auth' => 'AuthMiddleware',
-        'permission' => ['PermissionMiddleware', 'self:update_profile'],
-        'handler' => ['UserController', 'changePassword']
-    ]],
-
-    // Route for securely downloading an employee's payslip
-    ['GET', '/my-account/payslips/{payslipId:\d+}/download', [
-        'auth' => 'AuthMiddleware',
-        'permission' => ['PermissionMiddleware', 'self:view_payslip'], 
-        'handler' => ['PayrollController', 'downloadMyPayslip']
-    ]],
-
-    // =========================================================
-    // Configuration Routes: Department Management (Protected)
-    // =========================================================
-    // List/Index Departments
-    ['GET', '/departments', [
-        'auth' => 'AuthMiddleware',
-        'permission' => ['PermissionMiddleware', 'config:manage_departments'],
-        'handler' => ['DepartmentController', 'index']
-    ]],
-
+        ['POST', '/leave/approve/{id:\d+}', [
+            'auth' => 'AuthMiddleware',
+            'permission' => ['PermissionMiddleware', 'leave:approve'],
+            'handler' => ['LeaveController', 'approveLeave']
+        ]],
+        ['POST', '/leave/reject/{id:\d+}', [
+            'auth' => 'AuthMiddleware',
+            'permission' => ['PermissionMiddleware', 'leave:approve'],
+            'handler' => ['LeaveController', 'rejectLeave']
+        ]],
+    
+        // NOTE: The API Route for Cascading Dropdown is REMOVED as it's now handled by client-side JS.
+     
+        // API Route for fetching positions by department
+        ['GET', '/api/positions', [
+            'auth' => 'AuthMiddleware',
+            'handler' => ['EmployeeController', 'getPositionsByDepartment']
+        ]],
+     
+        // =========================================================
+        // Configuration Routes: Company Profile (Protected)
+        // =========================================================
+        // Display the Company Profile form
+        ['GET', '/company-profile', [
+            'auth' => 'AuthMiddleware',
+            'permission' => ['PermissionMiddleware', 'tenant:manage_settings'],
+            'handler' => ['CompanyProfileController', 'index']
+        ]],
+    
+        // Process the update for general details (Name, TIN, Address, etc.)
+        ['POST', '/company-profile/save', [
+            'auth' => 'AuthMiddleware',
+            'permission' => ['PermissionMiddleware', 'tenant:manage_settings'],
+            'handler' => ['CompanyProfileController', 'save']
+        ]],
+    
+        // Process the update for the logo file only
+        ['POST', '/company-profile/upload-logo', [
+            'auth' => 'AuthMiddleware',
+            'permission' => ['PermissionMiddleware', 'tenant:manage_settings'],
+            'handler' => ['CompanyProfileController', 'uploadLogo']
+        ]],
+    
+        // =========================================================
+        // Tenant Activity Log
+        // =========================================================
+        ['GET', '/activity-log', [
+            'auth' => 'AuthMiddleware',
+            'permission' => ['PermissionMiddleware', 'tenant:view_audit_logs'],
+            'handler' => ['ActivityLogController', 'index']
+        ]],
+        ['GET', '/activity-log/csv', [
+            'auth' => 'AuthMiddleware',
+            'permission' => ['PermissionMiddleware', 'tenant:view_audit_logs'],
+            'handler' => ['ActivityLogController', 'exportCsv']
+        ]],
+        ['GET', '/activity-log/pdf', [
+            'auth' => 'AuthMiddleware',
+            'permission' => ['PermissionMiddleware', 'tenant:view_audit_logs'],
+            'handler' => ['ActivityLogController', 'exportPdf']
+        ]],
+    
+        // =========================================================
+        // Employee Self-Service Portal Routes (Protected)
+        // =========================================================
+        ['GET', '/my-account', [
+            'auth' => 'AuthMiddleware',
+            'permission' => ['PermissionMiddleware', 'self:view_profile'],
+            'handler' => ['EmployeeController', 'myAccountIndex']
+        ]],
+        ['POST', '/my-account/leave/apply', [
+            'auth' => 'AuthMiddleware',
+            'permission' => ['PermissionMiddleware', 'self:apply_leave'],
+            'handler' => ['EmployeeController', 'applyForLeave']
+        ]],
+        ['POST', '/my-account/create-employee-profile', [
+            'auth' => 'AuthMiddleware',
+            'permission' => ['PermissionMiddleware', 'self:view_profile'], // User must be able to view their profile to create it
+            'handler' => ['EmployeeController', 'storeMyEmployeeProfile']
+        ]],
+        ['GET', '/my-account/change-password', [
+            'auth' => 'AuthMiddleware',
+            'permission' => ['PermissionMiddleware', 'self:update_profile'],
+            'handler' => ['UserController', 'changePassword']
+        ]],
+        ['POST', '/my-account/change-password', [
+            'auth' => 'AuthMiddleware',
+            'permission' => ['PermissionMiddleware', 'self:update_profile'],
+            'handler' => ['UserController', 'changePassword']
+        ]],
+    
+        // Route for securely downloading an employee's payslip
+        ['GET', '/my-account/payslips/{payslipId:\d+}/download', [
+            'auth' => 'AuthMiddleware',
+            'permission' => ['PermissionMiddleware', 'self:view_payslip'],
+            'handler' => ['PayrollController', 'downloadMyPayslip']
+        ]],
+    
+        // =========================================================
+        // Configuration Routes: Department Management (Protected)
+        // =========================================================
+        // List/Index Departments
+        ['GET', '/departments', [
+            'auth' => 'AuthMiddleware',
+            'permission' => ['PermissionMiddleware', 'config:manage_departments'],
+            'handler' => ['DepartmentController', 'index']
+        ]],
     // Create/Store a new Department
     ['POST', '/departments/store', [
         'auth' => 'AuthMiddleware',

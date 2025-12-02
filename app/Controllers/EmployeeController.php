@@ -29,6 +29,9 @@ use Jeffrey\Sikapay\Models\EmployeePayrollDetailsModel;
 use Jeffrey\Sikapay\Models\PermissionModel;
 use Jeffrey\Sikapay\Models\UserPermissionModel;
 use Jeffrey\Sikapay\Models\PayslipModel;
+use Jeffrey\Sikapay\Models\LeaveTypeModel;
+use Jeffrey\Sikapay\Models\LeaveBalanceModel;
+use Jeffrey\Sikapay\Models\LeaveApplicationModel;
 
 
 class EmployeeController extends Controller
@@ -42,6 +45,9 @@ class EmployeeController extends Controller
     private PermissionModel $permissionModel;
     private UserPermissionModel $userPermissionModel;
     private PayslipModel $payslipModel;
+    private LeaveTypeModel $leaveTypeModel;
+    private LeaveApplicationModel $leaveApplicationModel;
+    private LeaveBalanceModel $leaveBalanceModel;
     
     // Permission Constants 
     public const PERM_EDIT_PERSONAL = 'employee:update';
@@ -66,6 +72,9 @@ class EmployeeController extends Controller
             $this->permissionModel = new PermissionModel();
             $this->userPermissionModel = new UserPermissionModel();
             $this->payslipModel = new PayslipModel();
+            $this->leaveTypeModel = new LeaveTypeModel();
+            $this->leaveApplicationModel = new LeaveApplicationModel();
+            $this->leaveBalanceModel = new LeaveBalanceModel();
             
         } catch (Throwable $e) {
             Log::critical("EmployeeController failed to initialize core models: " . $e->getMessage());
@@ -1151,6 +1160,10 @@ class EmployeeController extends Controller
             $assignedPayrollElements = $this->employeePayrollDetailsModel->getDetailsForEmployee($currentUserId, $this->tenantId);
             $staffFileModel = new StaffFileModel();
             $staffFiles = $staffFileModel->getFilesByUserId($currentUserId);
+            
+            $leaveTypes = $this->leaveTypeModel->getAllByTenant($this->tenantId); // Assign to local variable
+            $myApplications = $this->leaveApplicationModel->getAllByUser($currentUserId);
+            $myBalances = $this->leaveBalanceModel->getAllBalancesByUser($currentUserId, $this->tenantId);
 
             $this->view('employee/my_account/index', [
                 'title' => 'My Account',
@@ -1158,7 +1171,14 @@ class EmployeeController extends Controller
                 'payslips' => $payslips,
                 'assignedPayrollElements' => $assignedPayrollElements,
                 'staffFiles' => $staffFiles,
+                'leaveTypes' => $leaveTypes, // Use the local variable
+                'myApplications' => $myApplications,
+                'myBalances' => $myBalances,
             ]);
+
+            if (empty($leaveTypes)) {
+                Log::warning("No leave types found for Tenant {$this->tenantId}. Leave application dropdown will be empty for User {$currentUserId}.");
+            }
 
         } catch (Throwable $e) {
             // Also correct this log message to use Auth::userId()
@@ -1687,4 +1707,98 @@ class EmployeeController extends Controller
             $_SESSION['flash_error'] = "Error creating your employee profile: A critical system error occurred. Please try again.";
             $this->redirect('/my-account');
         }
+    }
+
+    /**
+     * Handles the submission of a leave application from the 'My Account' page.
+     */
+    public function applyForLeave(): void
+    {
+        $this->checkPermission('self:apply_leave'); // Use the new permission for self-service leave
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('/my-account'); // Redirect back to my-account if not a POST request
+        }
+
+        $validator = new \Jeffrey\Sikapay\Core\Validator($_POST);
+        $validator->validate([
+            'leave_type_id' => 'required|int',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date',
+            'reason' => 'optional|max:500',
+        ]);
+
+        if ($validator->fails()) {
+            $_SESSION['flash_error'] = "Error submitting application: " . implode('<br>', $validator->errors());
+            $_SESSION['flash_input'] = $validator->all();
+            $this->redirect('/my-account');
+            return;
+        }
+
+        $startDate = new \DateTime($validator->get('start_date'));
+        $endDate = new \DateTime($validator->get('end_date'));
+        $today = new \DateTime('today');
+
+        if ($startDate < $today) {
+            $_SESSION['flash_error'] = "Start date cannot be in the past.";
+            $_SESSION['flash_input'] = $validator->all();
+            $this->redirect('/my-account');
+            return;
+        }
+
+        if ($endDate < $startDate) {
+            $_SESSION['flash_error'] = "End date must be after the start date.";
+            $_SESSION['flash_input'] = $validator->all();
+            $this->redirect('/my-account');
+            return;
+        }
+
+        // Calculate total days excluding weekends
+        $totalDays = 0;
+        $current = clone $startDate;
+        while ($current <= $endDate) {
+            $dayOfWeek = (int)$current->format('N');
+            if ($dayOfWeek < 6) { // Monday to Friday
+                $totalDays++;
+            }
+            $current->add(new \DateInterval('P1D'));
+        }
+
+        $leaveTypeId = $validator->get('leave_type_id', 'int');
+        $currentUserId = \Jeffrey\Sikapay\Core\Auth::userId();
+        $tenantId = \Jeffrey\Sikapay\Core\Auth::tenantId();
+
+        $balance = $this->leaveBalanceModel->getBalance($currentUserId, $leaveTypeId);
+        $currentBalance = $balance ? (float)$balance['balance'] : 0.0;
+
+        if ($currentBalance < $totalDays) {
+            $_SESSION['flash_error'] = "Insufficient leave balance for this request. You have {$currentBalance} days remaining.";
+            $_SESSION['flash_input'] = $validator->all();
+            $this->redirect('/my-account');
+            return;
+        }
+
+        $data = [
+            'user_id' => $currentUserId,
+            'tenant_id' => $tenantId,
+            'leave_type_id' => $leaveTypeId,
+            'start_date' => $validator->get('start_date'),
+            'end_date' => $validator->get('end_date'),
+            'total_days' => $totalDays,
+            'reason' => $validator->get('reason'),
+            'status' => 'pending', // New applications are always pending
+        ];
+
+        try {
+            $appId = $this->leaveApplicationModel->create($data);
+            if ($appId) {
+                $_SESSION['flash_success'] = "Leave application submitted successfully for {$totalDays} days. It is now awaiting approval.";
+            } else {
+                $_SESSION['flash_error'] = "Failed to submit leave application.";
+            }
+        } catch (Throwable $e) {
+            Log::error("Failed to apply for leave for User {$currentUserId}: " . $e->getMessage());
+            $_SESSION['flash_error'] = "A system error occurred while submitting your application.";
+        }
+
+        $this->redirect('/my-account');
     }}

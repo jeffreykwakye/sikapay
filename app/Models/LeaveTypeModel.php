@@ -22,7 +22,7 @@ class LeaveTypeModel extends Model
      */
     public function getAllByTenant(int $tenantId): array
     {
-        $sql = "SELECT id, name, default_days, is_accrued, is_active FROM {$this->table} 
+        $sql = "SELECT id, name, default_days, is_accrued, is_active, is_paid FROM {$this->table} 
                 WHERE tenant_id = :tenant_id
                 ORDER BY name ASC";
         
@@ -40,15 +40,15 @@ class LeaveTypeModel extends Model
      * Creates a new leave type for a tenant.
      *
      * @param int $tenantId
-     * @param array $data Contains name, default_days, is_accrued, is_active.
+     * @param array $data Contains name, default_days, is_accrued, is_active, is_paid.
      * @return int The ID of the new leave type, or 0 on failure.
      */
     public function create(int $tenantId, array $data): int
     {
         $sql = "INSERT INTO {$this->table} (
-                    tenant_id, name, default_days, is_accrued, is_active
+                    tenant_id, name, default_days, is_accrued, is_active, is_paid
                 ) VALUES (
-                    :tenant_id, :name, :default_days, :is_accrued, :is_active
+                    :tenant_id, :name, :default_days, :is_accrued, :is_active, :is_paid
                 )";
         
         try {
@@ -59,6 +59,7 @@ class LeaveTypeModel extends Model
                 ':default_days' => $data['default_days'],
                 ':is_accrued' => $data['is_accrued'],
                 ':is_active' => $data['is_active'],
+                ':is_paid' => $data['is_paid'],
             ]);
             return (int)$this->db->lastInsertId();
         } catch (PDOException $e) {
@@ -72,7 +73,7 @@ class LeaveTypeModel extends Model
      *
      * @param int $id The ID of the leave type to update.
      * @param int $tenantId
-     * @param array $data Contains name, default_days, is_accrued, is_active.
+     * @param array $data Contains name, default_days, is_accrued, is_active, is_paid.
      * @return bool True on success, false otherwise.
      */
     public function update(int $id, int $tenantId, array $data): bool
@@ -82,6 +83,7 @@ class LeaveTypeModel extends Model
                     default_days = :default_days, 
                     is_accrued = :is_accrued, 
                     is_active = :is_active,
+                    is_paid = :is_paid,
                     updated_at = NOW()
                 WHERE id = :id AND tenant_id = :tenant_id";
         
@@ -94,6 +96,7 @@ class LeaveTypeModel extends Model
                 ':default_days' => $data['default_days'],
                 ':is_accrued' => $data['is_accrued'],
                 ':is_active' => $data['is_active'],
+                ':is_paid' => $data['is_paid'],
             ]);
             return $stmt->rowCount() > 0;
         } catch (PDOException $e) {
