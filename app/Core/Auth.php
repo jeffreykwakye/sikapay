@@ -51,8 +51,10 @@ class Auth
      */
     public function login(string $email, string $password): bool
     {
-        if ($this->loginAttemptModel->isLockedOut($email)) {
-            Log::warning("Login attempt for locked-out account: {$email}");
+        $lockStatus = $this->loginAttemptModel->getLockoutStatus($email);
+        if ($lockStatus !== \Jeffrey\Sikapay\Models\LoginAttemptModel::NOT_LOCKED) {
+            // The controller is responsible for logging the specific status and sending notifications.
+            // The Auth service's only responsibility is to deny the login attempt.
             return false;
         }
 

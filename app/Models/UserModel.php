@@ -10,8 +10,11 @@ use \PDOException;
 
 class UserModel extends Model
 {
-    public function __construct()
+    public function __construct(bool $ignoreTenantScope = false)
     {
+        if ($ignoreTenantScope) {
+            $this->noTenantScope = true;
+        }
         parent::__construct('users');
     }
 

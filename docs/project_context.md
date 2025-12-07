@@ -13,6 +13,7 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 | Module | Features | Status | Notes |
 | :--- | :--- | :--- | :--- |
 | **Authentication** | Super Admin Login, Tenant User Login, Logout **(Auth Service is now Singleton)** | Complete | Centralized, secure session management. |
+| **Security/Authentication** | **Brute-force Protection (Login Attempts)** | **Complete** | **Limits login attempts. Implements temporary, extending lockouts with email alerts to user and admins.** |
 | **Security/RBAC** | **Role-Based Access Control (RBAC)** | **Core Complete** | **Implemented central `Auth::can()` gate, Permission Middleware, and protected initial routes.** |
 | **Multi-Tenancy** | Request/Tenant Routing, Database Scoping | Core Complete | Base Model enforces `WHERE tenant_id = X` on most tables. |
 | **Super Admin Features** | **Dashboard Overhaul, Subscription & Plan Management (CRUD), Automated Subscription Lifecycle, Statutory Rates Management (CRUD)** | **Complete** | Full suite of tools for Super Admins to manage the entire platform, including revenue metrics, plan creation, subscription lifecycle, and global statutory rates. |
@@ -31,7 +32,13 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 | **Advanced Payroll Logic** | Conditional tax/SSNIT logic for different employment types (Contract, Intern, National-Service, Casual-Worker). | **Complete** | Implemented withholding tax for contractors/casuals and exemptions for interns/NSS. |
 | **Configuration System** | Replaced .env with native app/config.php; refactored AppConfig | **Complete** | Supports shared hosting environments and improves configuration management. |
 | **Support Messaging** | Tenant-to-Super Admin Support Tickets with Replies; Super Admin Interface | **Complete** | Tenants can submit/reply to tickets; Super Admins can view/respond to all tickets, with notification system and open ticket count badge. |
-| **Leave Management** | Comprehensive Leave Application, Approval, and Balance Tracking | **Complete** | Full CRUD for leave types, application workflow, and employee leave balance management. |
+| **Leave Management** | Comprehensive Leave Application, Approval, and Balance Tracking; Dedicated pages for Pending, Approved, On-Leave, and Returning Staff; 'Is Paid' field for Leave Types. | **Complete** | Full CRUD for leave types, application workflow, and employee leave balance management. |
+
+---
+
+## 🐞 Known Issues
+
+- **My Account Leave Application Not Submitting:** The leave application form on the "My Account" page currently refreshes upon submission without error messages, and no application is recorded. Investigation is ongoing.
 
 ---
 
@@ -115,3 +122,4 @@ The tenant creation process adheres to the **Single Responsibility Principle (SR
 | **2025-11-20** | **Tenant Support Messaging System** | Implemented tenant-to-Super Admin support ticket system with replies; Super Admin interface for viewing/responding, notification system, and open ticket count badge. | **Complete** |
 | **2025-11-23** | **Configuration System Refactor** | Replaced `.env` file loading with a native `app/config.php` system to support shared hosting environments. Refactored `AppConfig` and related services. | **Complete** |
 | **2025-11-24** | **Leave Management** | Implemented comprehensive leave application, approval, and balance tracking, including full CRUD for leave types and application workflows. | **Complete** |
+| **2025-12-07** | **Enhanced Login Security** | Fixed permanent lockout bug, added progressive lockout penalties, and implemented email notifications (to user and admins) for brute-force attempts. Refactored LoginAttemptModel, Auth, and LoginController to support the new logic. | **Complete** |

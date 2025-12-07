@@ -34,25 +34,41 @@ class LoginAttemptModel extends Model
         $this->db->prepare($sql)->execute(['email' => $email]);
     }
 
-    public function isLockedOut(string $email): bool
+    public const NOT_LOCKED = 0;
+    public const JUST_LOCKED = 1;
+    public const ALREADY_LOCKED = 2;
+
+    public function getLockoutStatus(string $email): int
     {
         $sql = "SELECT attempts, locked_until FROM {$this->table} WHERE email = :email";
         $stmt = $this->db->prepare($sql);
         $stmt->execute(['email' => $email]);
         $result = $stmt->fetch(\PDO::FETCH_ASSOC);
 
-        if ($result) {
-            if ($result['locked_until'] && strtotime($result['locked_until']) > time()) {
-                return true; // Still locked out
-            }
-
-            if ($result['attempts'] >= self::MAX_ATTEMPTS) {
-                $this->lockAccount($email);
-                return true;
-            }
+        if (!$result) {
+            return self::NOT_LOCKED; // No attempts recorded, not locked out.
         }
 
-        return false;
+        // Case 1: There is an active lockout period. Re-apply the lock to extend the penalty.
+        if ($result['locked_until'] && strtotime($result['locked_until']) > time()) {
+            $this->lockAccount($email); // Re-locks the account, effectively extending the lockout from NOW.
+            Log::warning("Lockout extended for email: {$email}");
+            return self::ALREADY_LOCKED;
+        }
+
+        // Case 2: The lockout period has expired. Reset attempts and allow login.
+        if ($result['locked_until'] && strtotime($result['locked_until']) <= time()) {
+            $this->clearAttempts($email);
+            return self::NOT_LOCKED; // Lockout expired, let them try again.
+        }
+
+        // Case 3: No active lockout, but attempts have reached the limit. Trigger a new lockout.
+        if ($result['attempts'] >= self::MAX_ATTEMPTS) {
+            $this->lockAccount($email);
+            return self::JUST_LOCKED; // Account is now locked for the first time.
+        }
+
+        return self::NOT_LOCKED; // Not locked out.
     }
 
     private function lockAccount(string $email): void

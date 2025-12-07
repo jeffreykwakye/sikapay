@@ -11,6 +11,8 @@ use Jeffrey\Sikapay\Models\AuditModel;
 use Jeffrey\Sikapay\Models\LoginAttemptModel;
 use Jeffrey\Sikapay\Controllers\SubscriptionController; // NEW
 use Jeffrey\Sikapay\Security\CsrfToken;
+use Jeffrey\Sikapay\Services\EmailService;
+use Jeffrey\Sikapay\Models\UserModel;
 use \Throwable;
 
 class LoginController extends Controller
@@ -103,9 +105,42 @@ class LoginController extends Controller
             $email = $validator->get('email');
             $password = $validator->get('password');
 
-            if ($this->loginAttemptModel->isLockedOut($email)) {
+            $lockStatus = $this->loginAttemptModel->getLockoutStatus($email);
+            if ($lockStatus !== LoginAttemptModel::NOT_LOCKED) {
+                // If the account was just locked for the first time, send notifications.
+                if ($lockStatus === LoginAttemptM-odel::JUST_LOCKED) {
+                    try {
+                        // Instantiate services locally, only when needed.
+                        $emailService = new EmailService();
+                        $userModel = new UserModel(true); // Instantiate with scope bypassed
+
+                        // Find the user who was locked out
+                        $lockedUser = $userModel->findBy('email', $email);
+                        $superAdmins = $userModel->getSuperAdminUsers(); // Use correct method
+
+                        $subject = "Security Alert: Account Locked";
+                        
+                        // Notify the user
+                        if ($lockedUser) {
+                            $userMessage = "Hello {$lockedUser['first_name']},<br><br>Your SikaPay account has been temporarily locked for 15 minutes due to multiple failed login attempts. If you did not attempt to log in, please contact support immediately.";
+                            $emailService->send($lockedUser['email'], $subject, $userMessage);
+                        }
+
+                        // Notify Super Admins
+                        foreach ($superAdmins as $admin) {
+                            $adminMessage = "Hello {$admin['first_name']},<br><br>A SikaPay account has been locked.<br><br><b>User Email:</b> {$email}<br><b>Time:</b> " . date('Y-m-d H:i:s') . "<br><br>This was due to multiple failed login attempts.";
+                            $emailService->send($admin['email'], $subject, $adminMessage);
+                        }
+                        
+                        Log::info("Security notifications sent for locked account: {$email}");
+
+                    } catch (Throwable $e) {
+                        Log::error("Failed to send account lockout notification for email {$email}: " . $e->getMessage());
+                    }
+                }
+
                 $_SESSION['login_error'] = 'This account has been temporarily locked due to too many failed login attempts. Please try again later.';
-                Log::warning("Login attempt for locked-out account: {$email}");
+                Log::warning("Login attempt for locked-out account: {$email}. Lock Status: {$lockStatus}");
                 $this->redirect('/login');
                 return;
             }
