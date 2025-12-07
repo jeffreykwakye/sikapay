@@ -12,14 +12,17 @@ use Jeffrey\Sikapay\Core\ErrorResponder;
 use Jeffrey\Sikapay\Core\Validator;
 use Jeffrey\Sikapay\Security\CsrfToken; // Added
 use Jeffrey\Sikapay\Core\Auth; // ADDED THIS LINE
+use Jeffrey\Sikapay\Services\EmailService;
+use Jeffrey\Sikapay\Services\NotificationService;
+use Jeffrey\Sikapay\Config\AppConfig;
 // use Jeffrey\Sikapay\Core\Router; // <-- REMOVED as redundant based on base Controller::redirect() implementation
 use \Throwable;
 
 // Lazy-loaded models/services used in specific methods
-use Jeffrey\Sikapay\Models\UserModel; 
-use Jeffrey\Sikapay\Models\UserProfileModel; 
-use Jeffrey\Sikapay\Models\AuditModel; 
-use Jeffrey\Sikapay\Models\RoleModel; 
+use Jeffrey\Sikapay\Models\UserModel;
+use Jeffrey\Sikapay\Models\UserProfileModel;
+use Jeffrey\Sikapay\Models\AuditModel;
+use Jeffrey\Sikapay\Models\RoleModel;
 use Jeffrey\Sikapay\Models\EmploymentHistoryModel; // Added for updateSalary()
 use Jeffrey\Sikapay\Services\SubscriptionService;
 use Jeffrey\Sikapay\Models\StaffFileModel;
@@ -48,6 +51,8 @@ class EmployeeController extends Controller
     private LeaveTypeModel $leaveTypeModel;
     private LeaveApplicationModel $leaveApplicationModel;
     private LeaveBalanceModel $leaveBalanceModel;
+    protected NotificationService $notificationService;
+    private EmailService $emailService;
     
     // Permission Constants 
     public const PERM_EDIT_PERSONAL = 'employee:update';
@@ -75,6 +80,8 @@ class EmployeeController extends Controller
             $this->leaveTypeModel = new LeaveTypeModel();
             $this->leaveApplicationModel = new LeaveApplicationModel();
             $this->leaveBalanceModel = new LeaveBalanceModel();
+            $this->notificationService = new NotificationService();
+            $this->emailService = new EmailService();
             
         } catch (Throwable $e) {
             Log::critical("EmployeeController failed to initialize core models: " . $e->getMessage());
@@ -1767,15 +1774,7 @@ class EmployeeController extends Controller
         $currentUserId = \Jeffrey\Sikapay\Core\Auth::userId();
         $tenantId = \Jeffrey\Sikapay\Core\Auth::tenantId();
 
-        $balance = $this->leaveBalanceModel->getBalance($currentUserId, $leaveTypeId);
-        $currentBalance = $balance ? (float)$balance['balance'] : 0.0;
 
-        if ($currentBalance < $totalDays) {
-            $_SESSION['flash_error'] = "Insufficient leave balance for this request. You have {$currentBalance} days remaining.";
-            $_SESSION['flash_input'] = $validator->all();
-            $this->redirect('/my-account');
-            return;
-        }
 
         $data = [
             'user_id' => $currentUserId,
@@ -1792,6 +1791,45 @@ class EmployeeController extends Controller
             $appId = $this->leaveApplicationModel->create($data);
             if ($appId) {
                 $_SESSION['flash_success'] = "Leave application submitted successfully for {$totalDays} days. It is now awaiting approval.";
+
+                // --- START NOTIFICATION LOGIC ---
+                try {
+                    $applicant = $this->userModel->find($currentUserId);
+                    $applicantName = $applicant ? $applicant['first_name'] . ' ' . $applicant['last_name'] : 'An employee';
+                    
+                    $admins = $this->userModel->getUsersByRole($tenantId, 'tenant_admin');
+                    $hrManagers = $this->userModel->getUsersByRole($tenantId, 'hr_manager');
+                    
+                    $recipients = array_merge($admins, $hrManagers);
+                    $uniqueRecipients = [];
+                    foreach ($recipients as $recipient) {
+                        $uniqueRecipients[$recipient['id']] = $recipient;
+                    }
+
+                    $leaveType = $this->leaveTypeModel->find($leaveTypeId);
+                    $leaveTypeName = $leaveType ? $leaveType['name'] : 'N/A';
+
+                    $inAppTitle = "New Leave Application: {$applicantName}";
+                    $link = '/leave/pending';
+                    $emailBody = "Hello,<br><br>A new leave application has been submitted by <b>{$applicantName}</b> and is awaiting your review.<br><br><b>Leave Type:</b> {$leaveTypeName}<br><b>Dates:</b> " . date('M j, Y', strtotime($data['start_date'])) . " - " . date('M j, Y', strtotime($data['end_date'])) . " ({$data['total_days']} days)<br><br><a href='" . AppConfig::get('app.url') . "/leave/pending'>Click here to review pending applications.</a>";
+                    
+
+                    foreach ($uniqueRecipients as $recipient) {
+                        $this->notificationService->notifyUser(
+                            $tenantId, // Correct: Use the tenant ID of the application
+                            (int)$recipient['id'],
+                            'leave_request', // type
+                            $inAppTitle,     // title
+                            $link,           // link
+                            $emailBody       // email_body
+                        );
+                    }
+                } catch (\Throwable $e) {
+                    Log::error("Failed to send leave application notifications for User {$currentUserId}: " . $e->getMessage());
+                }
+                // --- END NOTIFICATION LOGIC ---
+
+
             } else {
                 $_SESSION['flash_error'] = "Failed to submit leave application.";
             }

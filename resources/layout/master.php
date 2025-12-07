@@ -40,6 +40,23 @@
 
                 <div class="container">
                     <div class="page-inner">
+                        <?php
+                        // Display and clear flash messages
+                        if (isset($_SESSION['flash_success'])) {
+                            echo '<div class="alert alert-success alert-dismissible fade show" role="alert">' . $_SESSION['flash_success'] . '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>';
+                            unset($_SESSION['flash_success']);
+                        }
+                        if (isset($_SESSION['flash_error'])) {
+                            echo '<div class="alert alert-danger alert-dismissible fade show" role="alert">' . $_SESSION['flash_error'] . '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>';
+                            unset($_SESSION['flash_error']);
+                        }
+                        if (isset($_SESSION['flash_input'])) {
+                            // This session variable is used to repopulate form fields on validation failure.
+                            // It is typically handled within the view file itself, so we just unset it here
+                            // to ensure it doesn't persist across different pages.
+                            unset($_SESSION['flash_input']);
+                        }
+                        ?>
                         <?php 
                         // This is where the page-specific view fragment is loaded
                         if (isset($__content_file)) {

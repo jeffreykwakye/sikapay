@@ -9,6 +9,9 @@ use Jeffrey\Sikapay\Core\ErrorResponder;
 use Jeffrey\Sikapay\Models\LeaveTypeModel;
 use Jeffrey\Sikapay\Models\LeaveApplicationModel;
 use Jeffrey\Sikapay\Models\LeaveBalanceModel;
+use Jeffrey\Sikapay\Services\EmailService;
+use Jeffrey\Sikapay\Services\NotificationService;
+use Jeffrey\Sikapay\Models\UserModel;
 use \Throwable;
 
 class LeaveController extends Controller
@@ -16,6 +19,9 @@ class LeaveController extends Controller
     private LeaveTypeModel $leaveTypeModel;
     private LeaveApplicationModel $leaveApplicationModel;
     private LeaveBalanceModel $leaveBalanceModel;
+    protected NotificationService $notificationService;
+    private EmailService $emailService;
+    protected UserModel $userModel;
 
     public function __construct()
     {
@@ -23,6 +29,9 @@ class LeaveController extends Controller
         $this->leaveTypeModel = new LeaveTypeModel();
         $this->leaveApplicationModel = new LeaveApplicationModel();
         $this->leaveBalanceModel = new LeaveBalanceModel();
+        $this->notificationService = new NotificationService();
+        $this->emailService = new EmailService();
+        $this->userModel = new UserModel();
     }
 
     public function index(): void
@@ -248,7 +257,8 @@ class LeaveController extends Controller
                 return;
             }
 
-            $this->db->beginTransaction();
+            $db = $this->leaveApplicationModel->getDB();
+            $db->beginTransaction();
             
             $success = $this->leaveApplicationModel->updateStatus($id, $this->tenantId, 'approved', $this->userId);
             if ($success) {
@@ -260,14 +270,37 @@ class LeaveController extends Controller
                     -(float)$application['total_days']
                 );
                 $_SESSION['flash_success'] = "Leave application approved.";
+
+                // --- START NOTIFICATION LOGIC ---
+                try {
+                    $applicant = $this->userModel->find((int)$application['user_id']);
+                    if ($applicant) {
+                        $inAppTitle = "Your leave application has been approved.";
+                        $link = '/my-account';
+                        $emailBody = "Hello {$applicant['first_name']},<br><br>Your leave application for <b>{$application['leave_type_name']}</b> from " . date('M j, Y', strtotime($application['start_date'])) . " to " . date('M j, Y', strtotime($application['end_date'])) . " has been approved.<br><br>You can view your leave details in your SikaPay account.";
+
+                        $this->notificationService->notifyUser(
+                            $this->tenantId, // Correct: Use the current controller's tenant ID
+                            (int)$applicant['id'],
+                            'leave_approved',
+                            $inAppTitle,
+                            $link,
+                            $emailBody
+                        );
+                    }
+                } catch (\Throwable $e) {
+                    Log::error("Failed to send leave approval notifications for application {$id}: " . $e->getMessage());
+                }
+                // --- END NOTIFICATION LOGIC ---
+
             } else {
                 throw new \Exception("Failed to update application status.");
             }
 
-            $this->db->commit();
+            $db->commit();
         } catch (Throwable $e) {
-            if ($this->db->inTransaction()) {
-                $this->db->rollBack();
+            if (isset($db) && $db->inTransaction()) {
+                $db->rollBack();
             }
             Log::error("Failed to approve leave application {$id}: " . $e->getMessage());
             $_SESSION['flash_error'] = "A system error occurred while approving the application.";
@@ -296,6 +329,29 @@ class LeaveController extends Controller
             $success = $this->leaveApplicationModel->updateStatus($id, $this->tenantId, 'rejected', $this->userId);
             if ($success) {
                 $_SESSION['flash_success'] = "Leave application rejected.";
+
+                // --- START NOTIFICATION LOGIC ---
+                try {
+                    $applicant = $this->userModel->find((int)$application['user_id']);
+                    if ($applicant) {
+                        $inAppTitle = "Your leave application has been rejected.";
+                        $link = '/my-account';
+                        $emailBody = "Hello {$applicant['first_name']},<br><br>Your leave application for <b>{$application['leave_type_name']}</b> from " . date('M j, Y', strtotime($application['start_date'])) . " to " . date('M j, Y', strtotime($application['end_date'])) . " has been rejected.<br><br>Please contact your manager for more details.";
+
+                        $this->notificationService->notifyUser(
+                            $this->tenantId, // Correct: Use the current controller's tenant ID
+                            (int)$applicant['id'],
+                            'leave_rejected',
+                            $inAppTitle,
+                            $link,
+                            $emailBody
+                        );
+                    }
+                } catch (\Throwable $e) {
+                    Log::error("Failed to send leave rejection notifications for application {$id}: " . $e->getMessage());
+                }
+                // --- END NOTIFICATION LOGIC ---
+                
             } else {
                 $_SESSION['flash_error'] = "Failed to reject leave application.";
             }

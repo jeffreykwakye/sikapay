@@ -66,15 +66,9 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 | **Advanced Payroll Logic** | Conditional tax/SSNIT logic for different employment types (Contract, Intern, National-Service, Casual-Worker). | **Complete** | Implemented withholding tax for contractors/casuals and exemptions for interns/NSS. |
 | **Super Admin Features** | **Dashboard Overhaul, Subscription & Plan Management (CRUD), Automated Subscription Lifecycle, Statutory Rates Management (CRUD)** | **Complete** | Full suite of tools for Super Admins to manage the entire platform, including revenue metrics, plan creation, subscription lifecycle, and global statutory rates. |
 | **Support Messaging** | Tenant-to-Super Admin Support Tickets with Replies; Super Admin Interface | **Complete** | Tenants can submit/reply to tickets; Super Admins can view/respond to all tickets, with notification system and open ticket count badge. |
-| **Leave Management** | Comprehensive Leave Application, Approval, and Balance Tracking; Dedicated pages for Pending, Approved, On-Leave, and Returning Staff; 'Is Paid' field for Leave Types. | **Core Complete** | Full CRUD for leave types, application workflow, and employee leave balance management. |
+| **Leave Management** | Comprehensive Leave Application, Approval, and Balance Tracking | **Complete** | Full workflow for leave application, approval, and balance tracking. Includes a complete notification loop (in-app & email) for submissions, approvals, and rejections. |
 
 | **Configuration System** | Replaced .env with native app/config.php; refactored AppConfig | **Complete** | Supports shared hosting environments and improves configuration management. |
-
----
-
-## 🐞 Known Issues
-
-- **My Account Leave Application Not Submitting:** The leave application form on the "My Account" page currently refreshes upon submission without error messages, and no application is recorded. Investigation is ongoing.
 
 ---
 

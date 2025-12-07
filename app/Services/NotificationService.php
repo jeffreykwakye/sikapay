@@ -55,7 +55,7 @@ class NotificationService
     /**
      * Notifies a single, specific user. This is the primary method for sending alerts.
      */
-    public function notifyUser(int $tenantId, int $userId, string $type, string $title, ?string $body = null): void
+    public function notifyUser(int $tenantId, int $userId, string $type, string $title, ?string $link = null, ?string $emailBody = null): void
     {
         if ($userId <= 0) { 
             return;
@@ -63,13 +63,14 @@ class NotificationService
         
         try {
             // 1. Create in-app notification
-            $this->notificationModel->createNotification($tenantId, $userId, $type, $title, $body);
+            $this->notificationModel->createNotification($tenantId, $userId, $type, $title, $link);
 
             // 2. Send email notification
             $user = $this->userModel->find($userId);
             if ($user && !empty($user['email'])) {
-                $emailBody = $body ?? $title; // Use body if available, otherwise title
-                $this->emailService->send($user['email'], $title, $emailBody);
+                // Use the specific email body if provided, otherwise fallback to the title
+                $finalEmailBody = $emailBody ?? $title;
+                $this->emailService->send($user['email'], $title, $finalEmailBody);
             }
 
         } catch (Throwable $e) {
