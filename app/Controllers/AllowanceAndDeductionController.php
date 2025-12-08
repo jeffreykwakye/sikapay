@@ -72,21 +72,17 @@ class AllowanceAndDeductionController extends Controller
             'description' => 'optional|max:500',
         ]);
 
-        if ($validator->fails()) {
-            $_SESSION['flash_error'] = "Error creating payroll element: " . implode('<br>', $validator->errors());
-            $this->redirect('/payroll-elements');
-            return;
-        }
-
+        $calculationBase = $validator->get('calculation_base', 'string', null);
+        
         $data = [
             'name' => $validator->get('name'),
             'category' => $validator->get('category'),
             'amount_type' => $validator->get('amount_type'),
             'default_amount' => $validator->get('default_amount', 'float'),
-            'calculation_base' => $validator->get('calculation_base', 'string', null),
-            'is_taxable' => $validator->get('is_taxable', 'bool', false),
-            'is_ssnit_chargeable' => $validator->get('is_ssnit_chargeable', 'bool', false),
-            'is_recurring' => $validator->get('is_recurring', 'bool', false),
+            'calculation_base' => empty($calculationBase) ? null : $calculationBase,
+            'is_taxable' => (int)$validator->get('is_taxable', 'bool', false),
+            'is_ssnit_chargeable' => (int)$validator->get('is_ssnit_chargeable', 'bool', false),
+            'is_recurring' => (int)$validator->get('is_recurring', 'bool', false),
             'description' => $validator->get('description', 'string', null),
         ];
 
@@ -140,15 +136,17 @@ class AllowanceAndDeductionController extends Controller
             return;
         }
 
+                $calculationBase = $validator->get('calculation_base', 'string', null);
+
         $data = [
             'name' => $validator->get('name'),
             'category' => $validator->get('category'),
             'amount_type' => $validator->get('amount_type'),
             'default_amount' => $validator->get('default_amount', 'float'),
-            'calculation_base' => $validator->get('calculation_base', 'string', null),
-            'is_taxable' => $validator->get('is_taxable', 'bool', false),
-            'is_ssnit_chargeable' => $validator->get('is_ssnit_chargeable', 'bool', false),
-            'is_recurring' => $validator->get('is_recurring', 'bool', false),
+            'calculation_base' => empty($calculationBase) ? null : $calculationBase,
+            'is_taxable' => (int)$validator->get('is_taxable', 'bool', false),
+            'is_ssnit_chargeable' => (int)$validator->get('is_ssnit_chargeable', 'bool', false),
+            'is_recurring' => (int)$validator->get('is_recurring', 'bool', false),
             'description' => $validator->get('description', 'string', null),
         ];
 
