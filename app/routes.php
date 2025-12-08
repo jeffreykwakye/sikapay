@@ -290,6 +290,11 @@ return [
         'permission' => ['PermissionMiddleware', 'employee:update'],
         'handler' => ['EmployeeController', 'updateBankData']
     ]],
+    ['POST', '/employees/{userId:\d+}/salary', [ // NEW Route for Salary Update
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'employee:update'], // Using general employee update permission
+        'handler' => ['EmployeeController', 'updateSalary']
+    ]],
     ['POST', '/employees/{userId:\d+}/emergency', [
         'auth' => 'AuthMiddleware',
         'permission' => ['PermissionMiddleware', 'employee:update'],

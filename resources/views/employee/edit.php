@@ -33,6 +33,9 @@ $e = $employee; // Existing employee data
                 <a class="nav-link" id="pills-bank-tab" data-bs-toggle="pill" href="#pills-bank" role="tab" aria-controls="pills-bank" aria-selected="false">Bank & Payroll</a>
             </li>
             <li class="nav-item">
+                <a class="nav-link" id="pills-salary-tab" data-bs-toggle="pill" href="#pills-salary" role="tab" aria-controls="pills-salary" aria-selected="false">Salary</a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link" id="pills-emergency-tab" data-bs-toggle="pill" href="#pills-emergency" role="tab" aria-controls="pills-emergency" aria-selected="false">Emergency</a>
             </li>
             <li class="nav-item">
@@ -253,6 +256,38 @@ $e = $employee; // Existing employee data
                     </div>
                     <div class="d-grid">
                         <button type="submit" class="btn btn-primary">Save Bank Details</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Salary Tab -->
+            <div class="tab-pane fade" id="pills-salary" role="tabpanel" aria-labelledby="pills-salary-tab">
+                <form method="POST" action="/employees/<?= $e['user_id'] ?>/salary">
+                    <?php if (isset($CsrfToken)): ?>
+                        <input type="hidden" name="csrf_token" value="<?= $CsrfToken::getToken() ?>">
+                    <?php endif; ?>
+                    <h5 class="mb-3 mt-4">Current Monthly Base Salary</h5>
+                    <div class="alert alert-info" role="alert">
+                        Current Monthly Base Salary: <strong>GHS <?= number_format($e['current_salary_ghs'] ?? 0, 2) ?></strong>
+                    </div>
+                    <h5 class="mb-3 mt-4">Update Monthly Base Salary</h5>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="new_salary" class="form-label">New Monthly Base Salary (GHS) <span class="text-danger">*</span></label>
+                            <input type="number" step="0.01" class="form-control" id="new_salary" name="new_salary" value="<?= htmlspecialchars($e['current_salary_ghs'] ?? '') ?>" required min="0">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="effective_date" class="form-label">Effective Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="effective_date" name="effective_date" value="<?= date('Y-m-d') ?>" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="notes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="1"></textarea>
+                            <small class="form-text text-muted">Reason for salary change (e.g., Promotion, Annual Review).</small>
+                        </div>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Save Salary Details</button>
                     </div>
                 </form>
             </div>

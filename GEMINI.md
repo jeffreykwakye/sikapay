@@ -28,6 +28,7 @@
 - Fix My Account Leave Form Action: Corrected the `action` attribute of the leave application form in `resources/views/employee/my_account/index.php` from `/leave/apply` to `/my-account/leave/apply`, resolving the `Route Not Found (404)` error for form submissions.
 - Seed `self:apply_leave` Permission: Added the `self:apply_leave` permission to the `permissions` table and assigned it to the `tenant_admin`, `hr_manager`, `accountant`, and `employee` roles in `app/Commands/SeedCommand.php` to resolve the "Undefined Permission Key" error.
 - Leave Management Notifications & Fixes: Fixed the silent leave application submission bug by allowing all submissions regardless of balance. Implemented a full notification loop (in-app and email) for the entire leave workflow (submission, approval, rejection). Resolved multiple fatal errors during implementation.
+- Employee Salary Management & Department View Refinement: Implemented UI for immediate basic salary updates with history logging. Removed Gross Pay, Net Pay, and PAYE columns from the department list view to optimize space.
 
 ## SikaPay Project Status (2025-11-17)
 

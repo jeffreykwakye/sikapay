@@ -58,9 +58,6 @@ $h = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
                                 <tr>
                                     <th>Department Name</th>
                                     <th>Staff Count</th>
-                                    <th>Gross Pay (GHS)</th>
-                                    <th>Net Pay (GHS)</th>
-                                    <th>PAYE (GHS)</th>
                                     <th class="text-center">Actions</th>
                                 </tr>
                             </thead>
@@ -69,9 +66,6 @@ $h = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
                                 <tr>
                                     <td><?= $h($dept['name']) ?></td>
                                     <td><?= $h($dept['employee_count']) ?></td>
-                                    <td><?= number_format($dept['total_gross_pay'], 2) ?></td>
-                                    <td><?= number_format($dept['total_net_pay'], 2) ?></td>
-                                    <td><?= number_format($dept['total_paye'], 2) ?></td>
                                     <td class="text-center">
                                         <a href="/departments/<?= $dept['id'] ?>/dashboard" class="btn btn-sm btn-primary me-1" title="View Details">
                                             <i class="icon-eye"></i> View

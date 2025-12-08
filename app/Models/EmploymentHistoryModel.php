@@ -77,8 +77,10 @@ class EmploymentHistoryModel extends Model
                 'sql_params' => $params
             ]);
             
-            // Re-throw the exception to signal the failure back to the Controller for transaction rollback
+            // Re-throw the exception: Re-throw the exception for transaction rollback handling in the Controller.
             throw $e;
         }
     }
+
+
 }

@@ -537,7 +537,7 @@ class EmployeeController extends Controller
                 'current_position_id' => $validator->get('current_position_id', 'int'), 
                 'hire_date' => $validator->get('hire_date'),
                 'employment_type' => $validator->get('employment_type'),
-                'termination_date' => $validator->get('termination_date', 'date', null), 
+                'termination_date' => empty($validator->get('termination_date')) ? null : $validator->get('termination_date'), 
             ];
             
             $this->employeeModel->updateEmployeeRecord($userId, $employeeData);
@@ -849,7 +849,7 @@ class EmployeeController extends Controller
         $validator = new Validator($_POST);
         $validator->validate([
             'new_salary'        => 'required|numeric|min:1',
-            'effective_date'    => 'required|date',
+            'effective_date'    => 'required|date', // Keep effective date for history logging
             'notes'             => 'optional|max:500',
         ]);
         
@@ -871,30 +871,32 @@ class EmployeeController extends Controller
             $employee = $this->employeeModel->getEmployeeProfile($userId); 
             $oldSalary = $employee['current_salary_ghs'] ?? 0.00;
             $newSalary = $validator->get('new_salary', 'float');
-            
-            // 2. Update employee's current salary in the 'employees' table
+            $effectiveDate = $validator->get('effective_date'); // Still useful for history
+
+            // 2. IMMEDIATELY update employee's current salary in the 'employees' table
             $this->employeeModel->updateEmployeeRecord($userId, ['current_salary_ghs' => $newSalary]);
             
-            // 3. Log to employment_history table (Assuming create method exists)
+            // 3. Log to employment_history table
             $historyModel->create([
                 'user_id' => $userId,
                 'tenant_id' => $this->tenantId,
-                'effective_date' => $validator->get('effective_date'),
+                'effective_date' => $effectiveDate, // Log the effective date for historical context
                 'record_type' => 'Salary Change',
-                'old_salary' => $oldSalary,
+                'old_salary' => $oldSalary, 
                 'new_salary' => $newSalary,
                 'notes' => $validator->get('notes', 'string', null),
             ]);
             
-            $auditModel->log($this->tenantId, 'Employee salary updated for user with ID: ' . $userId, [
+            $auditModel->log($this->tenantId, 'Employee salary updated immediately for user with ID: ' . $userId, [
                 'user_id' => $userId, 
                 'old' => $oldSalary, 
-                'new' => $newSalary
+                'new' => $newSalary,
+                'effective_date' => $effectiveDate
             ]);
 
             $db->commit();
             
-            echo json_encode(['success' => true, 'message' => "Salary updated successfully! The change has been logged."]);
+            echo json_encode(['success' => true, 'message' => "Salary has been updated successfully and is now active."]);
             exit;
 
         } catch (Throwable $e) { 
