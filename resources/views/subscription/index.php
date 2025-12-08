@@ -62,6 +62,11 @@ if (!isset($h)) {
                         <p class="text-white mb-0">Next Billing Date:</p>
                         <p class="text-white fw-bold mb-0"><?= date('F j, Y', strtotime($subscription['next_billing_date'])) ?></p>
                     </div>
+                    <div class="mt-4 text-center">
+                        <a href="/subscription/how-to-pay" class="btn btn-light btn-rounded fw-bold">
+                            <i class="fas fa-money-check-alt"></i> How to Renew/Manage
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>

@@ -716,6 +716,11 @@ return [
         'permission' => ['PermissionMiddleware', 'tenant:manage_subscription'],
         'handler' => ['SubscriptionController', 'index']
     ]],
+    ['GET', '/subscription/how-to-pay', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'tenant:manage_subscription'], // Same permission as viewing subscription
+        'handler' => ['SubscriptionController', 'howToPay']
+    ]],
 
     // =========================================================
     // Tenant Support Routes

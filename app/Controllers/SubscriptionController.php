@@ -65,6 +65,15 @@ class SubscriptionController extends Controller
         }
     }
 
+    public function howToPay(): void
+    {
+        $this->checkPermission('tenant:manage_subscription');
+
+        $this->view('subscription/how_to_pay', [
+            'title' => 'How to Pay'
+        ]);
+    }
+
     /**
      * System-wide check for all tenant subscriptions.
      * This can be triggered by a login event or a future cron job.
