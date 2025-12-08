@@ -29,6 +29,7 @@
 - Seed `self:apply_leave` Permission: Added the `self:apply_leave` permission to the `permissions` table and assigned it to the `tenant_admin`, `hr_manager`, `accountant`, and `employee` roles in `app/Commands/SeedCommand.php` to resolve the "Undefined Permission Key" error.
 - Leave Management Notifications & Fixes: Fixed the silent leave application submission bug by allowing all submissions regardless of balance. Implemented a full notification loop (in-app and email) for the entire leave workflow (submission, approval, rejection). Resolved multiple fatal errors during implementation.
 - Employee Salary Management & Department View Refinement: Implemented UI for immediate basic salary updates with history logging. Removed Gross Pay, Net Pay, and PAYE columns from the department list view to optimize space.
+- Super Admin - Impersonate Tenant Admin: Allows Super Admins to temporarily assume the identity of a Tenant Admin for a specific tenant to assist with tenant-specific operations (e.g., user management, payroll runs).
 
 ## SikaPay Project Status (2025-11-17)
 
@@ -50,13 +51,3 @@ The foundational pillars of SikaPay are successfully implemented:
 -   **Super Admin Features:** The Super Admin dashboard has been overhauled with new KPIs and charts. Full CRUD functionality for subscription plans and global statutory rates (SSNIT and Withholding Tax) has been implemented. Automated subscription lifecycle management, including checking for expired subscriptions and sending notifications, is in place.
 -   **Tenant Subscription Management:** Implemented tenant-facing page for viewing current subscription plan, features, and history.
 -   **Tenant Support Messaging System:** Implemented tenant-to-Super Admin support ticket system with replies, Super Admin interface for viewing/responding, notification system, and open ticket count badge. Includes prevention of replies/responses to closed tickets.
-
-### Immediate Priorities (Next Focus Area)
-Based on the Product Requirements Document (PRD) and recent discussions, the immediate priorities for development are:
-
-1.  **Super Admin - Impersonate Tenant Admin:**
-    *   **Objective:** Allow Super Admins to temporarily assume the identity of a Tenant Admin for a specific tenant to assist with tenant-specific operations (e.g., user management, payroll runs).
-    *   **Future Tasks:**
-        *   Implement secure session switching and restoration mechanisms in the `Auth` module.
-        *   Develop UI integration for initiating and exiting impersonation on the tenant details page.
-        *   Ensure robust audit logging of all impersonation activities for security and compliance.

@@ -33,6 +33,7 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 | **Configuration System** | Replaced .env with native app/config.php; refactored AppConfig | **Complete** | Supports shared hosting environments and improves configuration management. |
 | **Support Messaging** | Tenant-to-Super Admin Support Tickets with Replies; Super Admin Interface | **Complete** | Tenants can submit/reply to tickets; Super Admins can view/respond to all tickets, with notification system and open ticket count badge. |
 | **Leave Management** | Comprehensive Leave Application, Approval, and Balance Tracking | **Complete** | Full workflow for leave application, approval, and balance tracking. Includes a complete notification loop (in-app & email) for submissions, approvals, and rejections. |
+| **Super Admin - Impersonate Tenant Admin** | Allows Super Admins to temporarily assume the identity of a Tenant Admin. | **Complete** | Secure session switching and restoration, with audit logging. |
 
 ---
 
@@ -119,3 +120,4 @@ The tenant creation process adheres to the **Single Responsibility Principle (SR
 | **2025-12-07** | **Enhanced Login Security** | Fixed permanent lockout bug, added progressive lockout penalties, and implemented email notifications (to user and admins) for brute-force attempts. Refactored LoginAttemptModel, Auth, and LoginController to support the new logic. | **Complete** |
 | **2025-12-07** | **Leave Management Workflow & Notifications** | Fixed leave application submission bug by allowing all submissions regardless of balance. Implemented a full notification loop (in-app & email) for the entire leave workflow (submission, approval, rejection). Resolved multiple fatal errors during implementation. | **Complete** |
 | **2025-12-07** | **Employee Salary Management & Department View Refinement** | Implemented UI for immediate basic salary updates with history logging. Removed irrelevant payroll columns from department list view for clarity. | **Complete** |
+| **2025-12-08** | **Super Admin - Impersonate Tenant Admin** | Implemented secure session switching and restoration mechanisms in the `Auth` module, UI integration for initiating and exiting impersonation on the tenant details page, and robust audit logging of all impersonation activities for security and compliance. | **Complete** |
