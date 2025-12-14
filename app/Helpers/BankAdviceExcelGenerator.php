@@ -7,6 +7,8 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Font;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
+use Jeffrey\Sikapay\Core\Log;
 
 class BankAdviceExcelGenerator
 {
@@ -25,8 +27,13 @@ class BankAdviceExcelGenerator
     {
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Bank Advice');
 
-        // Title
+        // --- Calculate totals first for summary ---
+        $totalNetPay = array_sum(array_column($this->reportData, 'net_pay'));
+        $employeeCount = count($this->reportData);
+
+        // --- Header ---
         $sheet->mergeCells('A1:F1');
         $sheet->setCellValue('A1', 'Bank Advice Report');
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
@@ -40,42 +47,59 @@ class BankAdviceExcelGenerator
         $sheet->setCellValue('A3', 'For Payroll Period: ' . $this->payrollPeriodData['period_name']);
         $sheet->getStyle('A3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
         $sheet->getRowDimension(1)->setRowHeight(22);
-        $sheet->getRowDimension(2)->setRowHeight(18);
-        $sheet->getRowDimension(3)->setRowHeight(18);
+
+        $sheet->mergeCells('A4:F4');
+        $sheet->setCellValue('A4', 'Generated on: ' . date('Y-m-d H:i:s'));
+        $sheet->getStyle('A4')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+        // --- Summary Section ---
+        $summaryRow = 6;
+        $sheet->setCellValue('A' . $summaryRow, 'Report Summary');
+        $sheet->getStyle('A' . $summaryRow)->getFont()->setBold(true);
+        $sheet->mergeCells('A' . $summaryRow . ':B' . $summaryRow);
+        $summaryRow++;
+
+        $sheet->setCellValue('A' . $summaryRow, 'Total Employees:');
+        $sheet->setCellValue('B' . $summaryRow, $employeeCount);
+        $sheet->getStyle('A' . $summaryRow)->getFont()->setBold(true);
+        $summaryRow++;
+        
+        $sheet->setCellValue('A' . $summaryRow, 'Total Net Pay:');
+        $sheet->setCellValue('B' . $summaryRow, number_format($totalNetPay, 2));
+        $sheet->getStyle('A' . $summaryRow)->getFont()->setBold(true);
+        $sheet->getStyle('B' . $summaryRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+        
+        // --- Main Data Table Headers ---
+        $headerRow = $summaryRow + 2;
+        $sheet->setCellValue('A' . $headerRow, 'Employee Name');
+        $sheet->setCellValue('B' . $headerRow, 'Bank');
+        $sheet->setCellValue('C' . $headerRow, 'Branch');
+        $sheet->setCellValue('D' . $headerRow, 'Account Number');
+        $sheet->setCellValue('E' . $headerRow, 'Account Name');
+        $sheet->setCellValue('F' . $headerRow, 'Net Salary (GHS)');
+        $sheet->getStyle('A' . $headerRow . ':F' . $headerRow)->getFont()->setBold(true);
+        $sheet->getStyle('F' . $headerRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
 
-        // Set headers
-        $sheet->setCellValue('A5', 'Employee Name');
-        $sheet->setCellValue('B5', 'Bank');
-        $sheet->setCellValue('C5', 'Branch');
-        $sheet->setCellValue('D5', 'Account Number');
-        $sheet->setCellValue('E5', 'Account Name');
-        $sheet->setCellValue('F5', 'Net Salary');
-
-        // Bold headers
-        $sheet->getStyle('A5:F5')->getFont()->setBold(true);
-
-        // Set data
-        $row = 6;
-        $totalNetPay = 0;
+        // --- Main Data Table Body ---
+        $currentRow = $headerRow + 1;
         foreach ($this->reportData as $data) {
-            $sheet->setCellValue('A' . $row, $data['employee_name']);
-            $sheet->setCellValue('B' . $row, $data['bank_name']);
-            $sheet->setCellValue('C' . $row, $data['bank_branch']);
-            $sheet->setCellValue('D' . $row, $data['bank_account_number']);
-            $sheet->setCellValue('E' . $row, $data['bank_account_name']);
-            $sheet->setCellValue('F' . $row, number_format((float)$data['net_pay'], 2));
-            $sheet->getStyle('F' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-            $totalNetPay += (float)$data['net_pay'];
-            $row++;
+            $sheet->setCellValue('A' . $currentRow, $data['employee_name']);
+            $sheet->setCellValue('B' . $currentRow, $data['bank_name']);
+            $sheet->setCellValue('C' . $currentRow, $data['bank_branch']);
+            $sheet->setCellValueExplicit('D' . $currentRow, $data['bank_account_number'], DataType::TYPE_STRING);
+            $sheet->setCellValue('E' . $currentRow, $data['bank_account_name']);
+            $sheet->setCellValue('F' . $currentRow, number_format((float)$data['net_pay'], 2));
+            $sheet->getStyle('F' . $currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+            $currentRow++;
         }
 
-        // Total
-        $sheet->setCellValue('E' . $row, 'Total');
-        $sheet->setCellValue('F' . $row, number_format($totalNetPay, 2));
-        $sheet->getStyle('E' . $row . ':F' . $row)->getFont()->setBold(true);
-        $sheet->getStyle('F' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-
+        // --- Total Row ---
+        $currentRow++; // Add a little space
+        $sheet->setCellValue('E' . $currentRow, 'TOTAL');
+        $sheet->setCellValue('F' . $currentRow, number_format($totalNetPay, 2));
+        $sheet->getStyle('E' . $currentRow . ':F' . $currentRow)->getFont()->setBold(true);
+        $sheet->getStyle('F' . $currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
 
         // Auto size columns
         foreach (range('A', 'F') as $col) {
@@ -84,12 +108,9 @@ class BankAdviceExcelGenerator
 
         // Create a writer
         $writer = new Xlsx($spreadsheet);
-
-        // Create a temporary file
         $tempFile = tempnam(sys_get_temp_dir(), 'bank_advice_');
         $writer->save($tempFile);
 
-        // Return the path to the temporary file
         return $tempFile;
     }
 }

@@ -39,7 +39,7 @@
     - Redesigned Earnings and Deductions tables with clearer headers and sub-headers ("Item", "Amount (GHS)") and implemented seamless border drawing.
     - Changed the primary header color to Teal for a fresh, professional look (excluding Net Pay which retains darker blue).
     - Fixed border gaps in Earnings/Deductions tables for seamless vertical/horizontal lines.
-- Professional Statutory Reports: Redesigned the PAYE, SSNIT, and Bank Advice PDF reports with a professional and consistent layout, color scheme, and typography. Implemented a new feature for tenants to configure and automatically generate formal cover letters for these reports. Cover letters are dynamically addressed using new tenant profile settings and include total amounts written in words, powered by the `kwn/number-to-words` package. Fixed several bugs during implementation related to database transactions and library usage.
+- Professional Statutory Reports: Redesigned the PAYE, SSNIT, and Bank Advice PDF reports with a professional and consistent layout, color scheme, and typography. Implemented a new feature for tenants to configure and automatically generate formal cover letters for these reports. Cover letters are dynamically addressed using new tenant profile settings and include total amounts written in words, powered by the `kwn/number-to-words` package. Implemented CSV reports for PAYE, SSNIT, and Bank Advice, ensuring number fields are explicitly treated as strings. Report format availability (PDF, CSV, Excel) is now tiered based on tenant subscription plans. Fixed several bugs during implementation related to database transactions and library usage.
 - Payslip Design Testing Setup: Created a test route (`/test/payslip-sample`) and controller method (`TestController::payslipSample`) to generate a sample payslip PDF with hardcoded data, allowing for easy design iteration. Removed permission requirement for testing.
 
 ## Immediate Priorities (Next Focus Area)
@@ -50,9 +50,9 @@ Based on the Product Requirements Document (PRD) and recent discussions, the imm
     *   **Objective:** Reviewed and finalized the payslip design, ensuring visual perfection and clarity.
     *   **Tasks:** Completed all aesthetic and layout adjustments for `PayslipPdfGenerator.php`, including independent earnings/deductions tables, corrected employer contribution border, payroll period relocation, logo path correction, fine-tuned header (deeper gray with white text) and Net Pay (darker gray with white text) color scheme, and adjusted logo and 'PAYSLIP' text positioning.
 
-2.  **Professional Statutory Reports Redesign (PDF & Excel):**
-    *   **Objective:** Apply new professional design principles to all statutory PDF reports.
-    *   **Status:** **Complete**. All core PDF reports (PAYE, SSNIT, Bank Advice) have been redesigned with professional headers, layouts, and a consistent color scheme.
+2.  **Professional Statutory Reports Redesign (PDF, CSV & Excel):**
+    *   **Objective:** Apply new professional design principles to all statutory PDF reports, and implement CSV and Excel reports with tiered availability.
+    *   **Status:** **Complete**. All core PDF reports (PAYE, SSNIT, Bank Advice) have been redesigned with professional headers, layouts, and a consistent color scheme. CSV and Excel reports have been implemented with tiered availability (PDF for Standard, PDF/CSV for Professional, PDF/CSV/Excel for Enterprise).
 
 3.  **Implement Test Samples for Reports:**
     *   **Objective:** Create dedicated test routes and controller methods for each statutory report.

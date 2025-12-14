@@ -55,7 +55,12 @@ $this->title = $title;
                                                     <td>Monthly PAYE tax deductions for all employees.</td>
                                                     <td class="text-end">
                                                         <a href="/reports/paye/pdf/<?= $id($period['id']) ?>" class="btn btn-sm btn-primary">PDF</a>
-                                                        <a href="/reports/paye/excel/<?= $id($period['id']) ?>" class="btn btn-sm btn-secondary">Excel</a>
+                                                        <?php if (in_array($planName, ['Professional', 'Enterprise'])): ?>
+                                                            <a href="/reports/paye/csv/<?= $id($period['id']) ?>" class="btn btn-sm btn-info">CSV</a>
+                                                        <?php endif; ?>
+                                                        <?php if ($planName === 'Enterprise'): ?>
+                                                            <a href="/reports/paye/excel/<?= $id($period['id']) ?>" class="btn btn-sm btn-secondary">Excel</a>
+                                                        <?php endif; ?>
                                                     </td>
                                                 </tr>
                                                 <tr>
@@ -63,7 +68,12 @@ $this->title = $title;
                                                     <td>Monthly SSNIT contributions for all employees.</td>
                                                     <td class="text-end">
                                                         <a href="/reports/ssnit/pdf/<?= $id($period['id']) ?>" class="btn btn-sm btn-primary">PDF</a>
-                                                        <a href="/reports/ssnit/excel/<?= $id($period['id']) ?>" class="btn btn-sm btn-secondary">Excel</a>
+                                                        <?php if (in_array($planName, ['Professional', 'Enterprise'])): ?>
+                                                            <a href="/reports/ssnit/csv/<?= $id($period['id']) ?>" class="btn btn-sm btn-info">CSV</a>
+                                                        <?php endif; ?>
+                                                        <?php if ($planName === 'Enterprise'): ?>
+                                                            <a href="/reports/ssnit/excel/<?= $id($period['id']) ?>" class="btn btn-sm btn-secondary">Excel</a>
+                                                        <?php endif; ?>
                                                     </td>
                                                 </tr>
                                                 <tr>
@@ -71,7 +81,12 @@ $this->title = $title;
                                                     <td>Net salary payments to be made to employees' bank accounts.</td>
                                                     <td class="text-end">
                                                         <a href="/reports/bank-advice/pdf/<?= $id($period['id']) ?>" class="btn btn-sm btn-primary">PDF</a>
-                                                        <a href="/reports/bank-advice/excel/<?= $id($period['id']) ?>" class="btn btn-sm btn-secondary">Excel</a>
+                                                        <?php if (in_array($planName, ['Professional', 'Enterprise'])): ?>
+                                                            <a href="/reports/bank-advice/csv/<?= $id($period['id']) ?>" class="btn btn-sm btn-info">CSV</a>
+                                                        <?php endif; ?>
+                                                        <?php if ($planName === 'Enterprise'): ?>
+                                                            <a href="/reports/bank-advice/excel/<?= $id($period['id']) ?>" class="btn btn-sm btn-secondary">Excel</a>
+                                                        <?php endif; ?>
                                                     </td>
                                                 </tr>
                                                 <tr>

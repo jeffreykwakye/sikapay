@@ -5,16 +5,16 @@ namespace Jeffrey\Sikapay\Helpers;
 
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-use PhpOffice\PhpSpreadsheet\Style\Font;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
-use PhpOffice\PhpSpreadsheet\Style\Border;
-use PhpOffice\PhpSpreadsheet\Style\Color;
+use PhpOffice\PhpSpreadsheet\Cell\DataType; // Added
+use Jeffrey\Sikapay\Core\Log;
 
 class SsnitReportExcelGenerator
 {
     private array $reportData;
     private array $tenantData;
     private array $payrollPeriodData;
+    private string $currencySymbol = 'GHS';
 
     public function __construct(array $reportData, array $tenantData, array $payrollPeriodData)
     {
@@ -25,177 +25,124 @@ class SsnitReportExcelGenerator
 
     public function generate(): string
     {
-        $spreadsheet = new Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('SSNIT Report');
+        try {
+            $spreadsheet = new Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->setTitle('SSNIT Report');
 
-        // --- Styles ---
-        $headerStyle = [
-            'font' => ['bold' => true, 'color' => ['argb' => Color::COLOR_WHITE]],
-            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['argb' => 'FF1665D8']], // Primary blue
-            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
-            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['argb' => Color::COLOR_BLACK]]],
-        ];
+            // --- Calculate totals first for summary ---
+            $totalBasicSalary = array_sum(array_column($this->reportData, 'basic_salary'));
+            $totalEmployeeSsnit = array_sum(array_column($this->reportData, 'employee_ssnit'));
+            $totalEmployerSsnit = array_sum(array_column($this->reportData, 'employer_ssnit'));
+            $totalOverallSsnit = array_sum(array_column($this->reportData, 'total_ssnit'));
+            $employeeCount = count($this->reportData);
 
-        $subHeaderStyle = [
-            'font' => ['bold' => true],
-            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['argb' => 'FFEBEBEB']], // Light grey
-            'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT],
-        ];
-        
-        $tableHeaderStyle = [
-            'font' => ['bold' => true],
-            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['argb' => 'FFD9E1F2']], // Light blue/grey
-            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['argb' => Color::COLOR_BLACK]]],
-            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
-        ];
+            // --- Simplified Header ---
+            $sheet->mergeCells('A1:F1');
+            $sheet->setCellValue('A1', 'SSNIT Report');
+            $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
+            $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-        $dataStyle = [
-            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['argb' => Color::COLOR_BLACK]]],
-        ];
+            $sheet->mergeCells('A2:F2');
+            $sheet->setCellValue('A2', $this->tenantData['legal_name']);
+            $sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-        $currencySymbol = 'GHS';
-        $currencyStyle = [
-            'numberFormat' => ['formatCode' => $currencySymbol . ' #,##0.00'],
-            'alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT],
-        ];
+            $sheet->mergeCells('A3:F3');
+            $sheet->setCellValue('A3', 'For Payroll Period: ' . $this->payrollPeriodData['period_name']);
+            $sheet->getStyle('A3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getRowDimension(1)->setRowHeight(22);
+            
+            $sheet->mergeCells('A4:F4');
+            $sheet->setCellValue('A4', 'Generated on: ' . date('Y-m-d H:i:s'));
+            $sheet->getStyle('A4')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-        $rightAlignStyle = [
-            'alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT],
-        ];
+            // --- Summary Section ---
+            $summaryRow = 6;
+            $sheet->setCellValue('A' . $summaryRow, 'Report Summary');
+            $sheet->getStyle('A' . $summaryRow)->getFont()->setBold(true);
+            $sheet->mergeCells('A' . $summaryRow . ':B' . $summaryRow);
+            $summaryRow++;
 
-        // --- Report Header ---
-        $sheet->mergeCells('A1:F1');
-        $sheet->setCellValue('A1', strtoupper($this->tenantData['legal_name']));
-        $sheet->getStyle('A1')->applyFromArray($headerStyle);
-        $sheet->getStyle('A1')->getFont()->setSize(16);
-        $sheet->getRowDimension(1)->setRowHeight(25);
+            $sheet->setCellValue('A' . $summaryRow, 'Total Employees:');
+            $sheet->setCellValue('B' . $summaryRow, $employeeCount);
+            $sheet->getStyle('A' . $summaryRow)->getFont()->setBold(true);
+            $summaryRow++;
+            
+            $sheet->setCellValue('A' . $summaryRow, 'Total Basic Salary:');
+            $sheet->setCellValue('B' . $summaryRow, number_format($totalBasicSalary, 2));
+            $sheet->getStyle('A' . $summaryRow)->getFont()->setBold(true);
+            $sheet->getStyle('B' . $summaryRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+            $summaryRow++;
+            
+            $sheet->setCellValue('A' . $summaryRow, 'Total Employee SSNIT:');
+            $sheet->setCellValue('B' . $summaryRow, number_format($totalEmployeeSsnit, 2));
+            $sheet->getStyle('A' . $summaryRow)->getFont()->setBold(true);
+            $sheet->getStyle('B' . $summaryRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+            $summaryRow++;
+            
+            $sheet->setCellValue('A' . $summaryRow, 'Total Employer SSNIT:');
+            $sheet->setCellValue('B' . $summaryRow, number_format($totalEmployerSsnit, 2));
+            $sheet->getStyle('A' . $summaryRow)->getFont()->setBold(true);
+            $sheet->getStyle('B' . $summaryRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+            $summaryRow++;
+            
+            $sheet->setCellValue('A' . $summaryRow, 'Total SSNIT Due:');
+            $sheet->setCellValue('B' . $summaryRow, number_format($totalOverallSsnit, 2));
+            $sheet->getStyle('A' . $summaryRow)->getFont()->setBold(true);
+            $sheet->getStyle('B' . $summaryRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
 
-        $sheet->mergeCells('A2:F2');
-        $sheet->setCellValue('A2', 'SSNIT Report for Payroll Period: ' . $this->payrollPeriodData['period_name']);
-        $sheet->getStyle('A2')->applyFromArray($headerStyle);
-        $sheet->getStyle('A2')->getFont()->setSize(12);
-        $sheet->getRowDimension(2)->setRowHeight(20);
-        
-        $sheet->mergeCells('A3:F3');
-        $sheet->setCellValue('A3', 'TIN: ' . ($this->tenantData['tin'] ?? 'N/A') . ' | Generated: ' . date('Y-m-d H:i'));
-        $sheet->getStyle('A3')->applyFromArray($headerStyle);
-        $sheet->getStyle('A3')->getFont()->setSize(10);
-        $sheet->getRowDimension(3)->setRowHeight(15);
-        $sheet->getStyle('A3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT); // Align date to right
+            // --- Main Data Table Headers ---
+            $headerRow = $summaryRow + 2;
+            $sheet->setCellValue('A' . $headerRow, 'Employee Name');
+            $sheet->setCellValue('B' . $headerRow, 'SSNIT Number');
+            $sheet->setCellValue('C' . $headerRow, 'Basic Salary (' . $this->currencySymbol . ')');
+            $sheet->setCellValue('D' . $headerRow, 'Employee SSNIT (' . $this->currencySymbol . ')');
+            $sheet->setCellValue('E' . $headerRow, 'Employer SSNIT (' . $this->currencySymbol . ')');
+            $sheet->setCellValue('F' . $headerRow, 'Total SSNIT (' . $this->currencySymbol . ')');
+            $sheet->getStyle('A' . $headerRow . ':F' . $headerRow)->getFont()->setBold(true);
+            $sheet->getStyle('A' . $headerRow . ':F' . $headerRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-        $currentRow = 5; // Start data after header
-        
-        // --- Summary Section ---
-        $totalBasicSalary = 0.0;
-        $totalEmployeeSsnit = 0.0;
-        $totalEmployerSsnit = 0.0;
-        $totalOverallSsnit = 0.0;
-        $employeeCount = count($this->reportData);
+            // --- Main Data Table Body ---
+            $currentRow = $headerRow + 1;
+            foreach ($this->reportData as $data) {
+                $sheet->setCellValue('A' . $currentRow, $data['employee_name']);
+                $sheet->setCellValueExplicit('B' . $currentRow, $data['ssnit_number'], DataType::TYPE_STRING);
+                $sheet->setCellValue('C' . $currentRow, number_format((float)$data['basic_salary'], 2));
+                $sheet->setCellValue('D' . $currentRow, number_format((float)$data['employee_ssnit'], 2));
+                $sheet->setCellValue('E' . $currentRow, number_format((float)$data['employer_ssnit'], 2));
+                $sheet->setCellValue('F' . $currentRow, number_format((float)$data['total_ssnit'], 2));
 
-        foreach ($this->reportData as $data) {
-            $totalBasicSalary += (float)$data['basic_salary'];
-            $totalEmployeeSsnit += (float)$data['employee_ssnit'];
-            $totalEmployerSsnit += (float)$data['employer_ssnit'];
-            $totalOverallSsnit += (float)$data['total_ssnit'];
-        }
-
-        $sheet->setCellValue('A' . $currentRow, 'Report Summary');
-        $sheet->getStyle('A' . $currentRow)->applyFromArray($subHeaderStyle);
-        $sheet->mergeCells('A' . $currentRow . ':F' . $currentRow);
-        $currentRow++;
-        
-        $sheet->setCellValue('A' . $currentRow, 'Total Employees:');
-        $sheet->setCellValue('B' . $currentRow, $employeeCount);
-        $sheet->getStyle('A' . $currentRow . ':B' . $currentRow)->applyFromArray($dataStyle);
-        $currentRow++;
-
-        $sheet->setCellValue('A' . $currentRow, 'Total Basic Salary:');
-        $sheet->setCellValue('B' . $currentRow, $totalBasicSalary);
-        $sheet->getStyle('B' . $currentRow)->applyFromArray($currencyStyle);
-        $sheet->getStyle('A' . $currentRow . ':B' . $currentRow)->applyFromArray($dataStyle);
-        $currentRow++;
-
-        $sheet->setCellValue('A' . $currentRow, 'Total Employee SSNIT:');
-        $sheet->setCellValue('B' . $currentRow, $totalEmployeeSsnit);
-        $sheet->getStyle('B' . $currentRow)->applyFromArray($currencyStyle);
-        $sheet->getStyle('A' . $currentRow . ':B' . $currentRow)->applyFromArray($dataStyle);
-        $currentRow++;
-
-        $sheet->setCellValue('A' . $currentRow, 'Total Employer SSNIT:');
-        $sheet->setCellValue('B' . $currentRow, $totalEmployerSsnit);
-        $sheet->getStyle('B' . $currentRow)->applyFromArray($currencyStyle);
-        $sheet->getStyle('A' . $currentRow . ':B' . $currentRow)->applyFromArray($dataStyle);
-        $currentRow++;
-
-        $sheet->setCellValue('A' . $currentRow, 'Total SSNIT Due:');
-        $sheet->setCellValue('B' . $currentRow, $totalOverallSsnit);
-        $sheet->getStyle('B' . $currentRow)->applyFromArray($currencyStyle);
-        $sheet->getStyle('A' . $currentRow . ':B' . $currentRow)->applyFromArray($dataStyle);
-        $currentRow += 2; // Add some space
-
-        // --- Main Data Table ---
-        $startDataTable = $currentRow;
-
-        // Table Headers
-        $sheet->setCellValue('A' . $currentRow, 'Employee Name');
-        $sheet->setCellValue('B' . $currentRow, 'SSNIT Number');
-        $sheet->setCellValue('C' . $currentRow, 'Basic Salary');
-        $sheet->setCellValue('D' . $currentRow, 'Employee SSNIT (5.5%)');
-        $sheet->setCellValue('E' . $currentRow, 'Employer SSNIT (13%)');
-        $sheet->setCellValue('F' . $currentRow, 'Total SSNIT (18.5%)');
-        $sheet->getStyle('A' . $currentRow . ':F' . $currentRow)->applyFromArray($tableHeaderStyle);
-        $currentRow++;
-
-        // Table Body
-        $rowCounter = 0;
-        foreach ($this->reportData as $data) {
-            $sheet->setCellValue('A' . $currentRow, $data['employee_name']);
-            $sheet->setCellValue('B' . $currentRow, $data['ssnit_number']);
-            $sheet->setCellValue('C' . $currentRow, (float)$data['basic_salary']);
-            $sheet->setCellValue('D' . $currentRow, (float)$data['employee_ssnit']);
-            $sheet->setCellValue('E' . $currentRow, (float)$data['employer_ssnit']);
-            $sheet->setCellValue('F' . $currentRow, (float)$data['total_ssnit']);
-
-            // Apply data styles
-            $sheet->getStyle('A' . $currentRow . ':F' . $currentRow)->applyFromArray($dataStyle);
-            $sheet->getStyle('C' . $currentRow . ':F' . $currentRow)->applyFromArray($currencyStyle);
-
-            // Alternating row color
-            if ($rowCounter % 2 == 1) {
-                $sheet->getStyle('A' . $currentRow . ':F' . $currentRow)->getFill()
-                      ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
-                      ->setStartColor(new Color('FFF0F0F0')); // Lighter grey
+                $sheet->getStyle('C' . $currentRow . ':F' . $currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+                $currentRow++;
             }
-            $rowCounter++;
-            $currentRow++;
+
+            // --- Total Row ---
+            $currentRow++; // Add a little space
+            $sheet->setCellValue('B' . $currentRow, 'TOTALS');
+            $sheet->setCellValue('C' . $currentRow, number_format($totalBasicSalary, 2));
+            $sheet->setCellValue('D' . $currentRow, number_format($totalEmployeeSsnit, 2));
+            $sheet->setCellValue('E' . $currentRow, number_format($totalEmployerSsnit, 2));
+            $sheet->setCellValue('F' . $currentRow, number_format($totalOverallSsnit, 2));
+            $sheet->getStyle('B' . $currentRow . ':F' . $currentRow)->getFont()->setBold(true);
+            $sheet->getStyle('C' . $currentRow . ':F' . $currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+
+            // Auto size columns
+            foreach (range('A', 'F') as $col) {
+                $sheet->getColumnDimension($col)->setAutoSize(true);
+            }
+
+            // Create a writer and save to a temporary file
+            $writer = new Xlsx($spreadsheet);
+            $tempFile = tempnam(sys_get_temp_dir(), 'ssnit_excel_');
+            $writer->save($tempFile);
+
+            return $tempFile;
+
+        } catch (\Exception $e) {
+            Log::critical("Failed to generate SSNIT Excel report: " . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            $emptyFile = tempnam(sys_get_temp_dir(), 'ssnit_excel_error_');
+            file_put_contents($emptyFile, "Error generating report.");
+            return $emptyFile;
         }
-
-        // Total Row
-        $sheet->setCellValue('A' . $currentRow, 'TOTALS');
-        $sheet->mergeCells('A' . $currentRow . ':B' . $currentRow);
-        $sheet->setCellValue('C' . $currentRow, $totalBasicSalary);
-        $sheet->setCellValue('D' . $currentRow, $totalEmployeeSsnit);
-        $sheet->setCellValue('E' . $currentRow, $totalEmployerSsnit);
-        $sheet->setCellValue('F' . $currentRow, $totalOverallSsnit);
-        $sheet->getStyle('A' . $currentRow . ':F' . $currentRow)->applyFromArray($tableHeaderStyle);
-        $sheet->getStyle('C' . $currentRow . ':F' . $currentRow)->applyFromArray($currencyStyle);
-        
-        $currentRow++; // For spacing
-
-        // Auto size columns
-        foreach (range('A', 'F') as $col) {
-            $sheet->getColumnDimension($col)->setAutoSize(true);
-        }
-
-        // Create a writer
-        $writer = new Xlsx($spreadsheet);
-
-        // Create a temporary file
-        $tempFile = tempnam(sys_get_temp_dir(), 'ssnit_excel_report_');
-        $writer->save($tempFile);
-
-        // Return the path to the temporary file
-        return $tempFile;
     }
 }

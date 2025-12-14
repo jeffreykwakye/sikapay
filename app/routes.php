@@ -449,6 +449,11 @@ return [
         'permission' => ['PermissionMiddleware', 'payroll:view_all'],
         'handler' => ['StatutoryReportController', 'generatePayeReportExcel']
     ]],
+    ['GET', '/reports/paye/csv/{periodId:\d+}', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'payroll:view_all'],
+        'handler' => ['StatutoryReportController', 'generatePayeReportCsv']
+    ]],
     ['GET', '/reports/ssnit/pdf/{periodId:\d+}', [
         'auth' => 'AuthMiddleware',
         'permission' => ['PermissionMiddleware', 'payroll:view_all'],
@@ -458,6 +463,11 @@ return [
         'auth' => 'AuthMiddleware',
         'permission' => ['PermissionMiddleware', 'payroll:view_all'],
         'handler' => ['StatutoryReportController', 'generateSsnitReportExcel']
+    ]],
+    ['GET', '/reports/ssnit/csv/{periodId:\d+}', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'payroll:view_all'],
+        'handler' => ['StatutoryReportController', 'generateSsnitReportCsv']
     ]],
     // New Bank Advice Routes
     ['GET', '/reports/bank-advice/pdf/{periodId:\d+}', [
@@ -469,6 +479,11 @@ return [
         'auth' => 'AuthMiddleware',
         'permission' => ['PermissionMiddleware', 'payroll:view_all'],
         'handler' => ['StatutoryReportController', 'generateBankAdviceExcel']
+    ]],
+    ['GET', '/reports/bank-advice/csv/{periodId:\d+}', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'payroll:view_all'],
+        'handler' => ['StatutoryReportController', 'generateBankAdviceCsv']
     ]],
     // New route for downloading all payslips as a ZIP
     ['GET', '/reports/payslips/zip/{periodId:\d+}', [
