@@ -68,6 +68,7 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 | **Support Messaging** | Tenant-to-Super Admin Support Tickets with Replies; Super Admin Interface | **Complete** | Tenants can submit/reply to tickets; Super Admins can view/respond to all tickets, with notification system and open ticket count badge. |
 | **Leave Management** | Comprehensive Leave Application, Approval, and Balance Tracking | **Complete** | Full workflow for leave application, approval, and balance tracking. Includes a complete notification loop (in-app & email) for submissions, approvals, and rejections. |
 | **Super Admin Impersonation** | Allow Super Admins to temporarily assume the identity of a Tenant Admin. | **Complete** | Secure session switching and restoration, with audit logging. |
+| **Professional Payslips & Reports Design** | Redesigned Payslip, PAYE, SSNIT, and Bank Advice PDFs. Includes a tenant-configurable option to add formal cover letters to statutory reports. | **Complete** | All core PDF reports now have a consistent, professional design with improved formatting and optional, dynamically addressed cover letters. |
 
 | **Configuration System** | Replaced .env with native app/config.php; refactored AppConfig | **Complete** | Supports shared hosting environments and improves configuration management. |
 
@@ -81,43 +82,3 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 | **Tenant Admin (Example)** | `beta.admin@beta.com` | `password` | Tenant-scoped (e.g., Tenant ID 3) |
 
 **Note on Tenant Credentials:** New tenants (e.g., `beta.admin@beta.com`) are now created directly via the Super Admin Dashboard and are fully operational for testing.
-
----
-
-
-
-## 🚀 Next Focus Area
-
-
-
-
-
-
-
-**Super Admin - Impersonate Tenant Admin**
-
-
-
-
-
-
-
-*   **Objective:** Allow Super Admins to temporarily assume the identity of a Tenant Admin for a specific tenant to assist with tenant-specific operations (e.g., user management, payroll runs).
-
-
-
-*   **Future Tasks:**
-
-
-
-    *   Implement secure session switching and restoration mechanisms in the `Auth` module.
-
-
-
-    *   Develop UI integration for initiating and exiting impersonation on the tenant details page.
-
-
-
-    *   Ensure robust audit logging of all impersonation activities for security and compliance.
-
-

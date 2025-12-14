@@ -12,7 +12,7 @@
 - Tenant Support Messaging System: Implemented tenant-to-Super Admin support ticket system with replies, Super Admin interface for viewing/responding, notification system, and open ticket count badge. Includes prevention of replies/responses to closed tickets.
 - Configuration System Overhaul: Replaced `.env` file loading with a native `app/config.php` file to support shared hosting environments. Refactored `AppConfig` and related services, and debugged production database connection issues.
 - Leave Management: Implemented comprehensive leave application, approval, and balance tracking, including full CRUD for leave types and application workflows.
-- Super Admin - Impersonate Tenant Admin: Allows Super Admins to temporarily assume the identity of a Tenant Admin for a specific tenant to assist with tenant-specific operations.
+- Super Admin - Impersonate Tenant Admin: Allows Super Admins to temporarily assume the identity of a Tenant Admin for a specific tenant to assist with tenant-specific operations (e.g., user management, payroll runs).
 - CSRF Token after Logout: Fixed CSRF token generation issue on login page after user logout to prevent authentication errors.
 - Clean up Employee Tables: Removed email and hire date columns from the employee tables in `resources/views/employee/index.php`, `resources/views/employee/active.php`, and `resources/views/employee/inactive.php` to simplify the tables.
 - Branded Emails: Implemented standardized, professional HTML email templates with tenant-specific branding (logo, name) and updated the email service and relevant controllers to use these templates. Tested successfully by sending an email from the Super Admin panel to a tenant.
@@ -27,27 +27,37 @@
 - Fix Leave Application Route and Method: Resolved the fatal error where `LeaveController` lacked the `applyForLeave` method. This involved removing the invalid route in `app/routes.php` that pointed to `LeaveController@applyForLeave`, and adding the `applyForLeave` method to `EmployeeController.php` along with a new route `['POST', '/my-account/leave/apply', ...]` pointing to it. This correctly re-establishes the leave application submission functionality for the "My Account" page.
 - Fix My Account Leave Form Action: Corrected the `action` attribute of the leave application form in `resources/views/employee/my_account/index.php` from `/leave/apply` to `/my-account/leave/apply`, resolving the `Route Not Found (404)` error for form submissions.
 - Seed `self:apply_leave` Permission: Added the `self:apply_leave` permission to the `permissions` table and assigned it to the `tenant_admin`, `hr_manager`, `accountant`, and `employee` roles in `app/Commands/SeedCommand.php` to resolve the "Undefined Permission Key" error.
-- Leave Management Notifications & Fixes: Fixed the silent leave application submission bug by allowing all submissions regardless of balance. Implemented a full notification loop (in-app and email) for the entire leave workflow (submission, approval, rejection). Resolved multiple fatal errors during implementation.
+- Leave Management Notifications & Fixes: Fixed the silent leave application submission bug by allowing all submissions regardless of balance. Implemented a full notification loop (in-app & email) for the entire leave workflow (submission, approval, rejection). Resolved multiple fatal errors during implementation.
 - Employee Salary Management & Department View Refinement: Implemented UI for immediate basic salary updates with history logging. Removed Gross Pay, Net Pay, and PAYE columns from the department list view to optimize space.
-- Super Admin - Impersonate Tenant Admin: Allows Super Admins to temporarily assume the identity of a Tenant Admin for a specific tenant to assist with tenant-specific operations (e.g., user management, payroll runs).
+- Payroll Element Fix: Fixed issue where adding/updating payroll elements failed on live server due to `calculation_base` truncation and boolean handling.
+- Subscription Management Page: Created a dedicated "How to Renew/Manage Subscription" page (`/subscription/how-to-pay`) with manual payment instructions (bank and mobile money details), updated support contact information, and abstracted internal roles. Linked from the main subscription page.
+- Payslip Design Enhancements:
+    - Redesigned Payslip PDF (`PayslipPdfGenerator.php`) for a more professional look.
+    - Implemented a two-column layout below the header for Company and Employee details.
+    - Updated the Net Pay section to display "Net Pay" and be right-aligned with the amount.
+    - Ensured `payment_date` is a required field when creating payroll periods to prevent "N/A" on payslips.
+    - Redesigned Earnings and Deductions tables with clearer headers and sub-headers ("Item", "Amount (GHS)") and implemented seamless border drawing.
+    - Changed the primary header color to Teal for a fresh, professional look (excluding Net Pay which retains darker blue).
+    - Fixed border gaps in Earnings/Deductions tables for seamless vertical/horizontal lines.
+- Professional Statutory Reports: Redesigned the PAYE, SSNIT, and Bank Advice PDF reports with a professional and consistent layout, color scheme, and typography. Implemented a new feature for tenants to configure and automatically generate formal cover letters for these reports. Cover letters are dynamically addressed using new tenant profile settings and include total amounts written in words, powered by the `kwn/number-to-words` package. Fixed several bugs during implementation related to database transactions and library usage.
+- Payslip Design Testing Setup: Created a test route (`/test/payslip-sample`) and controller method (`TestController::payslipSample`) to generate a sample payslip PDF with hardcoded data, allowing for easy design iteration. Removed permission requirement for testing.
 
-## SikaPay Project Status (2025-11-17)
+## Immediate Priorities (Next Focus Area)
 
-### Project Overview
-SikaPay is a robust, multi-tenant SaaS payroll application designed for the Ghanaian market, adhering to local statutory requirements. It is built using a vanilla PHP MVC architecture, emphasizing data isolation, comprehensive Role-Based Access Control (RBAC), and modular features.
+Based on the Product Requirements Document (PRD) and recent discussions, the immediate priorities for development are:
 
-### Current State
-The foundational pillars of SikaPay are successfully implemented:
--   **Tenant Management:** Provisioning, administration, and data isolation are fully functional.
--   **User Management:** Comprehensive RBAC with Super Admin, Tenant Admin, and Employee roles is in place.
--   **Employee Management:** Full CRUD operations for employee records are supported, including active/inactive staff views.
--   **Core Payroll:** The core payroll engine, including calculations and payslip generation, is operational.
--   **Reporting:** Statutory reporting (PAYE, SSNIT) is implemented.
--   **Company Profile:** Tenant company profile management is available.
--   **Dashboard:** A dynamic dashboard with KPIs and payroll summaries is integrated.
--   **Notifications:** An in-app notification system is active.
--   **Audit & Compliance:** Activity logging and a dedicated audit page are functional.
--   **Employee Self-Service Portal (`/my-account`):** Initial setup is complete, and employees can successfully update their profile information. The previous issue causing a crash after profile updates has been resolved.
--   **Super Admin Features:** The Super Admin dashboard has been overhauled with new KPIs and charts. Full CRUD functionality for subscription plans and global statutory rates (SSNIT and Withholding Tax) has been implemented. Automated subscription lifecycle management, including checking for expired subscriptions and sending notifications, is in place.
--   **Tenant Subscription Management:** Implemented tenant-facing page for viewing current subscription plan, features, and history.
--   **Tenant Support Messaging System:** Implemented tenant-to-Super Admin support ticket system with replies, Super Admin interface for viewing/responding, notification system, and open ticket count badge. Includes prevention of replies/responses to closed tickets.
+1.  **Finalize Payslip Design:**
+    *   **Objective:** Reviewed and finalized the payslip design, ensuring visual perfection and clarity.
+    *   **Tasks:** Completed all aesthetic and layout adjustments for `PayslipPdfGenerator.php`, including independent earnings/deductions tables, corrected employer contribution border, payroll period relocation, logo path correction, fine-tuned header (deeper gray with white text) and Net Pay (darker gray with white text) color scheme, and adjusted logo and 'PAYSLIP' text positioning.
+
+2.  **Professional Statutory Reports Redesign (PDF & Excel):**
+    *   **Objective:** Apply new professional design principles to all statutory PDF reports.
+    *   **Status:** **Complete**. All core PDF reports (PAYE, SSNIT, Bank Advice) have been redesigned with professional headers, layouts, and a consistent color scheme.
+
+3.  **Implement Test Samples for Reports:**
+    *   **Objective:** Create dedicated test routes and controller methods for each statutory report.
+    *   **Status:** **Complete**. Test samples are available for all redesigned PDF reports.
+
+4.  **Audit Payslip Data:**
+    *   **Objective:** Ensure all necessary employee data (like `employment_type`, `tin_number`, `ssnit_number`) and tenant data (like `support_email`, `phone_number`) are correctly retrieved and passed to the `PayslipPdfGenerator` from `PayrollService.php`.
+    *   **Tasks:** Verify `PayrollService.php` methods responsible for fetching this data.

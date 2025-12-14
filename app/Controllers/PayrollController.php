@@ -77,7 +77,7 @@ class PayrollController extends Controller
             'period_name' => 'required|min:3|max:100',
             'start_date' => 'required|date',
             'end_date' => 'required|date',
-            'payment_date' => 'optional|date',
+            'payment_date' => 'required|date',
         ]);
 
         if ($validator->fails()) {

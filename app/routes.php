@@ -214,6 +214,35 @@ return [
         'permission' => ['PermissionMiddleware', 'system:test_route'], 
         'handler' => ['TestController', 'index']
     ]],
+    ['GET', '/test/payslip-sample', [ // New route for sample payslip
+        'auth' => 'AuthMiddleware', 
+        'handler' => ['TestController', 'payslipSample']
+    ]],
+    ['GET', '/test/paye-pdf-sample', [ // New route for sample PAYE PDF
+        'auth' => 'AuthMiddleware', 
+        'handler' => ['TestController', 'payePdfSample']
+    ]],
+    ['GET', '/test/ssnit-pdf-sample', [ // New route for sample SSNIT PDF
+        'auth' => 'AuthMiddleware', 
+        'handler' => ['TestController', 'ssnitPdfSample']
+    ]],
+    ['GET', '/test/bank-advice-pdf-sample', [ // New route for sample Bank Advice PDF
+        'auth' => 'AuthMiddleware', 
+        'handler' => ['TestController', 'bankAdvicePdfSample']
+    ]],
+    ['GET', '/test/paye-excel-sample', [ // New route for sample PAYE Excel
+        'auth' => 'AuthMiddleware', 
+        'handler' => ['TestController', 'payeExcelSample']
+    ]],
+    ['GET', '/test/ssnit-excel-sample', [ // New route for sample SSNIT Excel
+        'auth' => 'AuthMiddleware', 
+        'handler' => ['TestController', 'ssnitExcelSample']
+    ]],
+    ['GET', '/test/bank-advice-excel-sample', [ // New route for sample Bank Advice Excel
+        'auth' => 'AuthMiddleware', 
+        'handler' => ['TestController', 'bankAdviceExcelSample']
+    ]],
+
 
 
     // =========================================================

@@ -7,6 +7,7 @@ use Jeffrey\Sikapay\Controllers\Controller;
 use Jeffrey\Sikapay\Models\PayrollPeriodModel;
 use Jeffrey\Sikapay\Models\PayslipModel;
 use Jeffrey\Sikapay\Models\TenantProfileModel;
+use Jeffrey\Sikapay\Models\PayrollSettingsModel; // Added
 use Jeffrey\Sikapay\Core\Auth;
 use Jeffrey\Sikapay\Helpers\PayeReportPdfGenerator;
 use Jeffrey\Sikapay\Helpers\PayeReportExcelGenerator;
@@ -26,6 +27,7 @@ class StatutoryReportController extends Controller
     private SsnitAdviceModel $ssnitAdviceModel;
     private GraPayeAdviceModel $graPayeAdviceModel;
     private BankAdviceModel $bankAdviceModel;
+    private PayrollSettingsModel $payrollSettingsModel; // Added
 
     public function __construct()
     {
@@ -36,6 +38,7 @@ class StatutoryReportController extends Controller
         $this->ssnitAdviceModel = new SsnitAdviceModel();
         $this->graPayeAdviceModel = new GraPayeAdviceModel();
         $this->bankAdviceModel = new BankAdviceModel();
+        $this->payrollSettingsModel = new PayrollSettingsModel(); // Instantiated
     }
 
     public function index(): void
@@ -59,8 +62,10 @@ class StatutoryReportController extends Controller
 
         $reportData = $this->graPayeAdviceModel->getAdviceByPeriod($periodId, $tenantId);
         $tenantData = $this->tenantProfileModel->findByTenantId($tenantId);
+        $includeCoverLetter = $this->payrollSettingsModel->getSetting($tenantId, 'include_report_cover_letters', 'false') === 'true';
 
-        $pdf = new PayeReportPdfGenerator($reportData, $tenantData, $period);
+
+        $pdf = new PayeReportPdfGenerator($reportData, $tenantData, $period, $includeCoverLetter);
         $pdfContent = $pdf->generate();
 
         header('Content-Type: application/pdf');
@@ -102,8 +107,9 @@ class StatutoryReportController extends Controller
 
         $reportData = $this->ssnitAdviceModel->getAdviceByPeriod($periodId, $tenantId);
         $tenantData = $this->tenantProfileModel->findByTenantId($tenantId);
+        $includeCoverLetter = $this->payrollSettingsModel->getSetting($tenantId, 'include_report_cover_letters', 'false') === 'true';
 
-        $pdf = new SsnitReportPdfGenerator($reportData, $tenantData, $period);
+        $pdf = new SsnitReportPdfGenerator($reportData, $tenantData, $period, $includeCoverLetter);
         $pdfContent = $pdf->generate();
 
         header('Content-Type: application/pdf');
@@ -145,6 +151,7 @@ class StatutoryReportController extends Controller
 
         $reportData = $this->bankAdviceModel->getAdviceByPeriod($periodId, $tenantId);
         $tenantData = $this->tenantProfileModel->findByTenantId($tenantId);
+        $includeCoverLetter = $this->payrollSettingsModel->getSetting($tenantId, 'include_report_cover_letters', 'false') === 'true';
 
         if (empty($reportData) || empty($tenantData)) {
             // Redirect or show an error if data is not available
@@ -152,7 +159,7 @@ class StatutoryReportController extends Controller
             return;
         }
 
-        $pdf = new BankAdvicePdfGenerator($reportData, $tenantData, $period);
+        $pdf = new BankAdvicePdfGenerator($reportData, $tenantData, $period, $includeCoverLetter);
         $pdfContent = $pdf->generate();
 
         header('Content-Type: application/pdf');

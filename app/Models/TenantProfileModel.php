@@ -22,7 +22,7 @@ class TenantProfileModel
      */
     public function findByTenantId(int $tenantId): ?array
     {
-        $stmt = $this->db->prepare("SELECT * FROM tenant_profiles WHERE tenant_id = :tenant_id");
+        $stmt = $this->db->prepare("SELECT *, ghana_revenue_authority_tin AS tin FROM tenant_profiles WHERE tenant_id = :tenant_id");
         $stmt->execute([':tenant_id' => $tenantId]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         return $result ?: null;
@@ -41,7 +41,10 @@ class TenantProfileModel
         // Define fields to update
         $fields = [
             'legal_name', 'logo_path', 'phone_number', 
-            'support_email', 'physical_address', 'ghana_revenue_authority_tin'
+            'support_email', 'physical_address', 'ghana_revenue_authority_tin',
+            'bank_name', 'bank_branch', 'bank_address',
+            'ssnit_office_name', 'ssnit_office_address',
+            'gra_office_name', 'gra_office_address'
         ];
 
         // Prepare parameter placeholders for both INSERT and UPDATE parts

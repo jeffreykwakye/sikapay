@@ -73,7 +73,7 @@ class PayrollSettingsModel extends Model
     {
         $sql = "INSERT INTO {$this->table} (tenant_id, setting_key, setting_value)
                 VALUES (:tenant_id, :setting_key, :setting_value)
-                ON DUPLICATE KEY UPDATE setting_value = :setting_value";
+                ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)";
         
         try {
             $stmt = $this->db->prepare($sql);
