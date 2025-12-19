@@ -31,33 +31,11 @@
 - Employee Salary Management & Department View Refinement: Implemented UI for immediate basic salary updates with history logging. Removed Gross Pay, Net Pay, and PAYE columns from the department list view to optimize space.
 - Payroll Element Fix: Fixed issue where adding/updating payroll elements failed on live server due to `calculation_base` truncation and boolean handling.
 - Subscription Management Page: Created a dedicated "How to Renew/Manage Subscription" page (`/subscription/how-to-pay`) with manual payment instructions (bank and mobile money details), updated support contact information, and abstracted internal roles. Linked from the main subscription page.
-- Payslip Design Enhancements:
-    - Redesigned Payslip PDF (`PayslipPdfGenerator.php`) for a more professional look.
-    - Implemented a two-column layout below the header for Company and Employee details.
-    - Updated the Net Pay section to display "Net Pay" and be right-aligned with the amount.
-    - Ensured `payment_date` is a required field when creating payroll periods to prevent "N/A" on payslips.
-    - Redesigned Earnings and Deductions tables with clearer headers and sub-headers ("Item", "Amount (GHS)") and implemented seamless border drawing.
-    - Changed the primary header color to Teal for a fresh, professional look (excluding Net Pay which retains darker blue).
-    - Fixed border gaps in Earnings/Deductions tables for seamless vertical/horizontal lines.
-- Professional Statutory Reports: Redesigned the PAYE, SSNIT, and Bank Advice PDF reports with a professional and consistent layout, color scheme, and typography. Implemented a new feature for tenants to configure and automatically generate formal cover letters for these reports. Cover letters are dynamically addressed using new tenant profile settings and include total amounts written in words, powered by the `kwn/number-to-words` package. Implemented CSV reports for PAYE, SSNIT, and Bank Advice, ensuring number fields are explicitly treated as strings. Report format availability (PDF, CSV, Excel) is now tiered based on tenant subscription plans. Fixed several bugs during implementation related to database transactions and library usage.
+- Payslip Design Enhancements & Professional Statutory Reports: Redesigned the PAYE, SSNIT, and Bank Advice PDF reports with a professional and consistent layout. Implemented tenant-configurable cover letters with dynamic addressing and amounts in words. Added tiered CSV/Excel report generation. This involved creating a database migration, updating the company profile UI, and refactoring all PDF and new CSV/Excel generator classes.
 - Payslip Design Testing Setup: Created a test route (`/test/payslip-sample`) and controller method (`TestController::payslipSample`) to generate a sample payslip PDF with hardcoded data, allowing for easy design iteration. Removed permission requirement for testing.
 
 ## Immediate Priorities (Next Focus Area)
 
-Based on the Product Requirements Document (PRD) and recent discussions, the immediate priorities for development are:
-
-1.  **Finalize Payslip Design:**
-    *   **Objective:** Reviewed and finalized the payslip design, ensuring visual perfection and clarity.
-    *   **Tasks:** Completed all aesthetic and layout adjustments for `PayslipPdfGenerator.php`, including independent earnings/deductions tables, corrected employer contribution border, payroll period relocation, logo path correction, fine-tuned header (deeper gray with white text) and Net Pay (darker gray with white text) color scheme, and adjusted logo and 'PAYSLIP' text positioning.
-
-2.  **Professional Statutory Reports Redesign (PDF, CSV & Excel):**
-    *   **Objective:** Apply new professional design principles to all statutory PDF reports, and implement CSV and Excel reports with tiered availability.
-    *   **Status:** **Complete**. All core PDF reports (PAYE, SSNIT, Bank Advice) have been redesigned with professional headers, layouts, and a consistent color scheme. CSV and Excel reports have been implemented with tiered availability (PDF for Standard, PDF/CSV for Professional, PDF/CSV/Excel for Enterprise).
-
-3.  **Implement Test Samples for Reports:**
-    *   **Objective:** Create dedicated test routes and controller methods for each statutory report.
-    *   **Status:** **Complete**. Test samples are available for all redesigned PDF reports.
-
-4.  **Audit Payslip Data:**
-    *   **Objective:** Ensure all necessary employee data (like `employment_type`, `tin_number`, `ssnit_number`) and tenant data (like `support_email`, `phone_number`) are correctly retrieved and passed to the `PayslipPdfGenerator` from `PayrollService.php`.
-    *   **Tasks:** Verify `PayrollService.php` methods responsible for fetching this data.
+1.  **Flexible Payroll Workflow**:
+    *   **Objective:** Refactor the core payroll module from a rigid, linear process to a flexible, state-driven one (Open -> Closed). This will allow for payroll re-runs to apply corrections and require a manual "Close Period" action before payslips are finalized and notifications are sent.
+    *   **Status:** **In Progress**.

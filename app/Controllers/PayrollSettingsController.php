@@ -49,7 +49,7 @@ class PayrollSettingsController extends Controller
             $availableTaxYears = $this->taxBandModel->getAvailableTaxYears();
             
             $this->view('payroll/settings', [
-                'title' => 'Statutory Rates Overview',
+                'title' => 'Payroll Settings', // Changed title
                 'taxBands' => $taxBands,
                 'monthlyTaxBands' => $monthlyTaxBands,
                 'ssnitRate' => $ssnitRate,

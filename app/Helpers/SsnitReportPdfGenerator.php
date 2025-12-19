@@ -140,15 +140,15 @@ class SsnitReportPdfGenerator extends FPDF
         $this->SetY(55);
 
         $this->SetFont('Arial', '', 11);
+        $recipientName = $this->tenantData['ssnit_report_recipient_name'] ?? 'The Director-General';
+        $this->Cell(0, 6, $recipientName, 0, 1, 'L');
         if (!empty($this->tenantData['ssnit_office_name']) && !empty($this->tenantData['ssnit_office_address'])) {
-            $this->Cell(0, 6, 'The Manager', 0, 1, 'L');
             $this->Cell(0, 6, $this->tenantData['ssnit_office_name'], 0, 1, 'L');
             $addressLines = explode("\n", str_replace("\r\n", "\n", $this->tenantData['ssnit_office_address']));
             foreach ($addressLines as $line) {
                 $this->Cell(0, 6, $line, 0, 1, 'L');
             }
         } else {
-            $this->Cell(0, 6, 'The Director-General', 0, 1, 'L');
             $this->Cell(0, 6, 'Social Security and National Insurance Trust', 0, 1, 'L');
             $this->Cell(0, 6, 'P.O. Box MB 149', 0, 1, 'L');
             $this->Cell(0, 6, 'Accra, Ghana', 0, 1, 'L');
@@ -187,7 +187,12 @@ class SsnitReportPdfGenerator extends FPDF
         $this->Cell(80, 0, '', 'T', 1, 'L');
         $this->Ln(1);
         $this->SetFont('Arial', '', 10);
-        $this->Cell(80, 6, '(Authorised Signatory)', 0, 1, 'L');
+        $authorizedSignatory = $this->tenantData['authorized_signatory_name'] ?? 'Authorised Signatory';
+        $this->Cell(80, 6, '(' . $authorizedSignatory . ')', 0, 1, 'L');
+        $authorizedSignatoryTitle = $this->tenantData['authorized_signatory_title'] ?? 'Management';
+        if (!empty($authorizedSignatoryTitle)) {
+            $this->Cell(80, 6, $authorizedSignatoryTitle, 0, 1, 'L');
+        }
         $this->SetFont('Arial', 'B', 10);
         $this->Cell(80, 6, $this->tenantData['legal_name'], 0, 1, 'L');
     }

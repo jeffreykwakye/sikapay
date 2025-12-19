@@ -68,7 +68,7 @@ $h = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
                                     <td><?= $h($dept['employee_count']) ?></td>
                                     <td class="text-center">
                                         <a href="/departments/<?= $dept['id'] ?>/dashboard" class="btn btn-sm btn-primary me-1" title="View Details">
-                                            <i class="icon-eye"></i> View
+                                            <i class="icon-eye"></i>
                                         </a>
                                         <button 
                                             class="btn btn-sm btn-info me-1" 

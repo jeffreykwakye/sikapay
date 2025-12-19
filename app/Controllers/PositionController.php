@@ -46,6 +46,7 @@ class PositionController extends Controller
             ]);
             
             $this->view('positions/index', [
+                'title' => 'Positions', // Added title
                 'positions' => $positions,
                 'departments' => $departments, 
                 'successMessage' => $_SESSION['flash_success'] ?? null,

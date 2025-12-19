@@ -4,42 +4,61 @@ document.addEventListener('DOMContentLoaded', function() {
     const viewElementModal = document.getElementById('viewElementModal');
     if (viewElementModal) {
         viewElementModal.addEventListener('show.bs.modal', function (event) {
-            const button = event.relatedTarget; // Button that triggered the modal
+            const button = event.relatedTarget;
+            const elementId = button.getAttribute('data-id');
 
-            // --- Get data directly from the button's data-* attributes ---
-            const data = {
-                name: button.getAttribute('data-name'),
-                category: button.getAttribute('data-category'),
-                amount_type: button.getAttribute('data-amount-type'),
-                default_amount: button.getAttribute('data-default-amount'),
-                calculation_base: button.getAttribute('data-calculation-base'),
-                is_taxable: button.getAttribute('data-is-taxable'),
-                is_ssnit_chargeable: button.getAttribute('data-is-ssnit-chargeable'),
-                is_recurring: button.getAttribute('data-is-recurring'),
-                description: button.getAttribute('data-description')
-            };
+            // --- Show a loading state ---
+            const fields = [
+                'name', 'category', 'amount-type', 'default-amount', 
+                'calculation-base', 'is-taxable', 'is-ssnit-chargeable', 
+                'is-recurring', 'description'
+            ];
+            fields.forEach(field => {
+                const el = document.getElementById(`view-${field}`);
+                if (el) el.textContent = 'Loading...';
+            });
 
-            // --- Helper functions for formatting ---
-            const formatText = (text) => text ? text.charAt(0).toUpperCase() + text.slice(1).replace(/_/g, ' ') : 'N/A';
-            const formatYesNo = (value) => (value == 1 || value === '1') ? 'Yes' : 'No';
-            const formatAmount = (amount, amountType) => {
-                let formatted = amount ? parseFloat(amount).toFixed(2) : '0.00';
-                if (amountType === 'percentage') {
-                    formatted += '%';
-                }
-                return formatted;
-            };
+            // --- Fetch data from API ---
+            fetch(`/api/payroll-elements/${elementId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('API Response:', data); // Log the received data for debugging
 
-            // --- Populate modal with data from attributes ---
-            document.getElementById('view-name').textContent = data.name || 'N/A';
-            document.getElementById('view-category').textContent = formatText(data.category);
-            document.getElementById('view-amount-type').textContent = formatText(data.amount_type);
-            document.getElementById('view-default-amount').textContent = formatAmount(data.default_amount, data.amount_type);
-            document.getElementById('view-calculation-base').textContent = formatText(data.calculation_base);
-            document.getElementById('view-is-taxable').textContent = formatYesNo(data.is_taxable);
-            document.getElementById('view-is-ssnit-chargeable').textContent = formatYesNo(data.is_ssnit_chargeable);
-            document.getElementById('view-is-recurring').textContent = formatYesNo(data.is_recurring);
-            document.getElementById('view-description').textContent = data.description || 'No description provided.';
+                    // --- Helper functions for formatting ---
+                    const formatText = (text) => text ? text.charAt(0).toUpperCase() + text.slice(1).replace(/_/g, ' ') : 'N/A';
+                    const formatYesNo = (value) => (value == 1 || value === true) ? 'Yes' : 'No';
+                    const formatAmount = (amount, amountType) => {
+                        let formatted = amount ? parseFloat(amount).toFixed(2) : '0.00';
+                        if (amountType === 'percentage') {
+                            formatted += '%';
+                        }
+                        return formatted;
+                    };
+
+                    // --- Populate modal with fetched data ---
+                    document.getElementById('view-name').textContent = data.name || 'N/A';
+                    document.getElementById('view-category').textContent = formatText(data.category);
+                    document.getElementById('view-amount-type').textContent = formatText(data.amount_type);
+                    document.getElementById('view-default-amount').textContent = formatAmount(data.default_amount, data.amount_type);
+                    document.getElementById('view-calculation-base').textContent = formatText(data.calculation_base);
+                    document.getElementById('view-is-taxable').textContent = formatYesNo(data.is_taxable);
+                    document.getElementById('view-is-ssnit-chargeable').textContent = formatYesNo(data.is_ssnit_chargeable);
+                    document.getElementById('view-is-recurring').textContent = formatYesNo(data.is_recurring);
+                    document.getElementById('view-description').textContent = data.description || 'No description provided.';
+                })
+                .catch(error => {
+                    console.error('Error fetching payroll element details:', error);
+                    document.getElementById('view-name').textContent = 'Error loading details.';
+                    fields.slice(1).forEach(field => { // Clear other fields on error
+                        const el = document.getElementById(`view-${field}`);
+                        if (el) el.textContent = '';
+                    });
+                });
         });
     }
 

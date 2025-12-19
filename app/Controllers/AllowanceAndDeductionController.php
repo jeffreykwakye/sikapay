@@ -33,6 +33,7 @@ class AllowanceAndDeductionController extends Controller
             $elements = $this->customPayrollElementModel->getAllByTenant($this->tenantId);
 
             $this->view('allowances_and_deductions/index', [
+                'title' => 'Payroll Elements', // Added title
                 'elements' => $elements,
                 'successMessage' => $_SESSION['flash_success'] ?? null,
                 'errorMessage' => $_SESSION['flash_error'] ?? null,
@@ -195,5 +196,28 @@ class AllowanceAndDeductionController extends Controller
         }
 
         $this->redirect('/payroll-elements');
+    }
+
+    public function getElementDetails(string $id): void
+    {
+        $this->checkActionIsAllowed();
+        header('Content-Type: application/json');
+
+        try {
+            $elementId = (int)$id;
+            $element = $this->customPayrollElementModel->find($elementId, $this->tenantId);
+
+            if (!$element) {
+                http_response_code(404);
+                echo json_encode(['error' => 'Payroll element not found.']);
+                return;
+            }
+
+            echo json_encode($element);
+        } catch (\Throwable $e) {
+            Log::error("Failed to fetch payroll element details for ID {$id} and Tenant {$this->tenantId}: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['error' => 'A system error occurred.']);
+        }
     }
 }

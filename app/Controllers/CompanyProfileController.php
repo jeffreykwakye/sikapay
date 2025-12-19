@@ -55,6 +55,11 @@ class CompanyProfileController extends Controller
             'ssnit_office_address' => '',
             'gra_office_name' => '',
             'gra_office_address' => '',
+            'authorized_signatory_name' => '',
+            'authorized_signatory_title' => '',
+            'bank_advice_recipient_name' => '',
+            'ssnit_report_recipient_name' => '',
+            'gra_report_recipient_name' => '',
         ];
 
         // Merge defaults with fetched data. This guarantees all keys exist.
@@ -66,6 +71,7 @@ class CompanyProfileController extends Controller
 
         // Prepare the final data array for the view
         $data = [
+            'title' => 'Company Profile & Settings', // Added title
             'profile' => $profileData, 
             'include_report_cover_letters' => $includeCoverLetters,
             'planName' => $planName,
@@ -113,6 +119,15 @@ class CompanyProfileController extends Controller
         $graOfficeAddress = Sanitizer::textarea($_POST['gra_office_address'] ?? '');
         $includeCoverLetters = isset($_POST['include_report_cover_letters']) ? 'true' : 'false';
 
+        // New fields for cover letters
+        $authorizedSignatoryName = Sanitizer::text($_POST['authorized_signatory_name'] ?? '');
+        $bankAdviceRecipientName = Sanitizer::text($_POST['bank_advice_recipient_name'] ?? '');
+        $ssnitReportRecipientName = Sanitizer::text($_POST['ssnit_report_recipient_name'] ?? '');
+        $graReportRecipientName = Sanitizer::text($_POST['gra_report_recipient_name'] ?? '');
+
+        // New field for signatory title
+        $authorizedSignatoryTitle = Sanitizer::text($_POST['authorized_signatory_title'] ?? '');
+
         // IMPORTANT: Fetch the current profile to retain the existing logo path
         $currentProfile = $this->profileModel->findByTenantId($this->tenantId);
         $logoPath = $currentProfile['logo_path'] ?? null; 
@@ -137,6 +152,11 @@ class CompanyProfileController extends Controller
             'ssnit_office_address' => $ssnitOfficeAddress,
             'gra_office_name' => $graOfficeName,
             'gra_office_address' => $graOfficeAddress,
+            'authorized_signatory_name' => $authorizedSignatoryName,
+            'authorized_signatory_title' => $authorizedSignatoryTitle,
+            'bank_advice_recipient_name' => $bankAdviceRecipientName,
+            'ssnit_report_recipient_name' => $ssnitReportRecipientName,
+            'gra_report_recipient_name' => $graReportRecipientName,
         ];
 
         // 3. Business Logic (UPSERT)
@@ -214,6 +234,52 @@ class CompanyProfileController extends Controller
         } catch (Exception $e) {
             Log::error("Logo upload failed: " . $e->getMessage());
             $_SESSION['flash_error'] = "Logo upload failed: " . $e->getMessage();
+        }
+
+        $this->redirect('/company-profile');
+    }
+
+    /**
+     * Handles POST request to remove the company logo.
+     */
+    public function removeLogo(): void
+    {
+        $this->checkActionIsAllowed();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('/company-profile');
+        }
+
+        if (!CsrfToken::validate($_POST['csrf_token'] ?? '')) {
+            CsrfToken::destroyToken();
+            $_SESSION['flash_error'] = "Security error: Invalid CSRF token. Please try again.";
+            $this->redirect('/company-profile');
+        }
+
+        try {
+            $currentProfile = $this->profileModel->findByTenantId($this->tenantId);
+            $logoPath = $currentProfile['logo_path'] ?? null;
+
+            if ($logoPath) {
+                // IMPORTANT: Construct the full, absolute path to the file for deletion
+                $fullLogoPath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'public' . $logoPath;
+
+                // 1. Delete the physical file
+                if (file_exists($fullLogoPath)) {
+                    unlink($fullLogoPath);
+                }
+
+                // 2. Update the database by setting the logo_path to null
+                $profileData = array_merge($currentProfile, ['logo_path' => null]);
+                $this->profileModel->save($this->tenantId, $profileData);
+
+                Log::info("Company logo removed by User {$this->userId} for Tenant {$this->tenantId}.");
+                $_SESSION['flash_success'] = "Company logo removed successfully.";
+            } else {
+                $_SESSION['flash_warning'] = "No logo to remove.";
+            }
+        } catch (Exception $e) {
+            Log::error("Failed to remove logo for Tenant {$this->tenantId}: " . $e->getMessage());
+            $_SESSION['flash_error'] = "An error occurred while trying to remove the logo.";
         }
 
         $this->redirect('/company-profile');

@@ -336,6 +336,7 @@ $e = $employee; // Existing employee data
                         <div class="col-md-6 mb-3">
                             <label for="is_active" class="form-label">Account Status</label>
                             <div class="form-check form-switch">
+                                <input type="hidden" name="is_active" value="0">
                                 <input class="form-check-input" type="checkbox" role="switch" id="is_active" name="is_active" value="1" <?= ($e['is_active'] ?? 0) ? 'checked' : '' ?>>
                                 <label class="form-check-label" for="is_active">Account is Active</label>
                             </div>

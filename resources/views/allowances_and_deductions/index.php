@@ -66,42 +66,38 @@ if (!isset($h)) {
                                     <tr>
                                         <th>Name</th>
                                         <th>Category</th>
-                                        <th>Amount Type</th>
+                                        <th>Type</th>
                                         <th>Default Amount</th>
-                                        <th>Calculation Base</th>
-                                        <th>Taxable</th>
-                                        <th>SSNIT Chargeable</th>
-                                        <th>Recurring</th>
                                         <th class="text-center">Actions</th>
                                     </tr>
                                 </thead>
-                                <tfoot>
-                                    <tr>
-                                        <th>Name</th>
-                                        <th>Category</th>
-                                        <th>Amount Type</th>
-                                        <th>Default Amount</th>
-                                        <th>Calculation Base</th>
-                                        <th>Taxable</th>
-                                        <th>SSNIT Chargeable</th>
-                                        <th>Recurring</th>
-                                        <!-- <th class="text-center">Actions</th> -->
-                                    </tr>
-                                </tfoot>
                                 <tbody>
                                     <?php foreach ($elements as $element): ?>
                                     <tr>
                                         <td><?= $h($element['name']) ?></td>
-                                        <td><?= $h(ucfirst($element['category'])) ?></td>
+                                        <td><span class="badge <?= $element['category'] === 'allowance' ? 'bg-success' : 'bg-warning' ?>"><?= $h(ucfirst($element['category'])) ?></span></td>
                                         <td><?= $h(ucfirst($element['amount_type'])) ?></td>
-                                        <td><?= $h(number_format((float)$element['default_amount'], 2)) ?></td>
-                                        <td><?= $h($element['calculation_base'] ?? 'N/A') ?></td>
-                                        <td><?= $element['is_taxable'] ? 'Yes' : 'No' ?></td>
-                                        <td><?= $element['is_ssnit_chargeable'] ? 'Yes' : 'No' ?></td>
-                                        <td><?= $element['is_recurring'] ? 'Yes' : 'No' ?></td>
+                                        <td><?= $h(number_format((float)$element['default_amount'], 2)) ?><?= $element['amount_type'] === 'percentage' ? '%' : '' ?></td>
                                         <td class="text-center">
                                             <button 
-                                                class="btn btn-sm btn-info me-1" 
+                                                class="btn btn-sm btn-link btn-info view-btn" 
+                                                title="View Details"
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#viewElementModal"
+                                                data-name="<?= $h($element['name']) ?>"
+                                                data-category="<?= $h($element['category']) ?>"
+                                                data-amount-type="<?= $h($element['amount_type']) ?>"
+                                                data-default-amount="<?= $h($element['default_amount']) ?>"
+                                                data-calculation-base="<?= $h($element['calculation_base']) ?>"
+                                                data-is-taxable="<?= $h($element['is_taxable']) ?>"
+                                                data-is-ssnit-chargeable="<?= $h($element['is_ssnit_chargeable']) ?>"
+                                                data-is-recurring="<?= $h($element['is_recurring']) ?>"
+                                                data-description="<?= $h($element['description']) ?>"
+                                            >
+                                                <i class="icon-eye"></i>
+                                            </button>
+                                            <button 
+                                                class="btn btn-sm btn-link btn-primary edit-btn" 
                                                 title="Edit" 
                                                 data-bs-toggle="modal" 
                                                 data-bs-target="#editModal"
@@ -120,7 +116,7 @@ if (!isset($h)) {
                                             </button>
                                             
                                             <button 
-                                                class="btn btn-sm btn-danger delete-btn" 
+                                                class="btn btn-sm btn-link btn-danger delete-btn" 
                                                 title="Delete"
                                                 data-bs-toggle="modal" 
                                                 data-bs-target="#deleteConfirmModal"
@@ -140,6 +136,51 @@ if (!isset($h)) {
                     </div>
                 </div>
                 
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Details Modal -->
+<div class="modal fade" id="viewElementModal" tabindex="-1" aria-labelledby="viewElementModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="viewElementModalLabel">Payroll Element Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <dl class="row">
+                    <dt class="col-sm-5">Name:</dt>
+                    <dd class="col-sm-7" id="view-name"></dd>
+
+                    <dt class="col-sm-5">Category:</dt>
+                    <dd class="col-sm-7" id="view-category"></dd>
+
+                    <dt class="col-sm-5">Amount Type:</dt>
+                    <dd class="col-sm-7" id="view-amount-type"></dd>
+
+                    <dt class="col-sm-5">Default Amount:</dt>
+                    <dd class="col-sm-7" id="view-default-amount"></dd>
+
+                    <dt class="col-sm-5">Calculation Base:</dt>
+                    <dd class="col-sm-7" id="view-calculation-base"></dd>
+
+                    <dt class="col-sm-5">Taxable:</dt>
+                    <dd class="col-sm-7" id="view-is-taxable"></dd>
+
+                    <dt class="col-sm-5">SSNIT Chargeable:</dt>
+                    <dd class="col-sm-7" id="view-is-ssnit-chargeable"></dd>
+
+                    <dt class="col-sm-5">Recurring:</dt>
+                    <dd class="col-sm-7" id="view-is-recurring"></dd>
+
+                    <dt class="col-sm-5">Description:</dt>
+                    <dd class="col-sm-7"><p id="view-description"></p></dd>
+                </dl>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>

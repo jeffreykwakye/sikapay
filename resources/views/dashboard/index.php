@@ -25,7 +25,7 @@
 <?php else: ?>
     <!-- KPI CARDS ROW -->
     <div class="row">
-        <div class="col-xl-3">
+        <div class="col-lg-4 col-md-6">
             <div class="card card-stats card-info card-round">
                 <div class="card-body">
                     <div class="row">
@@ -45,7 +45,7 @@
             </div>
         </div>
 
-        <div class="col-xl-3">
+        <div class="col-lg-4 col-md-6">
             <div class="card card-stats card-secondary card-round">
                 <div class="card-body">
                     <div class="row">
@@ -65,27 +65,7 @@
             </div>
         </div>
 
-        <div class="col-xl-3">
-            <div class="card card-stats card-success card-round">
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-5">
-                            <div class="icon-big text-center">
-                                <i class="fas fa-star"></i>
-                            </div>
-                        </div>
-                        <div class="col-7 col-stats">
-                            <div class="numbers">
-                                <p class="card-category">Current Plan</p>
-                                <p class="card-title fs-5"><?= $h($subscriptionPlan ?? 'N/A') ?></p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3">
+        <div class="col-lg-4 col-md-6">
             <div class="card card-stats card-danger card-round">
                 <div class="card-body">
                     <div class="row">

@@ -8,7 +8,7 @@
         <nav class="pull-left">
             <ul class="nav">
                 <li class="nav-item">
-                    <small><?= $tenantName ?? 'N/A' ?></small>
+                    <small><strong><?= $tenantName ?? 'N/A' ?></strong></small>
                 </li>
                 <!-- <li class="nav-item">
                     <a class="nav-link" href="#"> Help </a>

@@ -44,7 +44,9 @@ class TenantProfileModel
             'support_email', 'physical_address', 'ghana_revenue_authority_tin',
             'bank_name', 'bank_branch', 'bank_address',
             'ssnit_office_name', 'ssnit_office_address',
-            'gra_office_name', 'gra_office_address'
+            'gra_office_name', 'gra_office_address',
+            'authorized_signatory_name', 'authorized_signatory_title', 'bank_advice_recipient_name',
+            'ssnit_report_recipient_name', 'gra_report_recipient_name'
         ];
 
         // Prepare parameter placeholders for both INSERT and UPDATE parts

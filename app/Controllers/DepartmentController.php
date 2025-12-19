@@ -74,6 +74,7 @@ class DepartmentController extends Controller
             $employeeCountData = array_column($departmentData, 'employee_count');
 
             $this->view('departments/index', [
+                'title' => 'Departments', // Added title
                 'departments' => $departmentData,
                 'latestPeriodName' => $latestPeriod['period_name'] ?? 'N/A',
                 'chartLabels' => json_encode($chartLabels),

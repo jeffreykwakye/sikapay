@@ -12,6 +12,7 @@ use Jeffrey\Sikapay\Models\LeaveBalanceModel;
 use Jeffrey\Sikapay\Services\EmailService;
 use Jeffrey\Sikapay\Services\NotificationService;
 use Jeffrey\Sikapay\Models\UserModel;
+use Jeffrey\Sikapay\Models\AuditModel;
 use \Throwable;
 
 class LeaveController extends Controller
@@ -22,6 +23,7 @@ class LeaveController extends Controller
     protected NotificationService $notificationService;
     private EmailService $emailService;
     protected UserModel $userModel;
+    protected AuditModel $auditModel;
 
     public function __construct()
     {
@@ -32,6 +34,7 @@ class LeaveController extends Controller
         $this->notificationService = new NotificationService();
         $this->emailService = new EmailService();
         $this->userModel = new UserModel();
+        $this->auditModel = new AuditModel();
     }
 
     public function index(): void
@@ -361,5 +364,108 @@ class LeaveController extends Controller
         }
 
         $this->redirect('/leave');
+    }
+
+    /**
+     * API endpoint to get details for a single leave application.
+     * Returns JSON data for a specific leave application by ID.
+     */
+    public function getLeaveApplicationDetails(string $id): void
+    {
+        $id = (int)$id;
+        header('Content-Type: application/json');
+
+        try {
+            $application = $this->leaveApplicationModel->findById($id, $this->tenantId);
+
+            if (!$application) {
+                http_response_code(404);
+                echo json_encode(['success' => false, 'message' => 'Leave application not found or you do not have permission to view it.']);
+                exit;
+            }
+
+            // Fetch employee details
+            $employee = $this->userModel->find((int)$application['user_id']);
+            $employeeName = $employee ? $employee['first_name'] . ' ' . $employee['last_name'] : 'Unknown Employee';
+
+            // Fetch remaining leave balance for this leave type for the employee
+            $leaveBalance = $this->leaveBalanceModel->getBalance((int)$application['user_id'], $this->tenantId, (int)$application['leave_type_id']);
+            
+            $data = [
+                'id' => $application['id'],
+                'employee_name' => $employeeName,
+                'leave_type_name' => $application['leave_type_name'],
+                'start_date' => date('M d, Y', strtotime($application['start_date'])),
+                'end_date' => date('M d, Y', strtotime($application['end_date'])),
+                'total_days' => (float)$application['total_days'],
+                'reason' => $application['reason'],
+                'submitted_date' => date('M d, Y H:i', strtotime($application['created_at'])),
+                'status' => $application['status'],
+                'remaining_balance' => $leaveBalance['balance'] ?? 0, // Default to 0 if no balance record
+                'user_id' => $application['user_id'], // Include user_id for potential future use or debugging
+            ];
+
+            echo json_encode(['success' => true, 'data' => $data]);
+            exit;
+
+        } catch (Throwable $e) {
+            Log::error("Failed to fetch leave application details for ID {$id}: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'An error occurred while fetching leave application details.']);
+            exit;
+        }
+    }
+
+    /**
+     * API endpoint to mark a leave application as returned.
+     * Changes the status of an approved leave application to 'returned'.
+     */
+    public function markAsReturned(string $id): void
+    {
+        $id = (int)$id;
+        $this->checkPermission('leave:approve'); // Same permission as approving leave
+        header('Content-Type: application/json');
+
+        try {
+            $application = $this->leaveApplicationModel->findById($id, $this->tenantId);
+
+            if (!$application) {
+                http_response_code(404);
+                echo json_encode(['success' => false, 'message' => 'Leave application not found.']);
+                exit;
+            }
+
+            // Only allow marking as returned if status is 'approved'
+            // Consider also if end_date has passed or is today for stricter logic
+            if ($application['status'] !== 'approved') {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Cannot mark leave as returned. Application is not in an approved state.']);
+                exit;
+            }
+
+            $success = $this->leaveApplicationModel->updateStatus($id, $this->tenantId, 'returned', $this->userId);
+
+            if ($success) {
+                // Log the action
+                $this->auditModel->log(
+                    $this->tenantId, 
+                    'Leave Application Marked as Returned: ' . $application['leave_type_name'],
+                    ['leave_application_id' => $id, 'user_id' => $application['user_id']]
+                );
+
+                echo json_encode(['success' => true, 'message' => 'Leave application marked as returned.']);
+                exit;
+            } else {
+                http_response_code(500);
+                echo json_encode(['success' => false, 'message' => 'Failed to mark leave application as returned.']);
+                exit;
+            }
+
+        } catch (Throwable $e) {
+            Log::error("Failed to mark leave application ID {$id} as returned: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'An error occurred while marking leave application as returned.']);
+            exit;
+        }
     }
 }

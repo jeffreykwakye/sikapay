@@ -153,17 +153,17 @@ class PayeReportPdfGenerator extends FPDF
 
         // Recipient Info (GRA) - Dynamic based on tenant settings
         $this->SetFont('Arial', '', 11);
+        $recipientName = $this->tenantData['gra_report_recipient_name'] ?? 'The Commissioner';
+        $this->Cell(0, 6, $recipientName, 0, 1, 'L');
         if (!empty($this->tenantData['gra_office_name']) && !empty($this->tenantData['gra_office_address'])) {
-            $this->Cell(0, 6, 'The Manager', 0, 1, 'L');
             $this->Cell(0, 6, $this->tenantData['gra_office_name'], 0, 1, 'L');
             // Handle multi-line address
             $addressLines = explode("\n", str_replace("\r\n", "\n", $this->tenantData['gra_office_address']));
             foreach ($addressLines as $line) {
-                $this->Cell(0, 6, $line, 0, 1, 'L');
+                $this->MultiCell(0, 6, $line, 0, 'L');
             }
         } else {
             // Fallback to default
-            $this->Cell(0, 6, 'The Commissioner', 0, 1, 'L');
             $this->Cell(0, 6, 'Ghana Revenue Authority (GRA)', 0, 1, 'L');
             $this->Cell(0, 6, 'Accra, Ghana', 0, 1, 'L');
         }
@@ -205,7 +205,12 @@ class PayeReportPdfGenerator extends FPDF
         $this->Cell(80, 0, '', 'T', 1, 'L');
         $this->Ln(1);
         $this->SetFont('Arial', '', 10);
-        $this->Cell(80, 6, '(Authorised Signatory)', 0, 1, 'L');
+        $authorizedSignatory = $this->tenantData['authorized_signatory_name'] ?? 'Authorised Signatory';
+        $this->Cell(80, 6, '(' . $authorizedSignatory . ')', 0, 1, 'L');
+        $authorizedSignatoryTitle = $this->tenantData['authorized_signatory_title'] ?? 'Management';
+        if (!empty($authorizedSignatoryTitle)) {
+            $this->Cell(80, 6, $authorizedSignatoryTitle, 0, 1, 'L');
+        }
         $this->SetFont('Arial', 'B', 10);
         $this->Cell(80, 6, $this->tenantData['legal_name'], 0, 1, 'L');
     }

@@ -21,15 +21,16 @@ class LeaveBalanceModel extends Model
      * @param int $leaveTypeId
      * @return array|null The leave balance record, or null if not found.
      */
-    public function getBalance(int $userId, int $leaveTypeId): ?array
+    public function getBalance(int $userId, int $tenantId, int $leaveTypeId): ?array
     {
         $sql = "SELECT * FROM {$this->table} 
-                WHERE user_id = :user_id AND leave_type_id = :leave_type_id";
+                WHERE user_id = :user_id AND tenant_id = :tenant_id AND leave_type_id = :leave_type_id";
         
         try {
             $stmt = $this->db->prepare($sql);
             $stmt->execute([
                 ':user_id' => $userId,
+                ':tenant_id' => $tenantId,
                 ':leave_type_id' => $leaveTypeId,
             ]);
             $result = $stmt->fetch(\PDO::FETCH_ASSOC);

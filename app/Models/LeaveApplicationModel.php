@@ -262,21 +262,24 @@ class LeaveApplicationModel extends Model
      * @param int $daysAhead Number of days ahead to check for returning staff.
      * @return array An array of staff members returning from leave soon.
      */
-    public function getReturningStaff(int $tenantId, int $daysAhead = 7): array
+    public function getReturningStaff(int $tenantId, int $pastDays = 7, int $futureDays = 7): array
     {
-        $sql = "SELECT la.*, lt.name as leave_type_name, u.first_name, u.last_name, u.email
+        $sql = "SELECT la.*, lt.name as leave_type_name, u.first_name, u.last_name, u.email, la.status
                 FROM {$this->table} la
                 JOIN leave_types lt ON la.leave_type_id = lt.id
                 JOIN users u ON la.user_id = u.id
                 WHERE la.tenant_id = :tenant_id 
-                AND la.status = 'approved' 
-                AND la.end_date < CURDATE() + INTERVAL :days_ahead DAY
-                AND la.end_date >= CURDATE()
+                AND la.status IN ('approved', 'returned') -- Applications that are approved and yet to return, or have been marked as returned
+                AND la.end_date BETWEEN CURDATE() - INTERVAL :past_days DAY AND CURDATE() + INTERVAL :future_days DAY
                 ORDER BY la.end_date ASC";
         
         try {
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([':tenant_id' => $tenantId, ':days_ahead' => $daysAhead]);
+            $stmt->execute([
+                ':tenant_id' => $tenantId,
+                ':past_days' => $pastDays,
+                ':future_days' => $futureDays
+            ]);
             return $stmt->fetchAll(\PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
             Log::error("Failed to retrieve returning staff for tenant {$tenantId}. Error: " . $e->getMessage());

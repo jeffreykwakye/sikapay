@@ -9,11 +9,7 @@
     <div class="sidebar-logo">
         <div class="logo-header" data-background-color="light-blue">
             <a href="/" class="logo">
-                <?php if (isset($tenantLogo) && ($subscriptionPlan === 'Professional' || $subscriptionPlan === 'Enterprise')): ?>
-                    <img src="<?= htmlspecialchars($tenantLogo) ?>" alt="navbar brand" class="navbar-brand" height="20" />
-                <?php else: ?>
-                    <img src="/assets/images/tenant_logos/1/main-logo.svg" alt="navbar brand" class="navbar-brand" height="42" />
-                <?php endif; ?>
+                <img src="/assets/images/tenant_logos/1/main-logo.svg" alt="navbar brand" class="navbar-brand" height="42" />
             </a>
             <div class="nav-toggle">
                 <button class="btn btn-toggle toggle-sidebar">

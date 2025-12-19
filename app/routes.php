@@ -547,13 +547,25 @@ return [
             'permission' => ['PermissionMiddleware', 'leave:approve'],
             'handler' => ['LeaveController', 'approveLeave']
         ]],
-        ['POST', '/leave/reject/{id:\d+}', [
-            'auth' => 'AuthMiddleware',
-            'permission' => ['PermissionMiddleware', 'leave:approve'],
-            'handler' => ['LeaveController', 'rejectLeave']
-        ]],
-    
-        // NOTE: The API Route for Cascading Dropdown is REMOVED as it's now handled by client-side JS.
+            ['POST', '/leave/reject/{id:\d+}', [
+                'auth' => 'AuthMiddleware',
+                'permission' => ['PermissionMiddleware', 'leave:approve'],
+                'handler' => ['LeaveController', 'rejectLeave']
+            ]],
+        
+            // API route to get details for a single leave application
+                ['GET', '/api/leave/application/{id:\d+}', [
+                    'auth' => 'AuthMiddleware',
+                    'permission' => ['PermissionMiddleware', 'leave:approve'],
+                    'handler' => ['LeaveController', 'getLeaveApplicationDetails']
+                ]],
+            
+                // API route to mark a leave application as returned
+                ['POST', '/api/leave/returned/{id:\d+}', [
+                    'auth' => 'AuthMiddleware',
+                    'permission' => ['PermissionMiddleware', 'leave:approve'], // Approvers can mark as returned
+                    'handler' => ['LeaveController', 'markAsReturned']
+                ]],        // NOTE: The API Route for Cascading Dropdown is REMOVED as it's now handled by client-side JS.
      
         // API Route for fetching positions by department
         ['GET', '/api/positions', [
@@ -583,6 +595,13 @@ return [
             'auth' => 'AuthMiddleware',
             'permission' => ['PermissionMiddleware', 'tenant:manage_settings'],
             'handler' => ['CompanyProfileController', 'uploadLogo']
+        ]],
+    
+        // Process the removal of the logo file
+        ['POST', '/company-profile/remove-logo', [
+            'auth' => 'AuthMiddleware',
+            'permission' => ['PermissionMiddleware', 'tenant:manage_settings'],
+            'handler' => ['CompanyProfileController', 'removeLogo']
         ]],
     
         // =========================================================
@@ -736,6 +755,13 @@ return [
         'auth' => 'AuthMiddleware',
         'permission' => ['PermissionMiddleware', 'config:manage_payroll_elements'],
         'handler' => ['AllowanceAndDeductionController', 'delete']
+    ]],
+
+    // API route to get details for a single element (for the view modal)
+    ['GET', '/api/payroll-elements/{id:\d+}', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'config:manage_payroll_elements'],
+        'handler' => ['AllowanceAndDeductionController', 'getElementDetails']
     ]],
 
     // =========================================================

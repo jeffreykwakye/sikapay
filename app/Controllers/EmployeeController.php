@@ -949,7 +949,7 @@ class EmployeeController extends Controller
                 throw new \Exception("User with ID {$userId} not found.");
             }
 
-            $currentRole = $this->roleModel->find($employee['role_id']);
+            $currentRole = $this->roleModel->find((int)$employee['role_id']);
             $newRole = $this->roleModel->find($newRoleId);
 
             if (!$newRole) {
@@ -1841,4 +1841,5 @@ class EmployeeController extends Controller
         }
 
         $this->redirect('/my-account');
-    }}
+    }
+}
