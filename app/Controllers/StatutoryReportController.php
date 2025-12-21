@@ -22,6 +22,8 @@ use Jeffrey\Sikapay\Models\SsnitAdviceModel;
 use Jeffrey\Sikapay\Models\GraPayeAdviceModel;
 use Jeffrey\Sikapay\Models\BankAdviceModel;
 use Jeffrey\Sikapay\Models\SubscriptionModel;
+use Jeffrey\Sikapay\Models\DepartmentModel;
+use Jeffrey\Sikapay\Helpers\Sanitizer;
 
 class StatutoryReportController extends Controller
 {
@@ -33,10 +35,10 @@ class StatutoryReportController extends Controller
     private BankAdviceModel $bankAdviceModel;
     private PayrollSettingsModel $payrollSettingsModel;
     protected SubscriptionModel $subscriptionModel;
+    private DepartmentModel $departmentModel; // NEW PROPERTY
 
     public function __construct()
     {
-        parent::__construct();
         $this->payrollPeriodModel = new PayrollPeriodModel();
         $this->payslipModel = new PayslipModel();
         $this->tenantProfileModel = new TenantProfileModel();
@@ -45,6 +47,8 @@ class StatutoryReportController extends Controller
         $this->bankAdviceModel = new BankAdviceModel();
         $this->payrollSettingsModel = new PayrollSettingsModel();
         $this->subscriptionModel = new SubscriptionModel();
+        $this->departmentModel = new DepartmentModel(); // NEW INSTANTIATION
+        parent::__construct();
     }
 
     public function index(): void
@@ -313,5 +317,350 @@ class StatutoryReportController extends Controller
 
         readfile($zipFileName);
         unlink($zipFileName);
+    }
+    
+    // ==========================================================
+    // DEPARTMENT-SPECIFIC REPORTS
+    // ==========================================================
+
+    public function downloadAllPayslipsAsZipForDepartment(string $departmentId, string $periodId): void
+    {
+        $tenantId = Auth::tenantId();
+        $deptId = (int)\Jeffrey\Sikapay\Helpers\Sanitizer::text($departmentId);
+        $pId = (int)\Jeffrey\Sikapay\Helpers\Sanitizer::text($periodId);
+
+        // Validate Department
+        $department = $this->departmentModel->find($deptId);
+        if (!$department || (int)$department['tenant_id'] !== $tenantId) {
+            $this->redirect('/departments/' . $deptId . '/reports/' . $pId);
+            return;
+        }
+
+        // Validate Period
+        $period = $this->payrollPeriodModel->getPeriodById($pId, $tenantId);
+        if (!$period || !$period['is_closed']) {
+            $this->redirect('/departments/' . $deptId . '/reports/' . $pId);
+            return;
+        }
+
+        $payslips = $this->payslipModel->getPayslipsByDepartmentAndPeriod($tenantId, $deptId, $pId);
+
+        if (empty($payslips)) {
+            $this->redirect('/departments/' . $deptId . '/reports/' . $pId);
+            return;
+        }
+
+        $zip = new \ZipArchive();
+        $zipFileName = tempnam(sys_get_temp_dir(), 'payslips_') . '.zip';
+
+        if ($zip->open($zipFileName, \ZipArchive::CREATE) !== TRUE) {
+            $this->redirect('/departments/' . $deptId . '/reports/' . $pId);
+            return;
+        }
+
+        $publicPath = dirname(__DIR__, 2) . '/public';
+
+        foreach ($payslips as $payslip) {
+            if (!empty($payslip['payslip_path'])) {
+                $filePath = $publicPath . '/' . $payslip['payslip_path'];
+                if (file_exists($filePath)) {
+                    // Rename payslip file for better organization within the zip
+                    $employeeName = $payslip['first_name'] . ' ' . $payslip['last_name'];
+                    $zip->addFile($filePath, "{$department['name']}/{$employeeName}_payslip_{$period['period_name']}.pdf");
+                }
+            }
+        }
+
+        $zip->close();
+
+        header('Content-Type: application/zip');
+        header('Content-Disposition: attachment; filename="payslips_' . str_replace(' ', '_', $department['name']) . '_' . $period['period_name'] . '.zip"');
+        header('Content-Length: ' . filesize($zipFileName));
+
+        readfile($zipFileName);
+        unlink($zipFileName);
+    }
+
+    public function generatePayeReportPdfForDepartment(string $departmentId, string $periodId): void
+    {
+        $tenantId = Auth::tenantId();
+        $deptId = (int)\Jeffrey\Sikapay\Helpers\Sanitizer::text($departmentId);
+        $pId = (int)\Jeffrey\Sikapay\Helpers\Sanitizer::text($periodId);
+
+        $department = $this->departmentModel->find($deptId);
+        if (!$department || (int)$department['tenant_id'] !== $tenantId) {
+            $this->redirect('/departments/' . $deptId . '/reports/' . $pId);
+            return;
+        }
+
+        $period = $this->payrollPeriodModel->getPeriodById($pId, $tenantId);
+        if (!$period || !$period['is_closed']) {
+            $this->redirect('/departments/' . $deptId . '/reports/' . $pId);
+            return;
+        }
+
+        // --- Fetch data for the department ---
+        $reportData = $this->graPayeAdviceModel->getAdviceByDepartmentAndPeriod($tenantId, $deptId, $pId);
+        $tenantData = $this->tenantProfileModel->findByTenantId($tenantId);
+        $includeCoverLetter = false;
+
+        $pdf = new PayeReportPdfGenerator($reportData, $tenantData, $period, $includeCoverLetter, $department);
+        $pdfContent = $pdf->generate();
+
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: attachment; filename="paye_report_' . str_replace(' ', '_', $department['name']) . '_' . $period['period_name'] . '.pdf"');
+        echo $pdfContent;
+    }
+
+    public function generatePayeReportCsvForDepartment(string $departmentId, string $periodId): void
+    {
+        $tenantId = Auth::tenantId();
+        $deptId = (int)\Jeffrey\Sikapay\Helpers\Sanitizer::text($departmentId);
+        $pId = (int)\Jeffrey\Sikapay\Helpers\Sanitizer::text($periodId);
+
+        $department = $this->departmentModel->find($deptId);
+        if (!$department || (int)$department['tenant_id'] !== $tenantId) {
+            $this->redirect('/departments/' . $deptId . '/reports/' . $pId);
+            return;
+        }
+
+        $period = $this->payrollPeriodModel->getPeriodById($pId, $tenantId);
+        if (!$period || !$period['is_closed']) {
+            $this->redirect('/departments/' . $deptId . '/reports/' . $pId);
+            return;
+        }
+
+        $reportData = $this->graPayeAdviceModel->getAdviceByDepartmentAndPeriod($tenantId, $deptId, $pId);
+        $tenantData = $this->tenantProfileModel->findByTenantId($tenantId);
+
+        $csv = new PayeReportCsvGenerator($reportData, $tenantData, $period);
+        $csvContent = $csv->generate();
+
+        header('Content-Type: text/csv');
+        header('Content-Disposition: attachment; filename="paye_report_' . str_replace(' ', '_', $department['name']) . '_' . $period['period_name'] . '.csv"');
+        echo $csvContent;
+    }
+
+    public function generatePayeReportExcelForDepartment(string $departmentId, string $periodId): void
+    {
+        $tenantId = Auth::tenantId();
+        $deptId = (int)\Jeffrey\Sikapay\Helpers\Sanitizer::text($departmentId);
+        $pId = (int)\Jeffrey\Sikapay\Helpers\Sanitizer::text($periodId);
+
+        $department = $this->departmentModel->find($deptId);
+        if (!$department || (int)$department['tenant_id'] !== $tenantId) {
+            $this->redirect('/departments/' . $deptId . '/reports/' . $pId);
+            return;
+        }
+
+        $period = $this->payrollPeriodModel->getPeriodById($pId, $tenantId);
+        if (!$period || !$period['is_closed']) {
+            $this->redirect('/departments/' . $deptId . '/reports/' . $pId);
+            return;
+        }
+
+        $reportData = $this->graPayeAdviceModel->getAdviceByDepartmentAndPeriod($tenantId, $deptId, $pId);
+        $tenantData = $this->tenantProfileModel->findByTenantId($tenantId);
+
+        $excel = new PayeReportExcelGenerator($reportData, $tenantData, $period);
+        $excelFile = $excel->generate();
+
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="paye_report_' . str_replace(' ', '_', $department['name']) . '_' . $period['period_name'] . '.xlsx"');
+        readfile($excelFile);
+        unlink($excelFile);
+    }
+    
+    public function generateSsnitReportPdfForDepartment(string $departmentId, string $periodId): void
+    {
+        $tenantId = Auth::tenantId();
+        $deptId = (int)\Jeffrey\Sikapay\Helpers\Sanitizer::text($departmentId);
+        $pId = (int)\Jeffrey\Sikapay\Helpers\Sanitizer::text($periodId);
+
+        $department = $this->departmentModel->find($deptId);
+        if (!$department || (int)$department['tenant_id'] !== $tenantId) {
+            $this->redirect('/departments/' . $deptId . '/reports/' . $pId);
+            return;
+        }
+
+        $period = $this->payrollPeriodModel->getPeriodById($pId, $tenantId);
+        if (!$period || !$period['is_closed']) {
+            $this->redirect('/departments/' . $deptId . '/reports/' . $pId);
+            return;
+        }
+
+        $reportData = $this->ssnitAdviceModel->getAdviceByDepartmentAndPeriod($tenantId, $deptId, $pId);
+        $tenantData = $this->tenantProfileModel->findByTenantId($tenantId);
+        $includeCoverLetter = false;
+
+        $pdf = new SsnitReportPdfGenerator($reportData, $tenantData, $period, $includeCoverLetter, $department);
+        $pdfContent = $pdf->generate();
+
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: attachment; filename="ssnit_report_' . str_replace(' ', '_', $department['name']) . '_' . $period['period_name'] . '.pdf"');
+        echo $pdfContent;
+    }
+    
+    public function generateSsnitReportCsvForDepartment(string $departmentId, string $periodId): void
+    {
+        $tenantId = Auth::tenantId();
+        $deptId = (int)\Jeffrey\Sikapay\Helpers\Sanitizer::text($departmentId);
+        $pId = (int)\Jeffrey\Sikapay\Helpers\Sanitizer::text($periodId);
+
+        $department = $this->departmentModel->find($deptId);
+        if (!$department || (int)$department['tenant_id'] !== $tenantId) {
+            $this->redirect('/departments/' . $deptId . '/reports/' . $pId);
+            return;
+        }
+
+        $period = $this->payrollPeriodModel->getPeriodById($pId, $tenantId);
+        if (!$period || !$period['is_closed']) {
+            $this->redirect('/departments/' . $deptId . '/reports/' . $pId);
+            return;
+        }
+
+        $reportData = $this->ssnitAdviceModel->getAdviceByDepartmentAndPeriod($tenantId, $deptId, $pId);
+        $tenantData = $this->tenantProfileModel->findByTenantId($tenantId);
+
+        $csv = new SsnitReportCsvGenerator($reportData, $tenantData, $period);
+        $csvContent = $csv->generate();
+
+        header('Content-Type: text/csv');
+        header('Content-Disposition: attachment; filename="ssnit_report_' . str_replace(' ', '_', $department['name']) . '_' . $period['period_name'] . '.csv"');
+        echo $csvContent;
+    }
+
+    public function generateSsnitReportExcelForDepartment(string $departmentId, string $periodId): void
+    {
+        $tenantId = Auth::tenantId();
+        $deptId = (int)\Jeffrey\Sikapay\Helpers\Sanitizer::text($departmentId);
+        $pId = (int)\Jeffrey\Sikapay\Helpers\Sanitizer::text($periodId);
+
+        $department = $this->departmentModel->find($deptId);
+        if (!$department || (int)$department['tenant_id'] !== $tenantId) {
+            $this->redirect('/departments/' . $deptId . '/reports/' . $pId);
+            return;
+        }
+
+        $period = $this->payrollPeriodModel->getPeriodById($pId, $tenantId);
+        if (!$period || !$period['is_closed']) {
+            $this->redirect('/departments/' . $deptId . '/reports/' . $pId);
+            return;
+        }
+
+        $reportData = $this->ssnitAdviceModel->getAdviceByDepartmentAndPeriod($tenantId, $deptId, $pId);
+        $tenantData = $this->tenantProfileModel->findByTenantId($tenantId);
+
+        $excel = new SsnitReportExcelGenerator($reportData, $tenantData, $period);
+        $excelFile = $excel->generate();
+
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="ssnit_report_' . str_replace(' ', '_', $department['name']) . '_' . $period['period_name'] . '.xlsx"');
+        readfile($excelFile);
+        unlink($excelFile);
+    }
+
+    public function generateBankAdvicePdfForDepartment(string $departmentId, string $periodId): void
+    {
+        $tenantId = Auth::tenantId();
+        $deptId = (int)\Jeffrey\Sikapay\Helpers\Sanitizer::text($departmentId);
+        $pId = (int)\Jeffrey\Sikapay\Helpers\Sanitizer::text($periodId);
+
+        $department = $this->departmentModel->find($deptId);
+        if (!$department || (int)$department['tenant_id'] !== $tenantId) {
+            $this->redirect('/departments/' . $deptId . '/reports/' . $pId);
+            return;
+        }
+
+        $period = $this->payrollPeriodModel->getPeriodById($pId, $tenantId);
+        if (!$period || !$period['is_closed']) {
+            $this->redirect('/departments/' . $deptId . '/reports/' . $pId);
+            return;
+        }
+
+        $reportData = $this->bankAdviceModel->getAdviceByDepartmentAndPeriod($tenantId, $deptId, $pId);
+        $tenantData = $this->tenantProfileModel->findByTenantId($tenantId);
+        $includeCoverLetter = false;
+
+        if (empty($reportData) || empty($tenantData)) {
+            $this->redirect('/departments/' . $deptId . '/reports/' . $pId);
+            return;
+        }
+
+        $pdf = new BankAdvicePdfGenerator($reportData, $tenantData, $period, $includeCoverLetter, $department);
+        $pdfContent = $pdf->generate();
+
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: attachment; filename="bank_advice_' . str_replace(' ', '_', $department['name']) . '_' . $period['period_name'] . '.pdf"');
+        echo $pdfContent;
+    }
+    
+    public function generateBankAdviceCsvForDepartment(string $departmentId, string $periodId): void
+    {
+        $tenantId = Auth::tenantId();
+        $deptId = (int)\Jeffrey\Sikapay\Helpers\Sanitizer::text($departmentId);
+        $pId = (int)\Jeffrey\Sikapay\Helpers\Sanitizer::text($periodId);
+
+        $department = $this->departmentModel->find($deptId);
+        if (!$department || (int)$department['tenant_id'] !== $tenantId) {
+            $this->redirect('/departments/' . $deptId . '/reports/' . $pId);
+            return;
+        }
+
+        $period = $this->payrollPeriodModel->getPeriodById($pId, $tenantId);
+        if (!$period || !$period['is_closed']) {
+            $this->redirect('/departments/' . $deptId . '/reports/' . $pId);
+            return;
+        }
+
+        $reportData = $this->bankAdviceModel->getAdviceByDepartmentAndPeriod($tenantId, $deptId, $pId);
+        $tenantData = $this->tenantProfileModel->findByTenantId($tenantId);
+
+        if (empty($reportData) || empty($tenantData)) {
+            $this->redirect('/departments/' . $deptId . '/reports/' . $pId);
+            return;
+        }
+
+        $csv = new BankAdviceCsvGenerator($reportData, $tenantData, $period);
+        $csvContent = $csv->generate();
+
+        header('Content-Type: text/csv');
+        header('Content-Disposition: attachment; filename="bank_advice_' . str_replace(' ', '_', $department['name']) . '_' . $period['period_name'] . '.csv"');
+        echo $csvContent;
+    }
+
+    public function generateBankAdviceExcelForDepartment(string $departmentId, string $periodId): void
+    {
+        $tenantId = Auth::tenantId();
+        $deptId = (int)\Jeffrey\Sikapay\Helpers\Sanitizer::text($departmentId);
+        $pId = (int)\Jeffrey\Sikapay\Helpers\Sanitizer::text($periodId);
+
+        $department = $this->departmentModel->find($deptId);
+        if (!$department || (int)$department['tenant_id'] !== $tenantId) {
+            $this->redirect('/departments/' . $deptId . '/reports/' . $pId);
+            return;
+        }
+
+        $period = $this->payrollPeriodModel->getPeriodById($pId, $tenantId);
+        if (!$period || !$period['is_closed']) {
+            $this->redirect('/departments/' . $deptId . '/reports/' . $pId);
+            return;
+        }
+
+        $reportData = $this->bankAdviceModel->getAdviceByDepartmentAndPeriod($tenantId, $deptId, $pId);
+        $tenantData = $this->tenantProfileModel->findByTenantId($tenantId);
+
+        if (empty($reportData) || empty($tenantData)) {
+            $this->redirect('/departments/' . $deptId . '/reports/' . $pId);
+            return;
+        }
+
+        $excel = new BankAdviceExcelGenerator($reportData, $tenantData, $period);
+        $excelFile = $excel->generate();
+
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="bank_advice_' . str_replace(' ', '_', $department['name']) . '_' . $period['period_name'] . '.xlsx"');
+        readfile($excelFile);
+        unlink($excelFile);
     }
 }

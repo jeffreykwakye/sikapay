@@ -49,9 +49,26 @@ if (!isset($h)) {
                         </h2>
                         <div id="collapse<?= $period['id'] ?>" class="accordion-collapse collapse" aria-labelledby="heading<?= $period['id'] ?>" data-bs-parent="#payslipPeriodsAccordion">
                             <div class="accordion-body">
-                                <p>Click 'View Payslips' to load available payslips for this period.</p>
-                                <button class="btn btn-sm btn-primary view-payslips-btn" data-period-id="<?= $period['id'] ?>">View Payslips</button>
-                                <div id="payslips-content-<?= $period['id'] ?>" class="mt-3"></div>
+                                <?php if (isset($payslips)): ?>
+                                    <?php if (!empty($payslips)): ?>
+                                        <div class="payslip-list mt-3">
+                                            <ul class="list-group">
+                                                <?php foreach ($payslips as $payslip): ?>
+                                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                        <span><?= $h($payslip['first_name'] . ' ' . $payslip['last_name']) ?> (<?= $h($payslip['employee_id']) ?>)</span>
+                                                        <a href="/payroll/payslips/download/<?= $payslip['id'] ?>" class="btn btn-sm btn-primary"><i class="icon-cloud-download"></i> Download Payslip</a>
+                                                    </li>
+                                                <?php endforeach; ?>
+                                            </ul>
+                                        </div>
+                                    <?php else: ?>
+                                        <p class="text-muted">No payslips found for this department in this period.</p>
+                                    <?php endif; ?>
+                                <?php else: ?>
+                                    <p>Click 'View Payslips' to load available payslips for this period.</p>
+                                    <button class="btn btn-sm btn-primary view-payslips-btn" data-period-id="<?= $period['id'] ?>">View Payslips</button>
+                                    <div id="payslips-content-<?= $period['id'] ?>" class="mt-3"></div>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>

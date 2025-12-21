@@ -81,7 +81,7 @@ $historyNetPay = json_encode(array_column($payrollHistory, 'total_net'));
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <button class="btn btn-primary w-100 mt-3" id="viewPayslipsBtn">View Payslips</button>
+                    <button class="btn btn-primary w-100 mt-3" id="viewReportsBtn">View Reports</button>
                 </div>
             </div>
         </div>

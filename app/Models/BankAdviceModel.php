@@ -35,6 +35,39 @@ class BankAdviceModel extends Model
     }
 
     /**
+     * Retrieves Bank Advice data for a specific payroll period, tenant, and department.
+     *
+     * @param int $tenantId
+     * @param int $departmentId
+     * @param int $payrollPeriodId
+     * @return array An array of Bank Advice records.
+     */
+    public function getAdviceByDepartmentAndPeriod(int $tenantId, int $departmentId, int $payrollPeriodId): array
+    {
+        $sql = "SELECT ba.*
+                FROM {$this->table} ba
+                JOIN employees e ON ba.user_id = e.user_id
+                JOIN positions pos ON e.current_position_id = pos.id
+                WHERE ba.payroll_period_id = :payroll_period_id 
+                AND ba.tenant_id = :tenant_id
+                AND pos.department_id = :department_id
+                ORDER BY ba.employee_name";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                ':payroll_period_id' => $payrollPeriodId,
+                ':tenant_id' => $tenantId,
+                ':department_id' => $departmentId,
+            ]);
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (\PDOException $e) {
+            Log::error("Failed to retrieve Bank Advice for department {$departmentId}, period {$payrollPeriodId} (tenant {$tenantId}). Error: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
      * Generic method to create a new record, enforcing tenant scope.
      * @param array $data The data to insert.
      * @return int The ID of the newly created record.

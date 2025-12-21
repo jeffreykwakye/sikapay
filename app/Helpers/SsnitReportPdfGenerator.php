@@ -14,7 +14,8 @@ class SsnitReportPdfGenerator extends FPDF
     private array $payrollPeriodData;
     private string $currencySymbol = 'GHS';
     private bool $isCoverLetter = false;
-    private bool $shouldIncludeCoverLetter;
+    private bool $includeCoverLetter;
+    private ?array $departmentData;
 
     // New professional color scheme
     private array $documentHeaderColor = [51, 51, 51];
@@ -23,13 +24,14 @@ class SsnitReportPdfGenerator extends FPDF
     private array $borderColor = [200, 200, 200];
     private array $alternateRowColor = [242, 242, 242];
 
-    public function __construct(array $reportData, array $tenantData, array $payrollPeriodData, bool $includeCoverLetter = false)
+    public function __construct(array $reportData, array $tenantData, array $payrollPeriodData, bool $includeCoverLetter = false, ?array $department = null)
     {
         parent::__construct('L', 'mm', 'A4');
         $this->reportData = $reportData;
         $this->tenantData = $tenantData;
         $this->payrollPeriodData = $payrollPeriodData;
-        $this->shouldIncludeCoverLetter = $includeCoverLetter;
+        $this->includeCoverLetter = $includeCoverLetter;
+        $this->departmentData = $department;
     }
 
     public function Header()
@@ -83,7 +85,14 @@ class SsnitReportPdfGenerator extends FPDF
         $this->SetXY(200, 8);
         $this->SetFont('Arial', 'B', 16);
         $this->SetTextColor(255, 255, 255);
-        $this->Cell(90, 7, 'SSNIT REPORT', 0, 1, 'R');
+        
+        $year = date('Y', strtotime($this->payrollPeriodData['start_date']));
+        $title = $year . ' SSNIT REPORT'; // Default title
+        if ($this->departmentData) {
+            $title = $year . ' SSNIT FOR ' . strtoupper($this->departmentData['name']);
+        }
+
+        $this->Cell(90, 7, $title, 0, 1, 'R');
         $this->Ln(2);
 
         $this->SetX(200);
@@ -116,7 +125,7 @@ class SsnitReportPdfGenerator extends FPDF
         $this->SetTextColor(128, 128, 128);
         $this->Cell(0, 5, 'This is a statutory report. Unauthorized reproduction is prohibited.', 0, 1, 'C');
         $this->Cell(0, 5, 'Generated on: ' . date('Y-m-d H:i:s'), 0, 1, 'C');
-        $this->Cell(0, 5, 'Page ' . ($this->shouldIncludeCoverLetter ? $this->PageNo() - 1 : $this->PageNo()) . '/{nb}', 0, 0, 'C');
+        $this->Cell(0, 5, 'Page ' . ($this->includeCoverLetter ? $this->PageNo() - 1 : $this->PageNo()) . '/{nb}', 0, 0, 'C');
     }
 
     private function generateCoverLetterContent()
@@ -199,7 +208,7 @@ class SsnitReportPdfGenerator extends FPDF
 
     public function generate(): string
     {
-        if ($this->shouldIncludeCoverLetter) {
+        if ($this->includeCoverLetter) {
             $this->isCoverLetter = true;
             $this->AddPage('P', 'A4');
             $this->generateCoverLetterContent();

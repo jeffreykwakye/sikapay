@@ -8,12 +8,12 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // Initialize Payroll History Chart
-    var historyChartCanvas = document.getElementById('departmentHistoryChart');
+    const historyChartCanvas = document.getElementById('departmentHistoryChart');
     if (historyChartCanvas) {
-        var ctx = historyChartCanvas.getContext('2d');
-        var labels = JSON.parse(historyChartCanvas.dataset.labels || '[]');
-        var grossPayData = JSON.parse(historyChartCanvas.dataset.gross || '[]');
-        var netPayData = JSON.parse(historyChartCanvas.dataset.net || '[]');
+        const ctx = historyChartCanvas.getContext('2d');
+        const labels = JSON.parse(historyChartCanvas.dataset.labels || '[]');
+        const grossPayData = JSON.parse(historyChartCanvas.dataset.gross || '[]');
+        const netPayData = JSON.parse(historyChartCanvas.dataset.net || '[]');
 
         new Chart(ctx, {
             type: 'bar',
@@ -56,21 +56,20 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Handle "View Payslips" button click
-    var viewPayslipsBtn = document.getElementById('viewPayslipsBtn');
-    if (viewPayslipsBtn) {
-        viewPayslipsBtn.addEventListener('click', function() {
-            var periodSelect = document.getElementById('periodSelect');
-            var selectedPeriodId = periodSelect.value;
-            var departmentId = window.location.pathname.split('/')[2]; // Assumes URL is /departments/{id}/dashboard
+    // Handle "View Reports" button click
+    const viewReportsBtn = document.getElementById('viewReportsBtn');
+    if (viewReportsBtn) {
+        viewReportsBtn.addEventListener('click', function() {
+            const periodSelect = document.getElementById('periodSelect');
+            const selectedPeriodId = periodSelect.value;
+            const departmentId = window.location.pathname.split('/')[2]; // Assumes URL is /departments/{id}/dashboard
 
             if (selectedPeriodId && departmentId) {
-                // Placeholder using SweetAlert
-                swal("Coming Soon!", "This feature will show payslips for Department ID: " + departmentId + " and Period ID: " + selectedPeriodId, "info");
-                // window.location.href = '/departments/' + departmentId + '/payslips/' + selectedPeriodId;
+                window.location.href = '/departments/' + departmentId + '/reports/' + selectedPeriodId;
             } else {
                 swal("Error", "Please select a payroll period.", "error");
             }
         });
     }
 });
+

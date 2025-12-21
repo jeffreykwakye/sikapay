@@ -35,6 +35,7 @@ SikaPay is a custom-built, multi-tenant web application designed to handle payro
 | **Leave Management** | Comprehensive Leave Application, Approval, and Balance Tracking | **Complete** | Full workflow for leave application, approval, and balance tracking. Includes a complete notification loop (in-app & email) for submissions, approvals, and rejections. |
 | **Flexible Payroll Workflow** | Refactoring the payroll process to support a multi-stage workflow (Open/Draft -> Closed), allowing for re-runs and corrections before finalizing. | In Progress | This will replace the rigid, linear payroll run with a more flexible, state-driven process. |
 | **Super Admin - Impersonate Tenant Admin** | Allows Super Admins to temporarily assume the identity of a Tenant Admin. | **Complete** | Secure session switching and restoration, with audit logging. |
+| **Departmental Reports** | Dedicated dashboard for departmental reports, including payslips and statutory reports. | **Complete** | Dedicated dashboard with accurate, department-specific data for all reports. |
 
 ---
 
@@ -97,6 +98,8 @@ The tenant creation process adheres to the **Single Responsibility Principle (SR
 
 | Date | Feature/Decision | Details | Status |
 | :--- | :--- | :--- | :--- |
+| **2025-12-21** | **Departmental Reports & Subscription Fixes** | Debugged and fixed data scoping for all departmental reports (PAYE, SSNIT, Bank Advice, Payslips) by adding `user_id` to advice tables and correcting model/view logic. Added dynamic, department-specific headers to PDF reports. Corrected Super Admin subscription management logic for renewals, upgrades, and downgrades, ensuring accurate logging of amounts, billing cycles, and employee counts. | **Complete** |
+| **2025-12-20** | **Departmental Reports** | Implemented a dedicated dashboard for departmental reports, accessible from the main department dashboard. This includes views for payslips and statutory reports, and a streamlined UI with a single "View Reports" button. Page loads correctly, but reports are not yet populated with the right data. | **Complete (UI/Navigation)** |
 | **2025-12-13** | **Flexible Payroll Workflow** | Began refactoring the core payroll module to transition from a rigid, linear process to a flexible, state-driven one (Open -> Closed). This will allow for payroll re-runs, corrections, and manual closing of periods before payslip notifications are sent. | In Progress |
 | **2025-10-13** | **Authentication (Super Admin)** | Implemented `Auth` service, `LoginController`, and session management. | Complete |
 | **2025-10-13** | **Multi-Tenancy Scoping** | Implemented `getTenantScope()` logic in `app/Core/Model.php`. Super Admin bypass confirmed. | Complete |

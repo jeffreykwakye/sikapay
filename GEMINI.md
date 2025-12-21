@@ -33,9 +33,34 @@
 - Subscription Management Page: Created a dedicated "How to Renew/Manage Subscription" page (`/subscription/how-to-pay`) with manual payment instructions (bank and mobile money details), updated support contact information, and abstracted internal roles. Linked from the main subscription page.
 - Payslip Design Enhancements & Professional Statutory Reports: Redesigned the PAYE, SSNIT, and Bank Advice PDF reports with a professional and consistent layout. Implemented tenant-configurable cover letters with dynamic addressing and amounts in words. Added tiered CSV/Excel report generation. This involved creating a database migration, updating the company profile UI, and refactoring all PDF and new CSV/Excel generator classes.
 - Payslip Design Testing Setup: Created a test route (`/test/payslip-sample`) and controller method (`TestController::payslipSample`) to generate a sample payslip PDF with hardcoded data, allowing for easy design iteration. Removed permission requirement for testing.
+- Departmental Reports: Implemented a dedicated dashboard for departmental reports. The page loads correctly, but the reports are not yet populated with the right data.
 
 ## Immediate Priorities (Next Focus Area)
 
 1.  **Flexible Payroll Workflow**:
     *   **Objective:** Refactor the core payroll module from a rigid, linear process to a flexible, state-driven one (Open -> Closed). This will allow for payroll re-runs to apply corrections and require a manual "Close Period" action before payslips are finalized and notifications are sent.
     *   **Status:** **In Progress**.
+
+## Recently Completed
+
+1.  **Departmental Reports**:
+    *   **Objective:** Populate the departmental reports dashboard with correct, department-specific data.
+    *   **Work Done:**
+        *   Debugged and fixed data scoping issues for PAYE, SSNIT, Bank Advice, and Payslip reports.
+        *   Created a database migration to add `user_id` to all advice tables (`ssnit_advice`, `gra_paye_advice`, `bank_advice`).
+        *   Corrected the `PayrollService` to save the `user_id` when creating advice records.
+        *   Fixed the `PayslipModel` to ensure `user_id` is selected when preparing data.
+        *   Fixed the departmental payslip view to use pre-loaded data and avoid incorrect AJAX calls.
+        *   Added dynamic, department-specific headings to all departmental PDF reports.
+    *   **Status:** **Complete**.
+
+2.  **Super Admin Subscription Management**:
+    *   **Objective:** Fix bugs and improve data integrity in the Super Admin subscription management workflows.
+    *   **Work Done:**
+        *   Resolved a fatal `SQLSTATE[HY093]` error in the subscription renewal method.
+        *   Corrected the logic for logging `amount_paid` to accurately capture user input for upgrades and downgrades.
+        *   Fixed the `billing_cycle_start` date to use the current date for renewals, upgrades, and downgrades, ensuring correct audit logs.
+        *   Updated the initial subscription logging for new tenants to show the correct plan name and amount instead of a generic "trial" message.
+        *   Ensured the `employee_count_at_billing` is correctly snapshotted in the `subscriptions` table during all lifecycle events (new, renew, upgrade, downgrade).
+        *   Corrected the renewal end-date calculation to prevent it from being set years in the future.
+    *   **Status:** **Complete**.

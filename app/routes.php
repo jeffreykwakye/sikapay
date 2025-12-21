@@ -475,10 +475,67 @@ return [
         'permission' => ['PermissionMiddleware', 'payroll:view_all'],
         'handler' => ['StatutoryReportController', 'generateBankAdvicePdf']
     ]],
-    ['GET', '/reports/bank-advice/excel/{periodId:\d+}', [
-        'auth' => 'AuthMiddleware',
+    ['GET', '/reports/bank-advice/excel/{periodId:\d+}', [ // New route for sample Bank Advice Excel
+        'auth' => 'AuthMiddleware', 
         'permission' => ['PermissionMiddleware', 'payroll:view_all'],
         'handler' => ['StatutoryReportController', 'generateBankAdviceExcel']
+    ]],
+
+    // Department-Specific Report Routes
+    ['GET', '/payroll/payslips/department/{departmentId:\d+}/period/{periodId:\d+}', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'payroll:view_all'],
+        'handler' => ['PayrollController', 'viewDepartmentPayslips']
+    ]],
+    ['GET', '/reports/payslips/zip/department/{departmentId:\d+}/period/{periodId:\d+}', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'payroll:view_all'],
+        'handler' => ['StatutoryReportController', 'downloadAllPayslipsAsZipForDepartment']
+    ]],
+    ['GET', '/reports/paye/pdf/department/{departmentId:\d+}/period/{periodId:\d+}', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'payroll:view_all'],
+        'handler' => ['StatutoryReportController', 'generatePayeReportPdfForDepartment']
+    ]],
+    ['GET', '/reports/paye/csv/department/{departmentId:\d+}/period/{periodId:\d+}', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'payroll:view_all'],
+        'handler' => ['StatutoryReportController', 'generatePayeReportCsvForDepartment']
+    ]],
+    ['GET', '/reports/paye/excel/department/{departmentId:\d+}/period/{periodId:\d+}', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'payroll:view_all'],
+        'handler' => ['StatutoryReportController', 'generatePayeReportExcelForDepartment']
+    ]],
+    ['GET', '/reports/ssnit/pdf/department/{departmentId:\d+}/period/{periodId:\d+}', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'payroll:view_all'],
+        'handler' => ['StatutoryReportController', 'generateSsnitReportPdfForDepartment']
+    ]],
+    ['GET', '/reports/ssnit/csv/department/{departmentId:\d+}/period/{periodId:\d+}', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'payroll:view_all'],
+        'handler' => ['StatutoryReportController', 'generateSsnitReportCsvForDepartment']
+    ]],
+    ['GET', '/reports/ssnit/excel/department/{departmentId:\d+}/period/{periodId:\d+}', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'payroll:view_all'],
+        'handler' => ['StatutoryReportController', 'generateSsnitReportExcelForDepartment']
+    ]],
+    ['GET', '/reports/bank-advice/pdf/department/{departmentId:\d+}/period/{periodId:\d+}', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'payroll:view_all'],
+        'handler' => ['StatutoryReportController', 'generateBankAdvicePdfForDepartment']
+    ]],
+    ['GET', '/reports/bank-advice/csv/department/{departmentId:\d+}/period/{periodId:\d+}', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'payroll:view_all'],
+        'handler' => ['StatutoryReportController', 'generateBankAdviceCsvForDepartment']
+    ]],
+    ['GET', '/reports/bank-advice/excel/department/{departmentId:\d+}/period/{periodId:\d+}', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'payroll:view_all'],
+        'handler' => ['StatutoryReportController', 'generateBankAdviceExcelForDepartment']
     ]],
     ['GET', '/reports/bank-advice/csv/{periodId:\d+}', [
         'auth' => 'AuthMiddleware',
@@ -693,6 +750,12 @@ return [
         'auth' => 'AuthMiddleware',
         'permission' => ['PermissionMiddleware', 'config:manage_departments'],
         'handler' => ['DepartmentController', 'dashboard']
+    ]],
+    // Departmental Reports (Payslips, Statutory Reports)
+    ['GET', '/departments/{departmentId:\d+}/reports/{periodId:\d+}', [
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'payroll:view_all'], // Or a more specific 'department:view_reports'
+        'handler' => ['DepartmentController', 'viewDepartmentReports']
     ]],
 // -----------------------------------------------------------------
 // =========================================================

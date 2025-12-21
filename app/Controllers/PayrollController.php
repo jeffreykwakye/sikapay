@@ -11,6 +11,8 @@ use Jeffrey\Sikapay\Services\PayrollService;
 use Jeffrey\Sikapay\Services\NotificationService;
 use Jeffrey\Sikapay\Services\EmailService; // ADDED
 use Jeffrey\Sikapay\Models\PayrollPeriodModel;
+use Jeffrey\Sikapay\Models\PayslipModel;
+use Jeffrey\Sikapay\Models\DepartmentModel; // NEW IMPORT
 use Jeffrey\Sikapay\Core\Auth;
 use Jeffrey\Sikapay\Config\AppConfig;
 use \Throwable;
@@ -20,7 +22,9 @@ class PayrollController extends Controller
     private PayrollService $payrollService;
     private PayrollPeriodModel $payrollPeriodModel;
     protected NotificationService $notificationService;
-    private EmailService $emailService; // ADDED
+    private EmailService $emailService;
+    private PayslipModel $payslipModel;
+    private DepartmentModel $departmentModel; // NEW PROPERTY
 
     public function __construct()
     {
@@ -35,7 +39,9 @@ class PayrollController extends Controller
             $this->payrollService = new PayrollService();
             $this->payrollPeriodModel = new PayrollPeriodModel();
             $this->notificationService = new NotificationService();
-            $this->emailService = new EmailService(); // ADDED
+            $this->emailService = new EmailService();
+            $this->payslipModel = new PayslipModel();
+            $this->departmentModel = new DepartmentModel(); // NEW INSTANTIATION
         } catch (Throwable $e) {
             Log::critical("PayrollController failed to initialize services/models: " . $e->getMessage());
             ErrorResponder::respond(500, "A critical system error occurred during payroll initialization.");
@@ -293,5 +299,50 @@ class PayrollController extends Controller
             ErrorResponder::respond(500, "Could not load payslip history due to a system error.");
         }
     }
+
+    /**
+     * Displays payslips for a specific department and payroll period.
+     * Accessible via /payroll/payslips/department/{departmentId}/period/{periodId}
+     *
+     * @param string $departmentId
+     * @param string $periodId
+     */
+    public function viewDepartmentPayslips(string $departmentId, string $periodId): void
+    {
+        $this->checkPermission('payroll:view_all');
+
+        try {
+            $deptId = (int)\Jeffrey\Sikapay\Helpers\Sanitizer::text($departmentId);
+            $pId = (int)\Jeffrey\Sikapay\Helpers\Sanitizer::text($periodId);
+
+            $department = $this->departmentModel->find($deptId);
+            if (!$department || (int)$department['tenant_id'] !== $this->tenantId) {
+                ErrorResponder::respond(404, "Department not found or does not belong to your tenant.");
+                return;
+            }
+
+            $payrollPeriod = $this->payrollPeriodModel->getPeriodById($pId, Auth::tenantId());
+            if (!$payrollPeriod || (int)$payrollPeriod['tenant_id'] !== $this->tenantId) {
+                ErrorResponder::respond(404, "Payroll Period not found or does not belong to your tenant.");
+                return;
+            }
+
+            // Fetch payslips for this department and period
+            $payslips = $this->payslipModel->getPayslipsByDepartmentAndPeriod($this->tenantId, $deptId, $pId);
+
+            $this->view('payroll/payslip-history', [
+                'title' => 'Payslips for ' . $department['name'] . ' - ' . $payrollPeriod['period_name'],
+                'payrollPeriods' => [$payrollPeriod], // Only this period for the dropdown if needed
+                'payslips' => $payslips, // Pass filtered payslips
+                'selectedDepartmentId' => $deptId,
+                'selectedPeriodId' => $pId,
+            ]);
+
+        } catch (Throwable $e) {
+            Log::error("Failed to load payslips for Department ID {$departmentId}, Period ID {$periodId}: " . $e->getMessage());
+            ErrorResponder::respond(500, "Could not load departmental payslips due to a system error.");
+        }
+    }
 }
+
 

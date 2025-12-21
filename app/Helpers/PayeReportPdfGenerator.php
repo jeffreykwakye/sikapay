@@ -21,13 +21,17 @@ class PayeReportPdfGenerator extends FPDF
     private array $summaryFillColor = [245, 245, 245];     // Very light gray for summary box
     private array $borderColor = [200, 200, 200];          // Light gray for table borders
     private array $alternateRowColor = [242, 242, 242];    // For alternating table rows
+    private bool $includeCoverLetter;
+    private ?array $departmentData;
 
-    public function __construct(array $reportData, array $tenantData, array $payrollPeriodData)
+    public function __construct(array $reportData, array $tenantData, array $payrollPeriodData, bool $includeCoverLetter = true, ?array $department = null)
     {
         parent::__construct('P', 'mm', 'A4'); // Default to Portrait
         $this->reportData = $reportData;
         $this->tenantData = $tenantData;
         $this->payrollPeriodData = $payrollPeriodData;
+        $this->includeCoverLetter = $includeCoverLetter;
+        $this->departmentData = $department;
     }
 
     public function Header()
@@ -89,7 +93,14 @@ class PayeReportPdfGenerator extends FPDF
         $this->SetXY(110, 8); // Adjusted for Portrait
         $this->SetFont('Arial', 'B', 16);
         $this->SetTextColor(255, 255, 255);
-        $this->Cell(90, 7, 'PAYE REPORT', 0, 1, 'R');
+
+        $year = date('Y', strtotime($this->payrollPeriodData['start_date']));
+        $title = $year . ' PAYE REPORT'; // Default title
+        if ($this->departmentData) {
+            $title = $year . ' PAYE FOR ' . strtoupper($this->departmentData['name']);
+        }
+
+        $this->Cell(90, 7, $title, 0, 1, 'R');
         $this->Ln(2);
 
         // Tenant Details
@@ -217,11 +228,13 @@ class PayeReportPdfGenerator extends FPDF
 
     public function generate(): string
     {
-        // 1. Generate Cover Letter
-        $this->isCoverLetter = true;
-        $this->AddPage('P', 'A4'); // Add a Portrait page for the letter
-        $this->generateCoverLetterContent();
-        $this->isCoverLetter = false;
+        // 1. Conditionally Generate Cover Letter
+        if ($this->includeCoverLetter) {
+            $this->isCoverLetter = true;
+            $this->AddPage('P', 'A4'); // Add a Portrait page for the letter
+            $this->generateCoverLetterContent();
+            $this->isCoverLetter = false;
+        }
 
         // 2. Generate Report Pages
         $this->AddPage('P', 'A4'); // Report also in Portrait

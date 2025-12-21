@@ -10,10 +10,15 @@ use \PDOException;
 
 class SubscriptionModel extends Model
 {
+    private PlanModel $planModel;
+    private EmployeeModel $employeeModel;
+
     // The model defaults to the main subscriptions table
     public function __construct()
     {
         parent::__construct('subscriptions');
+        $this->planModel = new PlanModel();
+        $this->employeeModel = new EmployeeModel();
     }
 
     
@@ -32,8 +37,8 @@ class SubscriptionModel extends Model
         
         // 1. Insert into 'subscriptions' (Current state)
         $sql = "INSERT INTO subscriptions 
-                (tenant_id, current_plan_id, status, start_date, end_date, next_billing_date) 
-                VALUES (:tenant_id, :current_plan_id, :status, :start_date, :end_date, :end_date)";
+                (tenant_id, current_plan_id, status, start_date, end_date, next_billing_date, employee_count_at_billing) 
+                VALUES (:tenant_id, :current_plan_id, :status, :start_date, :end_date, :end_date, :employee_count)";
         
         $success = false;
         try {
@@ -44,6 +49,7 @@ class SubscriptionModel extends Model
                 ':status' => $status,
                 ':start_date' => $startDate,
                 ':end_date' => $endDate,
+                ':employee_count' => 1, // Default to 1 for the new admin employee
             ]);
         } catch (PDOException $e) {
             // Log failure in current subscription state recording (FATAL to tenant setup)
@@ -57,12 +63,13 @@ class SubscriptionModel extends Model
 
         // 2. Log the event in 'subscription_history' (Audit trail)
         if ($success) {
+            $plan = $this->planModel->find($planId); // Fetch plan details
             $historyId = $this->logHistory(
                 $tenantId, 
                 $planId, 
                 'New', 
-                "Initial 30-day Trial activation. Expires {$endDate}.", 
-                null, 
+                "Initial subscription activated for plan '{$plan['name']}'. Expires {$endDate}.", // Modified detail
+                (float)$plan['price_ghs'], // Modified amount
                 $startDate, 
                 $endDate
             );
@@ -109,12 +116,12 @@ class SubscriptionModel extends Model
             return (int)$this->db->lastInsertId();
         } catch (PDOException $e) {
             // Log failure in subscription history audit trail
-            // Failure here is an audit concern, so we return 0 but log heavily.
+            // Failure here is an audit concern, so we log heavily and re-throw.
             Log::error("Subscription HISTORY LOG FAILED for Tenant {$tenantId}. Audit trail breach.", [
                 'action_type' => $actionType,
                 'db_error' => $e->getMessage()
             ]);
-            return 0;
+            throw $e; // Re-throw to allow transaction rollback
         }
     }
 
@@ -475,18 +482,24 @@ class SubscriptionModel extends Model
     {
         $this->db->beginTransaction();
         try {
-            // Update the main subscriptions table
+            $employeeCount = $this->employeeModel->getEmployeeCount($tenantId);
+
+            // Update the main subscriptions table with explicit placeholders
             $sql = "UPDATE {$this->table} SET 
+                        current_plan_id = :plan_id,
                         status = 'active', 
-                        end_date = :new_end_date, 
-                        next_billing_date = :new_end_date, 
-                        last_payment_date = CURDATE()
-                    WHERE tenant_id = :tenant_id AND current_plan_id = :plan_id";
+                        end_date = :end_date, 
+                        next_billing_date = :next_billing_date, 
+                        last_payment_date = CURDATE(),
+                        employee_count_at_billing = :employee_count
+                    WHERE tenant_id = :tenant_id";
             $stmt = $this->db->prepare($sql);
             $success = $stmt->execute([
-                ':new_end_date' => $newEndDate,
-                ':tenant_id' => $tenantId,
                 ':plan_id' => $planId,
+                ':end_date' => $newEndDate,
+                ':next_billing_date' => $newEndDate,
+                ':tenant_id' => $tenantId,
+                ':employee_count' => $employeeCount,
             ]);
 
             if ($success) {
@@ -498,7 +511,7 @@ class SubscriptionModel extends Model
                     'Renewal',
                     "Subscription renewed for plan '{$currentSubscription['plan_name']}'. New end date: {$newEndDate}.",
                     $amountPaid,
-                    $currentSubscription['start_date'], // Use old start date for continuity or determine new cycle start
+                    date('Y-m-d'), 
                     $newEndDate
                 );
             }
@@ -506,7 +519,12 @@ class SubscriptionModel extends Model
             return $success;
         } catch (PDOException $e) {
             $this->db->rollBack();
-            Log::error("Failed to renew subscription for tenant {$tenantId}. Error: " . $e->getMessage());
+            // Add more context to the log
+            Log::error("Failed to renew subscription for tenant {$tenantId}. Error: " . $e->getMessage(), [
+                'tenant_id' => $tenantId,
+                'plan_id' => $planId,
+                'new_end_date' => $newEndDate
+            ]);
             return false;
         }
     }
@@ -518,7 +536,7 @@ class SubscriptionModel extends Model
      * @param int $newPlanId The ID of the new plan.
      * @return bool True on success, false otherwise.
      */
-    public function upgradeSubscription(int $tenantId, int $newPlanId): bool
+    public function upgradeSubscription(int $tenantId, int $newPlanId, float $amountPaid): bool
     {
         $this->db->beginTransaction();
         try {
@@ -527,17 +545,20 @@ class SubscriptionModel extends Model
                 throw new \Exception("No active subscription found for tenant {$tenantId}.");
             }
             $oldPlanId = (int)$currentSubscription['current_plan_id'];
+            $employeeCount = $this->employeeModel->getEmployeeCount($tenantId);
 
             // Update the main subscriptions table
             $sql = "UPDATE {$this->table} SET 
                         current_plan_id = :new_plan_id, 
                         status = 'active', 
-                        updated_at = NOW()
+                        updated_at = NOW(),
+                        employee_count_at_billing = :employee_count
                     WHERE tenant_id = :tenant_id";
             $stmt = $this->db->prepare($sql);
             $success = $stmt->execute([
                 ':new_plan_id' => $newPlanId,
                 ':tenant_id' => $tenantId,
+                ':employee_count' => $employeeCount,
             ]);
 
             if ($success) {
@@ -547,8 +568,8 @@ class SubscriptionModel extends Model
                     $newPlanId,
                     'Upgrade',
                     "Subscription upgraded from plan ID {$oldPlanId} to plan ID {$newPlanId}.",
-                    null, // Amount paid can be handled separately
-                    $currentSubscription['start_date'],
+                    $amountPaid,
+                    date('Y-m-d'),
                     $currentSubscription['end_date']
                 );
             }
@@ -572,7 +593,7 @@ class SubscriptionModel extends Model
      * @param int $newPlanId The ID of the new plan.
      * @return bool True on success, false otherwise.
      */
-    public function downgradeSubscription(int $tenantId, int $newPlanId): bool
+    public function downgradeSubscription(int $tenantId, int $newPlanId, float $amountPaid): bool
     {
         $this->db->beginTransaction();
         try {
@@ -581,17 +602,20 @@ class SubscriptionModel extends Model
                 throw new \Exception("No active subscription found for tenant {$tenantId}.");
             }
             $oldPlanId = (int)$currentSubscription['current_plan_id'];
+            $employeeCount = $this->employeeModel->getEmployeeCount($tenantId);
 
             // Update the main subscriptions table
             $sql = "UPDATE {$this->table} SET 
                         current_plan_id = :new_plan_id, 
                         status = 'active', 
-                        updated_at = NOW()
+                        updated_at = NOW(),
+                        employee_count_at_billing = :employee_count
                     WHERE tenant_id = :tenant_id";
             $stmt = $this->db->prepare($sql);
             $success = $stmt->execute([
                 ':new_plan_id' => $newPlanId,
                 ':tenant_id' => $tenantId,
+                ':employee_count' => $employeeCount,
             ]);
 
             if ($success) {
@@ -601,8 +625,8 @@ class SubscriptionModel extends Model
                     $newPlanId,
                     'Downgrade',
                     "Subscription downgraded from plan ID {$oldPlanId} to plan ID {$newPlanId}.",
-                    null, // Amount paid can be handled separately
-                    $currentSubscription['start_date'],
+                    $amountPaid,
+                    date('Y-m-d'),
                     $currentSubscription['end_date']
                 );
             }

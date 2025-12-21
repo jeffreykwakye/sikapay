@@ -474,6 +474,7 @@ class PayrollService
             $this->ssnitAdviceModel->create([
                 'payroll_period_id' => $payrollPeriodId,
                 'tenant_id' => $tenantId,
+                'user_id' => $data['user_id'], // Correctly adding user_id
                 'employee_name' => $data['first_name'] . ' ' . $data['last_name'],
                 'ssnit_number' => $data['ssnit_number'],
                 'basic_salary' => $data['basic_salary'],
@@ -489,6 +490,7 @@ class PayrollService
             $this->graPayeAdviceModel->create([
                 'payroll_period_id' => $payrollPeriodId,
                 'tenant_id' => $tenantId,
+                'user_id' => $data['user_id'], // Correctly adding user_id
                 'employee_name' => $data['first_name'] . ' ' . $data['last_name'],
                 'tin_number' => $data['tin_number'],
                 'taxable_income' => $data['total_taxable_income'], // Now using the correct column name
@@ -502,6 +504,7 @@ class PayrollService
             $this->bankAdviceModel->create([
                 'payroll_period_id' => $payrollPeriodId,
                 'tenant_id' => $tenantId,
+                'user_id' => $data['user_id'], // Correctly adding user_id
                 'employee_name' => $data['first_name'] . ' ' . $data['last_name'],
                 'bank_name' => $data['bank_name'],
                 'bank_branch' => $data['bank_branch'],

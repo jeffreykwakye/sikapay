@@ -7,7 +7,10 @@ use Jeffrey\Sikapay\Models\DepartmentModel;
 use Jeffrey\Sikapay\Models\EmployeeModel;
 use Jeffrey\Sikapay\Models\PayrollPeriodModel;
 use Jeffrey\Sikapay\Models\PayslipModel;
+use Jeffrey\Sikapay\Models\SubscriptionModel; // New Import
+use Jeffrey\Sikapay\Services\SubscriptionService; // New Import
 use Jeffrey\Sikapay\Security\CsrfToken;
+use Jeffrey\Sikapay\Core\Auth;
 use Jeffrey\Sikapay\Core\Log;
 use Jeffrey\Sikapay\Helpers\Sanitizer;
 use Jeffrey\Sikapay\Core\ErrorResponder;
@@ -293,6 +296,45 @@ class DepartmentController extends Controller
         } catch (\Throwable $e) {
             Log::error("Failed to load department dashboard for ID {$id}. Error: " . $e->getMessage());
             ErrorResponder::respond(500, "Could not load the department dashboard.");
+        }
+    }
+
+    /**
+     * Renders a dedicated page for departmental payroll reports (Payslips, Statutory).
+     * @param string $departmentId The department ID.
+     * @param string $periodId The payroll period ID.
+     */
+    public function viewDepartmentReports(string $departmentId, string $periodId): void
+    {
+        try {
+            $departmentId = (int)Sanitizer::text($departmentId);
+            $periodId = (int)Sanitizer::text($periodId);
+
+            $department = $this->departmentModel->find($departmentId);
+            if (!$department) {
+                ErrorResponder::respond(404, "Department not found.");
+                return;
+            }
+
+            $payrollPeriod = $this->payrollPeriodModel->getPeriodById($periodId, Auth::tenantId());
+            if (!$payrollPeriod || (int)$payrollPeriod['tenant_id'] !== $this->tenantId) {
+                ErrorResponder::respond(404, "Payroll period not found or does not belong to your tenant.");
+                return;
+            }
+            
+            // Fetch tenant's plan to determine report availability (PDF/CSV/Excel)
+            $planName = $this->subscriptionService->getCurrentPlanName($this->tenantId);
+
+            $this->view('departments/reports', [
+                'title' => 'Departmental Reports: ' . $department['name'] . ' - ' . $payrollPeriod['period_name'],
+                'department' => $department,
+                'payrollPeriod' => $payrollPeriod,
+                'planName' => $planName,
+            ]);
+
+        } catch (\Throwable $e) {
+            Log::error("Failed to load departmental reports for Department ID {$departmentId}, Period ID {$periodId}. Error: " . $e->getMessage());
+            ErrorResponder::respond(500, "Could not load departmental reports.");
         }
     }
 }

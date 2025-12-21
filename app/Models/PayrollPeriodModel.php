@@ -146,7 +146,7 @@ class PayrollPeriodModel extends Model
 
     public function getPeriodById(int $periodId, int $tenantId): ?array
     {
-        $sql = "SELECT id, period_name, start_date, end_date, payment_date, is_closed FROM {$this->table} 
+        $sql = "SELECT id, tenant_id, period_name, start_date, end_date, payment_date, is_closed FROM {$this->table} 
                 WHERE id = :id AND tenant_id = :tenant_id";
 
         try {

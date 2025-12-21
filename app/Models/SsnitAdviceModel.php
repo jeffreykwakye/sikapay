@@ -35,6 +35,39 @@ class SsnitAdviceModel extends Model
     }
 
     /**
+     * Retrieves SSNIT advice data for a specific payroll period, tenant, and department.
+     *
+     * @param int $tenantId
+     * @param int $departmentId
+     * @param int $payrollPeriodId
+     * @return array An array of SSNIT advice records.
+     */
+    public function getAdviceByDepartmentAndPeriod(int $tenantId, int $departmentId, int $payrollPeriodId): array
+    {
+        $sql = "SELECT sa.*
+                FROM {$this->table} sa
+                JOIN employees e ON sa.user_id = e.user_id
+                JOIN positions pos ON e.current_position_id = pos.id
+                WHERE sa.payroll_period_id = :payroll_period_id 
+                AND sa.tenant_id = :tenant_id
+                AND pos.department_id = :department_id
+                ORDER BY sa.employee_name";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                ':payroll_period_id' => $payrollPeriodId,
+                ':tenant_id' => $tenantId,
+                ':department_id' => $departmentId,
+            ]);
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (\PDOException $e) {
+            Log::error("Failed to retrieve SSNIT advice for department {$departmentId}, period {$payrollPeriodId} (tenant {$tenantId}). Error: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
      * Generic method to create a new record, enforcing tenant scope.
      * @param array $data The data to insert.
      * @return int The ID of the newly created record.

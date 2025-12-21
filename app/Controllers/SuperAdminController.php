@@ -643,7 +643,6 @@ class SuperAdminController extends Controller
         $validator = new Validator($_POST);
         $validator->validate([
             'plan_id' => 'required|int',
-            'new_end_date' => 'required|date',
             'amount_paid' => 'required|numeric|min:0',
         ]);
 
@@ -655,8 +654,23 @@ class SuperAdminController extends Controller
 
         try {
             $planId = $validator->get('plan_id', 'int');
-            $newEndDate = $validator->get('new_end_date');
             $amountPaid = $validator->get('amount_paid', 'float');
+
+            // --- Calculate new end date on the backend using strtotime for robustness ---
+            $currentSubscription = $this->subscriptionModel->getCurrentSubscription($id);
+            
+            // Get the later of today or the current end date as a base timestamp
+            $baseTimestamp = time();
+            if ($currentSubscription && $currentSubscription['end_date']) {
+                $currentEndTimestamp = strtotime($currentSubscription['end_date']);
+                if ($currentEndTimestamp > $baseTimestamp) {
+                    $baseTimestamp = $currentEndTimestamp;
+                }
+            }
+            
+            // Add one month to the base timestamp and format
+            $newEndDate = date('Y-m-d', strtotime('+1 month', $baseTimestamp));
+            // --- End of calculation ---
 
             $success = $this->subscriptionModel->renewSubscription($id, $planId, $newEndDate, $amountPaid);
 
@@ -685,6 +699,7 @@ class SuperAdminController extends Controller
         $validator = new Validator($_POST);
         $validator->validate([
             'new_plan_id' => 'required|int',
+            'amount_paid' => 'required|numeric|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -695,11 +710,12 @@ class SuperAdminController extends Controller
 
         try {
             $newPlanId = $validator->get('new_plan_id', 'int');
-            $success = $this->subscriptionModel->upgradeSubscription($id, $newPlanId);
+            $amountPaid = $validator->get('amount_paid', 'float');
+            $success = $this->subscriptionModel->upgradeSubscription($id, $newPlanId, $amountPaid);
 
             if ($success) {
                 $_SESSION['flash_success'] = "Subscription for tenant {$id} upgraded successfully.";
-                $this->auditModel->log(1, 'SUBSCRIPTION_UPGRADED', ['tenant_id' => $id, 'new_plan_id' => $newPlanId]);
+                $this->auditModel->log(1, 'SUBSCRIPTION_UPGRADED', ['tenant_id' => $id, 'new_plan_id' => $newPlanId, 'amount_paid' => $amountPaid]);
             } else {
                 $_SESSION['flash_error'] = "Failed to upgrade subscription for tenant {$id}.";
             }
@@ -722,6 +738,7 @@ class SuperAdminController extends Controller
         $validator = new Validator($_POST);
         $validator->validate([
             'new_plan_id' => 'required|int',
+            'amount_paid' => 'required|numeric|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -732,11 +749,12 @@ class SuperAdminController extends Controller
 
         try {
             $newPlanId = $validator->get('new_plan_id', 'int');
-            $success = $this->subscriptionModel->downgradeSubscription($id, $newPlanId);
+            $amountPaid = $validator->get('amount_paid', 'float');
+            $success = $this->subscriptionModel->downgradeSubscription($id, $newPlanId, $amountPaid);
 
             if ($success) {
                 $_SESSION['flash_success'] = "Subscription for tenant {$id} downgraded successfully.";
-                $this->auditModel->log(1, 'SUBSCRIPTION_DOWNGRADED', ['tenant_id' => $id, 'new_plan_id' => $newPlanId]);
+                $this->auditModel->log(1, 'SUBSCRIPTION_DOWNGRADED', ['tenant_id' => $id, 'new_plan_id' => $newPlanId, 'amount_paid' => $amountPaid]);
             } else {
                 $_SESSION['flash_error'] = "Failed to downgrade subscription for tenant {$id}.";
             }

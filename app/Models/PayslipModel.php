@@ -213,6 +213,7 @@ class PayslipModel extends Model
     public function getBankAdviceDataByPeriod(int $payrollPeriodId, int $tenantId): array
     {
         $sql = "SELECT 
+                    p.user_id,
                     u.first_name, 
                     u.last_name,
                     e.bank_name,
@@ -242,6 +243,7 @@ class PayslipModel extends Model
     public function getSsnitReportDataByPeriod(int $payrollPeriodId, int $tenantId): array
     {
         $sql = "SELECT 
+                    p.user_id,
                     u.first_name, 
                     u.last_name,
                     up.ssnit_number,
@@ -295,6 +297,44 @@ class PayslipModel extends Model
             return $stmt->fetchAll(\PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
             Log::error("Failed to retrieve payslips for user {$userId} (tenant {$tenantId}). Error: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Retrieves all payslips for a specific payroll period, tenant, and department.
+     *
+     * @param int $tenantId
+     * @param int $departmentId
+     * @param int $payrollPeriodId
+     * @return array An array of payslip records.
+     */
+    public function getPayslipsByDepartmentAndPeriod(int $tenantId, int $departmentId, int $payrollPeriodId): array
+    {
+        $sql = "SELECT 
+                    p.id, p.user_id, p.gross_pay, p.net_pay, p.paye_amount, p.ssnit_employee_amount, p.ssnit_employer_amount, p.payslip_path, p.total_taxable_income,
+                    u.first_name, u.last_name, u.email, e.employee_id,
+                    up.tin_number
+                FROM {$this->table} p
+                JOIN users u ON p.user_id = u.id
+                JOIN employees e ON p.user_id = e.user_id
+                JOIN positions pos ON e.current_position_id = pos.id
+                LEFT JOIN user_profiles up ON p.user_id = up.user_id
+                WHERE p.payroll_period_id = :payroll_period_id 
+                AND p.tenant_id = :tenant_id
+                AND pos.department_id = :department_id
+                ORDER BY u.last_name, u.first_name";
+
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                ':payroll_period_id' => $payrollPeriodId,
+                ':tenant_id' => $tenantId,
+                ':department_id' => $departmentId,
+            ]);
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            Log::error("Failed to retrieve payslips for department {$departmentId}, period {$payrollPeriodId} (tenant {$tenantId}). Error: " . $e->getMessage());
             return [];
         }
     }
