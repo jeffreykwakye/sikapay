@@ -38,7 +38,7 @@
 ## Immediate Priorities (Next Focus Area)
 
 1.  **Flexible Payroll Workflow**:
-    *   **Objective:** Refactor the core payroll module from a rigid, linear process to a flexible, state-driven one (Open -> Closed). This will allow for payroll re-runs to apply corrections and require a manual "Close Period" action before payslips are finalized and notifications are sent.
+    *   **Objective:** Refactor the core payroll module from a rigid, linear process to a flexible, state-driven one (Open -> Closed). This will allow for payroll re-runs to apply corrections and require a manual "Close Period" action before payslips are finalized and notifications are sent. This also includes enabling the viewing of draft statutory reports for open periods to allow pre-finalization review.
     *   **Status:** **In Progress**.
 
 ## Recently Completed
