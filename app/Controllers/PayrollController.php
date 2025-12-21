@@ -24,7 +24,8 @@ class PayrollController extends Controller
     protected NotificationService $notificationService;
     private EmailService $emailService;
     private PayslipModel $payslipModel;
-    private DepartmentModel $departmentModel; // NEW PROPERTY
+    private DepartmentModel $departmentModel;
+    protected \Jeffrey\Sikapay\Models\UserModel $userModel; // CHANGED FROM PRIVATE TO PROTECTED
 
     public function __construct()
     {
@@ -41,7 +42,8 @@ class PayrollController extends Controller
             $this->notificationService = new NotificationService();
             $this->emailService = new EmailService();
             $this->payslipModel = new PayslipModel();
-            $this->departmentModel = new DepartmentModel(); // NEW INSTANTIATION
+            $this->departmentModel = new DepartmentModel();
+            $this->userModel = new \Jeffrey\Sikapay\Models\UserModel(); // NEW INSTANTIATION
         } catch (Throwable $e) {
             Log::critical("PayrollController failed to initialize services/models: " . $e->getMessage());
             ErrorResponder::respond(500, "A critical system error occurred during payroll initialization.");
@@ -51,11 +53,12 @@ class PayrollController extends Controller
     public function index(): void
     {
         try {
-            $currentPeriod = $this->payrollPeriodModel->getCurrentPeriod($this->tenantId);
+            // $currentPeriod = $this->payrollPeriodModel->getCurrentPeriod($this->tenantId);
+            $payrollPeriods = $this->payrollPeriodModel->getAllPeriods($this->tenantId);
 
             $this->view('payroll/index', [
                 'title' => 'Payroll Management',
-                'currentPeriod' => $currentPeriod,
+                'payrollPeriods' => $payrollPeriods,
                 'Auth' => $this->auth // Pass the Auth instance to the view
             ]);
         } catch (Throwable $e) {
@@ -168,31 +171,18 @@ class PayrollController extends Controller
                 return;
             }
 
-            $this->payrollService->processPayrollRun($this->tenantId, $payrollPeriod, $employees);
+            $this->payrollService->runPayrollCalculations($this->tenantId, $payrollPeriod, $employees);
 
-            $_SESSION['flash_success'] = "Payroll for '{$payrollPeriod['period_name']}' successfully processed.";
-            // Notify tenant admins about the payroll run completion
+            $_SESSION['flash_success'] = "Payroll for '{$payrollPeriod['period_name']}' successfully processed. You can re-run it to make corrections or close the period to finalize.";
+            
+            // Notification is for processing, not finalization, so it's okay to keep a notification here.
             $this->notificationService->createNotificationForRole(
                 $this->tenantId,
                 'tenant_admin',
                 'success',
-                'Payroll Run Completed',
-                "Payroll for period '{$payrollPeriod['period_name']}' has been successfully processed."
+                'Payroll Processed',
+                "Payroll for period '{$payrollPeriod['period_name']}' has been processed and is ready for review."
             );
-
-            // Send email to the user who initiated the payroll run
-            $currentUserId = Auth::userId();
-            $currentUser = $this->userModel->find($currentUserId); // Retrieve full user object
-
-            if ($currentUser && !empty($currentUser['email'])) {
-                $subject = "SikaPay: Payroll Run Completed for {$payrollPeriod['period_name']}";
-                $appUrl = AppConfig::get('app.url');
-                $body = "Dear {$currentUser['first_name']},<br><br>" // Use retrieved user data
-                      . "The payroll for the period '{$payrollPeriod['period_name']}' has been successfully processed.<br>"
-                      . "You can view the payslip history and reports here: <a href=\"{$appUrl}/payroll/payslips\">Payslip History</a><br><br>"
-                      . "Thank you,<br>SikaPay Team";
-                $this->emailService->send($currentUser['email'], $subject, $body); // Use retrieved user email
-            }
 
         } catch (Throwable $e) {
             Log::critical("Payroll run failed for Tenant {$this->tenantId}, Period {$payrollPeriodId}: " . $e->getMessage());
@@ -342,6 +332,72 @@ class PayrollController extends Controller
             Log::error("Failed to load payslips for Department ID {$departmentId}, Period ID {$periodId}: " . $e->getMessage());
             ErrorResponder::respond(500, "Could not load departmental payslips due to a system error.");
         }
+    }
+
+    /**
+     * Closes a payroll period, finalizing payslips and statutory reports.
+     *
+     * @param string $id
+     * @return void
+     */
+    public function closePeriod(string $id): void
+    {
+        $this->checkActionIsAllowed();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('/payroll');
+        }
+
+        // CSRF check
+        if (!\Jeffrey\Sikapay\Security\CsrfToken::validate($_POST['csrf_token'] ?? '')) {
+            \Jeffrey\Sikapay\Security\CsrfToken::destroyToken();
+            $_SESSION['flash_error'] = "Security error: Invalid CSRF token. Please try again.";
+            $this->redirect('/payroll');
+        }
+
+        $pId = (int)\Jeffrey\Sikapay\Helpers\Sanitizer::text($id);
+
+        try {
+            $payrollPeriod = $this->payrollPeriodModel->find($pId);
+
+            if (!$payrollPeriod || (int)$payrollPeriod['tenant_id'] !== $this->tenantId || (bool)$payrollPeriod['is_closed']) {
+                $_SESSION['flash_error'] = "Invalid or already closed payroll period selected.";
+                $this->redirect('/payroll');
+                return;
+            }
+
+            $this->payrollService->closePayrollPeriod($this->tenantId, $pId);
+
+            $_SESSION['flash_success'] = "Payroll for '{$payrollPeriod['period_name']}' successfully closed. Payslips and reports are now finalized.";
+            
+            // Notify tenant admins about the payroll run completion
+            $this->notificationService->createNotificationForRole(
+                $this->tenantId,
+                'tenant_admin',
+                'success',
+                'Payroll Period Closed',
+                "Payroll for period '{$payrollPeriod['period_name']}' has been finalized and payslips are ready for distribution."
+            );
+
+            // Send email to the user who initiated the payroll run
+            $currentUserId = Auth::userId();
+            $currentUser = $this->userModel->find($currentUserId); // Retrieve full user object
+
+            if ($currentUser && !empty($currentUser['email'])) {
+                $subject = "SikaPay: Payroll Period Closed for {$payrollPeriod['period_name']}";
+                $appUrl = AppConfig::get('app.url');
+                $body = "Dear {$currentUser['first_name']},<br><br>" // Use retrieved user data
+                      . "The payroll for the period '{$payrollPeriod['period_name']}' has been successfully finalized.<br>"
+                      . "You can view the payslip history and reports here: <a href=\"{$appUrl}/payroll/payslips\">Payslip History</a><br><br>"
+                      . "Thank you,<br>SikaPay Team";
+                $this->emailService->send($currentUser['email'], $subject, $body); // Use retrieved user email
+            }
+
+        } catch (Throwable $e) {
+            Log::critical("Failed to close payroll period for Tenant {$this->tenantId}, Period {$pId}: " . $e->getMessage());
+            $_SESSION['flash_error'] = "A critical error occurred while closing the payroll period: " . $e->getMessage();
+        }
+
+        $this->redirect('/payroll');
     }
 }
 

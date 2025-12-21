@@ -77,6 +77,10 @@ class StatutoryReportController extends Controller
         $tenantData = $this->tenantProfileModel->findByTenantId($tenantId);
         $includeCoverLetter = $this->payrollSettingsModel->getSetting($tenantId, 'include_report_cover_letters', 'false') === 'true';
 
+        if (empty($reportData) || empty($tenantData)) {
+            $this->redirect('/reports'); // Redirect if no data or tenant info
+            return;
+        }
         $pdf = new PayeReportPdfGenerator($reportData, $tenantData, $period, $includeCoverLetter);
         $pdfContent = $pdf->generate();
 
@@ -98,6 +102,10 @@ class StatutoryReportController extends Controller
         $reportData = $this->graPayeAdviceModel->getAdviceByPeriod($periodId, $tenantId);
         $tenantData = $this->tenantProfileModel->findByTenantId($tenantId);
 
+        if (empty($reportData) || empty($tenantData)) {
+            $this->redirect('/reports'); // Redirect if no data or tenant info
+            return;
+        }
         $csv = new PayeReportCsvGenerator($reportData, $tenantData, $period);
         $csvContent = $csv->generate();
 
@@ -119,6 +127,10 @@ class StatutoryReportController extends Controller
         $reportData = $this->graPayeAdviceModel->getAdviceByPeriod($periodId, $tenantId);
         $tenantData = $this->tenantProfileModel->findByTenantId($tenantId);
 
+        if (empty($reportData) || empty($tenantData)) {
+            $this->redirect('/reports'); // Redirect if no data or tenant info
+            return;
+        }
         $excel = new PayeReportExcelGenerator($reportData, $tenantData, $period);
         $excelFile = $excel->generate();
 
@@ -142,6 +154,10 @@ class StatutoryReportController extends Controller
         $tenantData = $this->tenantProfileModel->findByTenantId($tenantId);
         $includeCoverLetter = $this->payrollSettingsModel->getSetting($tenantId, 'include_report_cover_letters', 'false') === 'true';
 
+        if (empty($reportData) || empty($tenantData)) {
+            $this->redirect('/reports'); // Redirect if no data or tenant info
+            return;
+        }
         $pdf = new SsnitReportPdfGenerator($reportData, $tenantData, $period, $includeCoverLetter);
         $pdfContent = $pdf->generate();
 
@@ -163,6 +179,10 @@ class StatutoryReportController extends Controller
         $reportData = $this->ssnitAdviceModel->getAdviceByPeriod($periodId, $tenantId);
         $tenantData = $this->tenantProfileModel->findByTenantId($tenantId);
 
+        if (empty($reportData) || empty($tenantData)) {
+            $this->redirect('/reports'); // Redirect if no data or tenant info
+            return;
+        }
         $csv = new SsnitReportCsvGenerator($reportData, $tenantData, $period);
         $csvContent = $csv->generate();
 
@@ -184,6 +204,10 @@ class StatutoryReportController extends Controller
         $reportData = $this->ssnitAdviceModel->getAdviceByPeriod($periodId, $tenantId);
         $tenantData = $this->tenantProfileModel->findByTenantId($tenantId);
 
+        if (empty($reportData) || empty($tenantData)) {
+            $this->redirect('/reports'); // Redirect if no data or tenant info
+            return;
+        }
         $excel = new SsnitReportExcelGenerator($reportData, $tenantData, $period);
         $excelFile = $excel->generate();
 
@@ -234,10 +258,9 @@ class StatutoryReportController extends Controller
         $tenantData = $this->tenantProfileModel->findByTenantId($tenantId);
 
         if (empty($reportData) || empty($tenantData)) {
-            $this->redirect('/reports');
+            $this->redirect('/reports'); // Redirect if no data or tenant info
             return;
         }
-
         $csv = new BankAdviceCsvGenerator($reportData, $tenantData, $period);
         $csvContent = $csv->generate();
 
@@ -260,10 +283,9 @@ class StatutoryReportController extends Controller
         $tenantData = $this->tenantProfileModel->findByTenantId($tenantId);
 
         if (empty($reportData) || empty($tenantData)) {
-            $this->redirect('/reports');
+            $this->redirect('/reports'); // Redirect if no data or tenant info
             return;
         }
-
         $excel = new BankAdviceExcelGenerator($reportData, $tenantData, $period);
         $excelFile = $excel->generate();
 
@@ -404,6 +426,10 @@ class StatutoryReportController extends Controller
         $tenantData = $this->tenantProfileModel->findByTenantId($tenantId);
         $includeCoverLetter = false;
 
+        if (empty($reportData) || empty($tenantData)) {
+            $this->redirect('/departments/' . $deptId . '/reports/' . $pId); // Redirect if no data or tenant info
+            return;
+        }
         $pdf = new PayeReportPdfGenerator($reportData, $tenantData, $period, $includeCoverLetter, $department);
         $pdfContent = $pdf->generate();
 
@@ -433,6 +459,10 @@ class StatutoryReportController extends Controller
         $reportData = $this->graPayeAdviceModel->getAdviceByDepartmentAndPeriod($tenantId, $deptId, $pId);
         $tenantData = $this->tenantProfileModel->findByTenantId($tenantId);
 
+        if (empty($reportData) || empty($tenantData)) {
+            $this->redirect('/departments/' . $deptId . '/reports/' . $pId); // Redirect if no data or tenant info
+            return;
+        }
         $csv = new PayeReportCsvGenerator($reportData, $tenantData, $period);
         $csvContent = $csv->generate();
 
@@ -462,6 +492,10 @@ class StatutoryReportController extends Controller
         $reportData = $this->graPayeAdviceModel->getAdviceByDepartmentAndPeriod($tenantId, $deptId, $pId);
         $tenantData = $this->tenantProfileModel->findByTenantId($tenantId);
 
+        if (empty($reportData) || empty($tenantData)) {
+            $this->redirect('/departments/' . $deptId . '/reports/' . $pId); // Redirect if no data or tenant info
+            return;
+        }
         $excel = new PayeReportExcelGenerator($reportData, $tenantData, $period);
         $excelFile = $excel->generate();
 
@@ -493,6 +527,10 @@ class StatutoryReportController extends Controller
         $tenantData = $this->tenantProfileModel->findByTenantId($tenantId);
         $includeCoverLetter = false;
 
+        if (empty($reportData) || empty($tenantData)) {
+            $this->redirect('/departments/' . $deptId . '/reports/' . $pId); // Redirect if no data or tenant info
+            return;
+        }
         $pdf = new SsnitReportPdfGenerator($reportData, $tenantData, $period, $includeCoverLetter, $department);
         $pdfContent = $pdf->generate();
 
@@ -522,6 +560,10 @@ class StatutoryReportController extends Controller
         $reportData = $this->ssnitAdviceModel->getAdviceByDepartmentAndPeriod($tenantId, $deptId, $pId);
         $tenantData = $this->tenantProfileModel->findByTenantId($tenantId);
 
+        if (empty($reportData) || empty($tenantData)) {
+            $this->redirect('/departments/' . $deptId . '/reports/' . $pId); // Redirect if no data or tenant info
+            return;
+        }
         $csv = new SsnitReportCsvGenerator($reportData, $tenantData, $period);
         $csvContent = $csv->generate();
 
@@ -551,6 +593,10 @@ class StatutoryReportController extends Controller
         $reportData = $this->ssnitAdviceModel->getAdviceByDepartmentAndPeriod($tenantId, $deptId, $pId);
         $tenantData = $this->tenantProfileModel->findByTenantId($tenantId);
 
+        if (empty($reportData) || empty($tenantData)) {
+            $this->redirect('/departments/' . $deptId . '/reports/' . $pId); // Redirect if no data or tenant info
+            return;
+        }
         $excel = new SsnitReportExcelGenerator($reportData, $tenantData, $period);
         $excelFile = $excel->generate();
 
@@ -617,10 +663,9 @@ class StatutoryReportController extends Controller
         $tenantData = $this->tenantProfileModel->findByTenantId($tenantId);
 
         if (empty($reportData) || empty($tenantData)) {
-            $this->redirect('/departments/' . $deptId . '/reports/' . $pId);
+            $this->redirect('/departments/' . $deptId . '/reports/' . $pId); // Redirect if no data or tenant info
             return;
         }
-
         $csv = new BankAdviceCsvGenerator($reportData, $tenantData, $period);
         $csvContent = $csv->generate();
 
@@ -651,10 +696,9 @@ class StatutoryReportController extends Controller
         $tenantData = $this->tenantProfileModel->findByTenantId($tenantId);
 
         if (empty($reportData) || empty($tenantData)) {
-            $this->redirect('/departments/' . $deptId . '/reports/' . $pId);
+            $this->redirect('/departments/' . $deptId . '/reports/' . $pId); // Redirect if no data or tenant info
             return;
         }
-
         $excel = new BankAdviceExcelGenerator($reportData, $tenantData, $period);
         $excelFile = $excel->generate();
 

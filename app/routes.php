@@ -416,6 +416,11 @@ return [
         'permission' => ['PermissionMiddleware', 'payroll:prepare'],
         'handler' => ['PayrollController', 'runPayroll']
     ]],
+    ['POST', '/payroll/period/{id:\d+}/close', [ // NEW
+        'auth' => 'AuthMiddleware',
+        'permission' => ['PermissionMiddleware', 'payroll:manage_rules'],
+        'handler' => ['PayrollController', 'closePeriod']
+    ]],
     ['GET', '/payroll/payslips', [
         'auth' => 'AuthMiddleware',
         'permission' => ['PermissionMiddleware', 'payroll:view_all'],

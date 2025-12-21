@@ -376,6 +376,9 @@ class SuperAdminController extends Controller
 
             // Fetch the plan details to check if default users should be created
             $selectedPlan = $this->planModel->find($tenantData['plan_id']);
+            if (!$selectedPlan) {
+                throw new \Exception("Selected plan with ID {$tenantData['plan_id']} not found.");
+            }
 
             // Create HR Manager and Accountant users ONLY for Professional and Enterprise plans
             if ($selectedPlan && in_array($selectedPlan['name'], ['Professional', 'Enterprise'])) {
@@ -483,7 +486,7 @@ class SuperAdminController extends Controller
             $lastPayrollPeriod = $this->payrollPeriodModel->getLatestClosedPeriod($id);
             $lastPayrollRunDate = $lastPayrollPeriod['end_date'] ?? 'N/A';
             $lastPayrollGrossPay = 0.0;
-            if ($lastPayrollPeriod) {
+            if ($lastPayrollPeriod && isset($lastPayrollPeriod['id'])) { // Add null check for $lastPayrollPeriod
                 $payrollAggregates = $this->payslipModel->getAggregatedPayslipData((int)$lastPayrollPeriod['id'], $id);
                 $lastPayrollGrossPay = $payrollAggregates['total_gross_pay'] ?? 0.0;
             }
@@ -526,7 +529,7 @@ class SuperAdminController extends Controller
 
         $roleId = $this->roleModel->findIdByName($roleName);
         if ($roleId === null) {
-            throw new \Exception("System error: '{$roleName}' role not found in the database. Aborting.");
+            throw new \Exception("System error: '{$roleName}' role not found in the database. Aborting default user creation.");
         }
 
         $userId = $this->userModel->createUser($tenantId, [

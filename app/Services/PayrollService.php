@@ -322,20 +322,22 @@ class PayrollService
     }
 
     /**
-     * Orchestrates the entire payroll run process for a given period and set of employees.
+     * Runs the payroll calculation for a given period, saving payslips as a draft.
+     * This process is re-runnable for an open period.
      *
      * @param int $tenantId
      * @param array $payrollPeriod
      * @param array $employees
      * @throws \Exception
      */
-    public function processPayrollRun(int $tenantId, array $payrollPeriod, array $employees): void
+    public function runPayrollCalculations(int $tenantId, array $payrollPeriod, array $employees): void
     {
         $this->db->beginTransaction();
         try {
-            // 1. Delete existing payslips and related details for this period to prevent duplicate entry errors on re-run
+            // 1. Delete existing payslips and related details for this period to allow re-runs.
+            // This also needs to cascade to payslip_allowances, payslip_deductions etc.
+            // We'll rely on foreign key constraints with ON DELETE CASCADE for this.
             $this->payslipModel->deletePayslipsForPeriod((int)$payrollPeriod['id'], $tenantId);
-            // TODO: Also delete from payslip_allowances, payslip_deductions, etc. for this period
 
             // Fetch tenant profile data for payslip header
             $tenantProfileModel = new \Jeffrey\Sikapay\Models\TenantProfileModel();
@@ -347,33 +349,23 @@ class PayrollService
             $fullPayslipDirPath = $basePublicPath . DIRECTORY_SEPARATOR . $payslipRelativeDir;
 
             if (!is_dir($fullPayslipDirPath)) {
-                $mkdirResult = mkdir($fullPayslipDirPath, 0777, true);
-                Log::debug("mkdir result for {$fullPayslipDirPath}: ", ['result' => $mkdirResult]);
+                mkdir($fullPayslipDirPath, 0777, true);
             }
 
             foreach ($employees as $employee) {
                 $calculatedPayroll = $this->calculateEmployeePayroll((int)$employee['user_id'], $tenantId, $payrollPeriod);
 
-                // Log calculated payroll for debugging
-                Log::debug("Calculated Payroll for Employee " . $employee['user_id'], $calculatedPayroll);
-
                 // Generate PDF Payslip
-                $employeeFullData = $this->employeeModel->getEmployeeProfile((int)$employee['user_id']); // Get full employee data for payslip
-                $payslipFileName = "payslip_" . $employeeFullData['user_id'] . "_" . date('YmdHis') . ".pdf"; // Using user ID and timestamp
-                $payslipRelativeFilePath = $payslipRelativeDir . DIRECTORY_SEPARATOR . $payslipFileName; // Relative path for DB
-                $fullPayslipFilePath = $basePublicPath . DIRECTORY_SEPARATOR . $payslipRelativeFilePath; // Absolute path for file_put_contents
+                $employeeFullData = $this->employeeModel->getEmployeeProfile((int)$employee['user_id']);
+                $payslipFileName = "payslip_" . $employeeFullData['user_id'] . "_" . date('YmdHis') . ".pdf";
+                $payslipRelativeFilePath = $payslipRelativeDir . DIRECTORY_SEPARATOR . $payslipFileName;
+                $fullPayslipFilePath = $basePublicPath . DIRECTORY_SEPARATOR . $payslipRelativeFilePath;
 
-                Log::debug("Payslip File Path: ", ['path' => $fullPayslipFilePath]);
-
+                // The PayslipPdfGenerator constructor needs to be updated if it causes issues.
                 $pdf = new PayslipPdfGenerator($calculatedPayroll, $employeeFullData, $tenantData, $payrollPeriod);
                 $pdfContent = $pdf->generatePayslip();
-                $filePutContentsResult = file_put_contents($fullPayslipFilePath, $pdfContent);
-
-                if ($filePutContentsResult === false) {
-                    Log::error("Failed to save payslip PDF to {$fullPayslipFilePath}. Check directory permissions.");
-                }
-
-                Log::debug("file_put_contents result: ", ['result' => $filePutContentsResult]);
+                file_put_contents($fullPayslipFilePath, $pdfContent);
+                
 
                 // Save main payslip data
                 $payslipData = [
@@ -386,73 +378,82 @@ class PayrollService
                     'total_bonuses' => $calculatedPayroll['total_bonuses'],
                     'gross_pay' => $calculatedPayroll['gross_pay'],
                     'total_taxable_income' => $calculatedPayroll['total_taxable_income'],
-                    'total_deductions' => $calculatedPayroll['total_deductions'], // This is custom deductions only
+                    'total_deductions' => $calculatedPayroll['total_deductions'],
                     'net_pay' => $calculatedPayroll['net_pay'],
                     'paye_amount' => $calculatedPayroll['paye'],
                     'ssnit_employee_amount' => $calculatedPayroll['employee_ssnit'],
                     'ssnit_employer_amount' => $calculatedPayroll['employer_ssnit'],
-                    'payslip_path' => $payslipRelativeFilePath, // Store relative path in DB
+                    'payslip_path' => $payslipRelativeFilePath,
                 ];
                 $payslipId = $this->payslipModel->createPayslip($payslipData);
 
                 if ($payslipId > 0) {
-                    // Save detailed allowances
+                    // Save detailed components
                     foreach ($calculatedPayroll['detailed_allowances'] as $allowance) {
-                        $this->payslipAllowanceModel->create([
-                            'payslip_id' => $payslipId,
-                            'tenant_id' => $tenantId,
-                            'allowance_name' => $allowance['name'],
-                            'amount' => $allowance['amount'],
-                        ]);
+                        $this->payslipAllowanceModel->create(['payslip_id' => $payslipId, 'tenant_id' => $tenantId, 'allowance_name' => $allowance['name'], 'amount' => $allowance['amount']]);
                     }
-                    // Save detailed deductions
                     foreach ($calculatedPayroll['detailed_deductions'] as $deduction) {
-                        $this->payslipDeductionModel->create([
-                            'payslip_id' => $payslipId,
-                            'tenant_id' => $tenantId,
-                            'deduction_name' => $deduction['name'],
-                            'amount' => $deduction['amount'],
-                        ]);
+                        $this->payslipDeductionModel->create(['payslip_id' => $payslipId, 'tenant_id' => $tenantId, 'deduction_name' => $deduction['name'], 'amount' => $deduction['amount']]);
                     }
-                    // TODO: Save detailed overtimes and bonuses once implemented in calculateEmployeePayroll
 
                     // Auto-unassign non-recurring elements
                     foreach ($calculatedPayroll['applied_elements'] as $element) {
                         if (!$element['is_recurring']) {
-                            $this->employeePayrollDetailsModel->deleteByEmployeeAndElement(
-                                (int)$employee['user_id'],
-                                (int)$element['payroll_element_id'],
-                                $tenantId
-                            );
-
-                            $this->auditModel->log(
-                                $tenantId,
-                                'NON_RECURRING_ELEMENT_REMOVED',
-                                [
-                                    'employee_user_id' => (int)$employee['user_id'],
-                                    'element_name' => $element['name'],
-                                    'payslip_id' => $payslipId,
-                                    'details' => 'Non-recurring element automatically unassigned after payroll run.'
-                                ]
-                            );
+                            $this->employeePayrollDetailsModel->deleteByEmployeeAndElement((int)$employee['user_id'], (int)$element['payroll_element_id'], $tenantId);
                         }
                     }
                 }
             }
 
+            // DO NOT save advice records or close the period here.
+            
+            $this->db->commit();
+        } catch (\Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            Log::critical("Payroll calculation run failed for Tenant {$tenantId}, Period {$payrollPeriod['id']}: " . $e->getMessage());
+            throw new Exception("Payroll calculation failed: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Finalizes a payroll period, generating advice records and locking the period from further changes.
+     *
+     * @param int $tenantId
+     * @param int $payrollPeriodId
+     * @return void
+     * @throws \Exception
+     */
+    public function closePayrollPeriod(int $tenantId, int $payrollPeriodId): void
+    {
+        $this->db->beginTransaction();
+        try {
+            $payrollPeriod = $this->payrollPeriodModel->find($payrollPeriodId);
+            if (!$payrollPeriod || (int)$payrollPeriod['tenant_id'] !== $tenantId) {
+                throw new \Exception("Payroll period not found for this tenant.");
+            }
+            if ((bool)$payrollPeriod['is_closed']) {
+                throw new \Exception("Cannot close a period that is already closed.");
+            }
+
+            // Fetch tenant profile data for advice record generation
+            $tenantProfileModel = new \Jeffrey\Sikapay\Models\TenantProfileModel();
+            $tenantData = $tenantProfileModel->findByTenantId($tenantId);
+
             // After all payslips are processed, generate and save advice records
-            $this->saveAdviceRecords($tenantId, (int)$payrollPeriod['id'], $payrollPeriod, $tenantData);
+            $this->saveAdviceRecords($tenantId, $payrollPeriodId, $payrollPeriod, $tenantData);
 
             // Mark payroll period as closed
-            $this->payrollPeriodModel->markPeriodAsClosed((int)$payrollPeriod['id'], $tenantId);
+            $this->payrollPeriodModel->markPeriodAsClosed($payrollPeriodId, $tenantId);
 
             $this->db->commit();
         } catch (\Throwable $e) {
             if ($this->db->inTransaction()) {
                 $this->db->rollBack();
             }
-            Log::critical("Payroll run transaction failed for Tenant {$tenantId}, Period {$payrollPeriod['id']}: " . $e->getMessage());
-            throw new Exception("Payroll processing failed: " . $e->getMessage());
+            Log::critical("Failed to close payroll period for Tenant {$tenantId}, Period {$payrollPeriodId}: " . $e->getMessage());
+            throw new Exception("Failed to close payroll period: " . $e->getMessage());
         }
     }
 

@@ -64,6 +64,9 @@ class SubscriptionModel extends Model
         // 2. Log the event in 'subscription_history' (Audit trail)
         if ($success) {
             $plan = $this->planModel->find($planId); // Fetch plan details
+            if (!$plan) {
+                throw new \Exception("Plan with ID {$planId} not found during initial subscription recording.");
+            }
             $historyId = $this->logHistory(
                 $tenantId, 
                 $planId, 

@@ -51,26 +51,63 @@ if (isset($_SESSION['flash_success'])): ?>
     <div class="col-md-12">
         <div class="card">
             <div class="card-header">
-                <div class="card-title">Current Payroll Period</div>
+                <div class="card-title">Manage Payroll Periods</div>
             </div>
             <div class="card-body">
-                <?php if ($currentPeriod): ?>
-                    <p><strong>Period Name:</strong> <?= $h($currentPeriod['period_name']) ?></p>
-                    <p><strong>Start Date:</strong> <?= date('F j, Y', strtotime($currentPeriod['start_date'])) ?></p>
-                    <p><strong>End Date:</strong> <?= date('F j, Y', strtotime($currentPeriod['end_date'])) ?></p>
-                    <p><strong>Payment Date:</strong> <?= $currentPeriod['payment_date'] ? date('F j, Y', strtotime($currentPeriod['payment_date'])) : 'N/A' ?></p>
-                    <p><strong>Status:</strong> <?= $currentPeriod['is_closed'] ? 'Closed' : 'Open' ?></p>
-                    <form action="/payroll/run" method="POST" class="d-inline">
-                        <input type="hidden" name="csrf_token" value="<?= $CsrfToken::getToken() ?>">
-                        <input type="hidden" name="payroll_period_id" value="<?= $currentPeriod['id'] ?>">
-                        <button type="submit" class="btn btn-primary">Run Payroll for this Period</button>
-                    </form>
-
+                <?php if (empty($payrollPeriods)): ?>
+                <div class="alert alert-info" role="alert">
+                    No payroll periods have been created yet. Click below to create one.
+                </div>
+                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#createPeriodModal">Create New Payroll Period</button>
                 <?php else: ?>
-                    <div class="alert alert-warning" role="alert">
-                        No active payroll period found. Please configure a new payroll period.
-                    </div>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead>
+                            <tr>
+                                <th>Period Name</th>
+                                <th>Start Date</th>
+                                <th>End Date</th>
+                                <th>Payment Date</th>
+                                <th>Status</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($payrollPeriods as $period): ?>
+                            <tr>
+                                <td><?= $h($period['period_name']) ?></td>
+                                <td><?= date('F j, Y', strtotime($period['start_date'])) ?></td>
+                                <td><?= date('F j, Y', strtotime($period['end_date'])) ?></td>
+                                <td><?= $period['payment_date'] ? date('F j, Y', strtotime($period['payment_date'])) : 'N/A' ?></td>
+                                <td>
+                                    <span class="badge <?= (bool)$period['is_closed'] ? 'bg-success' : 'bg-warning' ?>">
+                                        <?= (bool)$period['is_closed'] ? 'Closed' : 'Open' ?>
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <?php if (!(bool)$period['is_closed']): ?>
+                                        <form action="/payroll/run" method="POST" class="d-inline me-2">
+                                            <input type="hidden" name="csrf_token" value="<?= $CsrfToken::getToken() ?>">
+                                            <input type="hidden" name="payroll_period_id" value="<?= $period['id'] ?>">
+                                            <button type="submit" class="btn btn-sm btn-primary">Run Payroll</button>
+                                        </form>
+                                        <form action="/payroll/period/<?= $period['id'] ?>/close" method="POST" class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="<?= $CsrfToken::getToken() ?>">
+                                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to close this payroll period? This action is irreversible and finalizes all payslips and reports.');">Close Period</button>
+                                        </form>
+                                    <?php else: ?>
+                                        <a href="/payroll/payslips?period_id=<?= $period['id'] ?>" class="btn btn-sm btn-info me-2">View Payslips</a>
+                                        <a href="/reports?period_id=<?= $period['id'] ?>" class="btn btn-sm btn-secondary">View Reports</a>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-3">
                     <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#createPeriodModal">Create New Payroll Period</button>
+                </div>
                 <?php endif; ?>
             </div>
         </div>
